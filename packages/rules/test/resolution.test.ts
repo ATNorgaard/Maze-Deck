@@ -222,6 +222,14 @@ describe('the reveal beat', () => {
     expect(revealed.revealed?.leavesRiver).toBe(false);
   });
 
+  it('does not show a Wanderer leaving before the GM has decided', () => {
+    const g = atPick('beat-wander', ['wanderer', 'item', 'item']);
+    const revealed = apply(g, { type: 'PICK_SLOT', index: 0 }).state;
+    // Undecided is not the same as leaving: the card must not slide to
+    // the discard and then turn out to have stayed.
+    expect(revealed.revealed?.leavesRiver).toBe(false);
+  });
+
   it('refuses to advance when nothing is being revealed', () => {
     const g = atPick('beat-none', ['item', 'item', 'item']);
     expect(() => apply(g, { type: 'ADVANCE_REVEAL' })).toThrow(/being revealed/);

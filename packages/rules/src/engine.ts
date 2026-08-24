@@ -533,8 +533,10 @@ function revealPick(g: GameState, events: GameEvent[], index: number): void {
   g.revealed = {
     slot: index,
     category,
-    // Blockers stay put; everything else is on its way to the discard.
-    leavesRiver: !getCategory(category).blocker,
+    // Blockers stay put. A Wanderer's fate is undecided until the GM
+    // says whether they linger, so it must not be shown leaving yet.
+    // Everything else is on its way to the discard.
+    leavesRiver: category !== 'wanderer' && !getCategory(category).blocker,
   };
   g.phase = 'reveal';
 

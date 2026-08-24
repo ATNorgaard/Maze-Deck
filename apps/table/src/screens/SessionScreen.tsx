@@ -1,14 +1,17 @@
 import * as React from 'react';
 import {
-  ActionBar, DeckPile, DiscardPile, PlayerSeat, River, ScoreTrack,
+  ActionBar, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, ScoreTrack,
 } from '@maze-deck/ui';
 import { activeSeat, available } from '@maze-deck/rules';
-import type { AbilityScore, GameAction, GameState } from '@maze-deck/rules';
+import type {
+  AbilityScore, ChoicePayload, GameAction, GameState,
+} from '@maze-deck/rules';
+import { CardFlight } from '../components/CardFlight';
+import type { FlightRequest } from '../components/CardFlight';
 import { CheckPanel } from '../components/CheckPanel';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
-import { RevealLayer } from '../components/RevealLayer';
 import { SCORES } from '../campaign';
 import { useFittingSize } from '../useFittingSize';
 
@@ -45,10 +48,11 @@ const PHASE_NOTE: Record<GameState['phase'], string> = {
 
 export function SessionScreen({ state, dispatch, onExit, runName, error }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
-  const [flyingSlot, setFlyingSlot] = React.useState<number | null>(null);
+  const [covered, setCovered] = React.useState<number | null>(null);
+  const [handFlight, setHandFlight] = React.useState<FlightRequest | null>(null);
   const riverRef = React.useRef<HTMLDivElement>(null);
-  const riverSize = useFittingSize(riverRef);
   const discardRef = React.useRef<HTMLDivElement>(null);
+  const riverSize = useFittingSize(riverRef);
 
   const a = available(state);
   const seat = state.order.length ? activeSeat(state) : null;
@@ -56,17 +60,67 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
   const pending = state.pending;
   const revealed = a.revealed;
 
-  const advance = React.useCallback(
-    () => dispatch({ type: 'ADVANCE_REVEAL' }), [dispatch],
-  );
+  const revealSlot = revealed?.slot;
+  const revealCategory = revealed?.category;
+  const revealLeaves = revealed?.leavesRiver;
 
-  // A Clear Path or a Monster lands on a track; the track says so.
-  const pulse = revealed?.category === 'clear-path' ? 'escape'
-    : revealed?.category === 'monster' ? 'threat' : null;
+  // The engine's own reveal: turn the card over, then send it on — but
+  // only if it is actually leaving.
+  const revealFlight = React.useMemo<FlightRequest | null>(() => {
+    if (revealSlot === undefined || revealCategory === undefined) return null;
+    return {
+      slot: revealSlot,
+      category: revealCategory,
+      flip: true,
+      fly: revealLeaves === true,
+      onDone: () => dispatch({ type: 'ADVANCE_REVEAL' }),
+    };
+  }, [revealSlot, revealCategory, revealLeaves, dispatch]);
+
+  const flight = handFlight ?? revealFlight;
+
+  /**
+   * A Wanderer is turned over on the reveal but does not leave until
+   * the GM says they do not linger, so its trip to the discard is
+   * staged here rather than as part of the reveal.
+   */
+  const onResolveChoice = (payload: ChoicePayload) => {
+    const choice = pending?.kind === 'choice' ? pending.choice : null;
+    if (
+      payload.kind === 'wanderer-stays' && !payload.stays
+      && choice?.kind === 'wanderer-stays'
+    ) {
+      const leaving = state.river[choice.slot]?.category;
+      if (leaving) {
+        setHandFlight({
+          slot: choice.slot,
+          category: leaving,
+          flip: false,
+          fly: true,
+          onDone: () => {
+            setHandFlight(null);
+            dispatch({ type: 'RESOLVE_CHOICE', payload });
+          },
+        });
+        return;
+      }
+    }
+    dispatch({ type: 'RESOLVE_CHOICE', payload });
+  };
+
+  const pulse = revealCategory === 'clear-path' ? 'escape'
+    : revealCategory === 'monster' ? 'threat' : null;
 
   return (
     <div className="t-board">
       <div className="t-col t-col--side">
+        <div className="t-panel">
+          <h2 className="t-panel__title">
+            {runName} <span className="t-panel__aside">DC {state.config.mazeDc}</span>
+          </h2>
+          <p className="t-note">Round {state.round} · {state.deck.length} cards left</p>
+        </div>
+
         <div className="t-panel">
           <h2 className="t-panel__title">Initiative</h2>
           <div className="t-seats">
@@ -88,9 +142,7 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
         </div>
 
         <div className="t-panel">
-          <h2 className="t-panel__title">{runName}</h2>
-          <p className="t-note">Round {state.round} · {state.deck.length} cards left</p>
-          <div className="t-row" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
+          <div className="t-row">
             <button type="button" className="t-btn" onClick={onExit}>Campaign</button>
             {state.phase !== 'over' ? (
               <button
@@ -131,7 +183,12 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
           </p>
         </div>
 
-        <div className="t-river" ref={riverRef} data-flying={flyingSlot === null ? undefined : String(flyingSlot)}>
+        <div
+          className="t-river"
+          ref={riverRef}
+          data-covered={covered === null ? undefined : String(covered)}
+          data-pickable={a.pickSlots.length ? true : undefined}
+        >
           <River
             size={riverSize}
             slots={state.river.map((s) => ({ category: s.category, faceDown: !s.faceUp }))}
@@ -157,13 +214,15 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
         <div className="t-actions">
           {state.phase === 'act' ? (
             <>
-              <ActionBar
-                abilities={state.config.abilities}
-                dc={state.config.mazeDc}
-                onUse={(ability) => dispatch({ type: 'USE_ABILITY', ability })}
-              />
+              <MazeDeckProvider size="lg" className="t-actions__bar">
+                <ActionBar
+                  abilities={state.config.abilities}
+                  showDc={false}
+                  onUse={(ability) => dispatch({ type: 'USE_ABILITY', ability })}
+                />
+              </MazeDeckProvider>
               {a.obstacleSlots.length ? (
-                <div className="t-row" style={{ justifyContent: 'center', marginTop: 'calc(4 * var(--md-u))' }}>
+                <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
                   <span className="t-kicker">Or work on what is blocking them:</span>
                   <select
                     className="t-input"
@@ -193,12 +252,12 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
         <EventLog log={state.log} />
       </div>
 
-      <RevealLayer
-        revealed={revealed}
+      <CardFlight
+        request={flight}
+        size={riverSize}
         riverRef={riverRef}
         discardRef={discardRef}
-        onDone={advance}
-        onLift={setFlyingSlot}
+        onOccupy={setCovered}
       />
 
       {state.phase === 'check' && pending?.kind === 'check' ? (
@@ -220,12 +279,14 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
         </Modal>
       ) : null}
 
-      {state.phase === 'choice' && pending?.kind === 'choice' ? (
+      {/* Stand the modal down while the Wanderer is on its way out, so
+          the card being discarded is actually visible leaving. */}
+      {state.phase === 'choice' && pending?.kind === 'choice' && !handFlight ? (
         <Modal label="A decision is owed">
           <ChoicePanel
             state={state}
             choice={pending.choice}
-            onResolve={(payload) => dispatch({ type: 'RESOLVE_CHOICE', payload })}
+            onResolve={onResolveChoice}
           />
         </Modal>
       ) : null}
@@ -239,7 +300,7 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
               Winning takes a Monster out of the deck for good and the crossing
               carries on.
             </p>
-            <div className="t-row" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
+            <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
               <button
                 type="button" className="t-btn t-btn--primary"
                 onClick={() => dispatch({ type: 'RESOLVE_ENCOUNTER', won: true })}
@@ -274,7 +335,7 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
                 ? `${state.progress} Clear Paths in ${state.round} rounds. Start the scene on the far side.`
                 : 'Note where they got to, and pick it up from there.'}
             </p>
-            <div className="t-row" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
+            <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
               <button type="button" className="t-btn t-btn--primary" onClick={onExit}>
                 Back to the campaign
               </button>

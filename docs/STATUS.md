@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M2 revised)
+**Last updated:** 2026-08-24 (M2, second revision)
 
 ## Where we are
 
@@ -75,6 +75,11 @@ than the cards rather than a copy of them — see DECISIONS A5.
 
 ## Watch out for
 
+- **CSS regressions from bulk edits.** The `.t-panel` rules were silently lost
+  in an earlier rewrite of the layout section, which is why every panel — the
+  modals included — painted transparent. Several follow-up patches then no-opped
+  because their anchor text was already gone. If you edit `app.css` by script,
+  assert the anchor exists; a `.replace()` that matches nothing fails quietly.
 - **The board wants width.** Three `lg` river cards need ~1104px of centre
   column, which with the 320px + 300px side columns means roughly a 1810px
   window. `useFittingSize` steps the river down to `md` then `sm` as the column

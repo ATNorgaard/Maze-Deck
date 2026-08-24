@@ -18,6 +18,13 @@ export interface ActionBarProps {
   locked?: AbilityKey[];
   /** Difficulty shown on each check line. @default 13 */
   dc?: number;
+  /**
+   * Print the DC beside the ability score. Off when the table already
+   * has the Maze DC in front of them — repeating it six times across
+   * the strip is noise.
+   * @default true
+   */
+  showDc?: boolean;
   /** Called with the ability when an available action is chosen. */
   onUse?: (ability: AbilityKey) => void;
   className?: string;
@@ -35,6 +42,7 @@ export function ActionBar({
   abilities,
   locked = [],
   dc = MAZE_DC,
+  showDc = true,
   onUse,
   className,
   style,
@@ -70,7 +78,7 @@ export function ActionBar({
               <span className="md-action__locked">Locked</span>
             ) : (
               <span className="md-action__check">
-                {def.score} · DC {dc}
+                {showDc ? `${def.score} · DC ${dc}` : def.score}
               </span>
             )}
           </button>

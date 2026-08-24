@@ -81,16 +81,13 @@ export function CheckPanel({ state, check, onEnterRoll, onConfirm }: Props) {
   return (
     <div className="t-panel t-panel--live">
       <h2 className="t-panel__title">{seatName(state, check.seatId)}</h2>
-      <div className="t-row" style={{ alignItems: 'baseline' }}>
-        <div className={`t-roll ${success ? 't-roll--good' : 't-roll--bad'}`}>
-          <span className="t-roll__total">{total}</span>
-          <span className="t-roll__vs">vs DC {check.dc}</span>
-        </div>
-        <span className="t-spacer" />
-        <span className={`t-verdict ${success ? 't-roll--good' : 't-roll--bad'}`}>
-          {success ? 'Success' : 'Failure'}
-        </span>
+      <div className={`t-roll ${success ? 't-roll--good' : 't-roll--bad'}`}>
+        <span className="t-roll__total">{total}</span>
+        <span className="t-roll__vs">vs DC {check.dc}</span>
       </div>
+      <p className={`t-verdict ${success ? 't-roll--good' : 't-roll--bad'}`}>
+        {success ? 'Success' : 'Failure'}
+      </p>
       <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
         {advantage
           ? `Rolled ${check.d20} and ${check.d20b}, keeping ${die}, ${sign} ${check.score}.`
