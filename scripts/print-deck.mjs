@@ -57,8 +57,38 @@ const query = [flag('expansion') ? 'expansion=1' : '', flag('guides') ? 'guides=
   .filter(Boolean).join('&');
 const url = `http://127.0.0.1:${port}/deck.html${query ? `?${query}` : ''}`;
 
+/**
+ * The browser is a hidden prerequisite: playwright lives in
+ * .ds-sync/node_modules, but its Chromium is downloaded separately
+ * into a shared cache. A fresh clone — or an interrupted download —
+ * fails here, and Playwright's own error is a stack trace that does
+ * not mention which directory to run the fix in.
+ */
 const { chromium } = require('playwright');
-const browser = await chromium.launch();
+let browser;
+try {
+  browser = await chromium.launch();
+} catch (err) {
+  server.close();
+  const missing = /Executable doesn't exist/.test(String(err?.message));
+  if (missing) {
+    console.error([
+      '',
+      'Playwright has no browser to drive.',
+      '',
+      '  cd .ds-sync && npx playwright install chromium',
+      '',
+      'Run it from .ds-sync — that is where playwright is installed.',
+      'If a download was interrupted the folder can exist while the',
+      'executable does not, which produces exactly this error.',
+      '',
+    ].join('\n'));
+  } else {
+    console.error(`\nCould not start a browser:\n\n  ${err?.message ?? err}\n`);
+  }
+  process.exit(1);
+}
+
 try {
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: 'networkidle' });
