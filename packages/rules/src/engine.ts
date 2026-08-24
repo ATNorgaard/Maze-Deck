@@ -317,12 +317,12 @@ function applyAbility(
         push(g, events, 'muted', 'all', 'Nothing left face down to consider.');
         return null;
       }
+      // A card turned face up is face up on the table. Everyone sees
+      // it. Only what is looked at inside the DECK stays private.
       for (const i of revealed) {
-        push(g, events, 'card', 'gm',
+        push(g, events, 'card', 'all',
           `Revealed: the ${positionName(i)} path is ${getCategory(slotAt(g, i).category as CardCategory).title}.`);
       }
-      push(g, events, 'sys', 'all',
-        `${revealed.length} path${revealed.length === 1 ? '' : 's'} studied.`);
       return { kind: 'discard-revealed', slots: revealed };
     }
 

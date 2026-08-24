@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "table",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "apps/table"],
+      "port": 5180
+    },
+    {
       "name": "deck-preview",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8791", "--directory", "design-system"],

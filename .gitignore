@@ -1,6 +1,7 @@
 # --- dependencies & build output ---
 node_modules/
 packages/*/dist/
+apps/*/dist/
 packages/ui/harness/demo.js
 coverage/
 .wrangler/

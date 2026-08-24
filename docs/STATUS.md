@@ -8,83 +8,95 @@ then [DECISIONS.md](DECISIONS.md), then
 
 ## Where we are
 
-**M0 and M1 complete.**
-
-- The project is consolidated into this repo; `packages/ui` builds and the
-  design-sync converter runs clean at 13/13 components.
-- The deck is canonical: 23 cards, five categories, Maze DC 15, six actions
-  including `steel-yourself` (CON). Dead End and Trap are marked `expansion` and
-  excluded from the standard deck with their art intact.
-- **`packages/rules` is done.** Pure, seeded, no React and no I/O.
-  39 tests pass, typecheck is clean.
+**M0, M1 and M2 complete. A full crossing is playable on one screen.**
 
 ```bash
-cd packages/rules && npm test        # 39 tests, ~8s
+cd packages/rules && npm test            # 40 tests, ~8s, no browser needed
 cd packages/rules && npm run simulate -- 2000
+cd apps/table && npm run dev             # http://localhost:5180
+cd apps/table && npm run build           # tsc --noEmit && vite build
+cd packages/ui && npm run build          # tsup + the CSS flattening step
 ```
 
-The engine's shape, if you are picking this up cold: `createGame(config)` then
-`apply(state, action) -> { state, events }`, with `available(state)` telling the
-UI what it may offer. Everything random comes from a seeded generator held in
-the state, so a run replays exactly from its seed. Log events carry
-`visibility: 'all' | 'gm'` — that is the whole hidden-information model, and the
-redaction must happen server-side, never in the client.
+- **`packages/ui`** — the component layer, unchanged except for the canonical
+  deck data. Builds; design-sync converter runs clean at 13/13.
+- **`packages/rules`** — the engine. Pure, seeded, 40 tests.
+  `createGame` → `apply(state, action)` → `available(state)`.
+- **`apps/table`** — the GM's screen. Vite + React, both packages aliased to
+  **source** (no workspace root; hoisting breaks design-sync).
 
-## Read before building the UI
+Verified in the browser end to end: a run starts with randomised initiative,
+all six actions appear, a check can be rolled and confirmed or overturned, the
+choice phase renders real cards, an Obstacle stays face up in the river and
+offers the "work on what is blocking them" action, and a mid-run reload restores
+round, turn, phase, river, deck, discard and log intact.
 
-**[reference/balance.md](reference/balance.md).** The simulator found three
-things worth knowing: the card game as written **cannot be lost** (there is no
-loss condition — danger is entirely delegated to the D&D combat), the **Maze DC
-is nearly inert** because a failed action still lets you pick a card, and
-**Forge a Path does not pay for itself** in a four-round run. None of it blocks
-the app. All of it is worth a decision from the author eventually.
+**The hidden-information model is real and tested in the browser.** The
+"Viewing as GM / as player" toggle in the session header filters `visibility:
+'gm'` events out and hides the discard's top card. Player-side log lines are
+renumbered sequentially, because raw engine numbering left gaps and a gap tells
+a player exactly how much is being withheld. When M4 adds the network, this
+filter moves server-side — it is currently a client-side demonstration of the
+right shape, not a security boundary.
 
 ## Next single action
 
-**Start M2: the single-screen GM app.** In order:
+**Start M3: scenario tables.** This is the feature that makes the app better
+than the cards rather than a copy of them — see DECISIONS A5.
 
-1. Scaffold `apps/table` — Vite + React 18 + TypeScript strict. Alias
-   `@maze-deck/ui` → `../../packages/ui/src/index.ts` and `@maze-deck/rules` →
-   `../../packages/rules/src/index.ts` in both `vite.config.ts` and `tsconfig`.
-   Deliberately no npm workspace root: hoisting breaks the design-sync build.
-2. Wrap the whole app in `MazeDeckProvider`. A component rendered outside
-   `.md-root` resolves no tokens and silently paints unstyled.
-3. Campaign and run state in `localStorage` under `mazedeck.campaign.v1`, with a
-   schema version in the blob from the first commit.
-4. The session screen against the real engine: `River`, `ActionBar`,
-   `ScoreTrack` ×2, `DeckPile`/`DiscardPile`, seat list, the pending-check panel
-   with the GM's confirm-or-overturn, and the event log filtered to what the
-   current viewer may see.
-5. New UI the prototype never had: the **choice** phase. Scout Ahead, It's
-   Elementary and Careful Consideration all stop and ask. `available(state)`
-   returns the choice; render one panel per `choice.kind`.
-
-Note `ScoreTrack variant="threat"` counts strikes toward `ENCOUNTER_AT` (2), and
-the engine's `encounter` phase is a **pause**, not an ending — the GM resolves
-combat at the table and reports back with `RESOLVE_ENCOUNTER`.
+1. Add `tables: Record<CardCategory, TableEntry[]>` to `Campaign` in
+   `apps/table/src/campaign.ts`, bumping `SCHEMA_VERSION` to 2 and writing the
+   migration from v1 (v1 blobs currently get discarded — see `load()`).
+2. `TableEntry` needs at minimum `{ id, text }`, plus optional
+   `{ score, dc }` for Obstacles, which is what DECISIONS R6 promised: the
+   entry suggests the check, the GM overrides before the roll.
+3. Draw an entry when a card resolves, and surface it to the GM as the prompt to
+   narrate from. It must come off the **seeded** generator if it lives in engine
+   state — otherwise keep it in the app layer and out of `GameState`, which is
+   the simpler option and the one I would take.
+4. A per-campaign editor screen. Ship a default set written by us — roughly six
+   entries per category, two or three for Monster.
+5. Wire the Obstacle entry's suggested score/DC into the existing
+   `ATTEMPT_OBSTACLE` control, which currently makes the GM pick a score cold.
 
 ## Watch out for
 
-- **`--md-u` is a millimetre.** Card geometry is physically correct for print.
-  Add a size step rather than changing the base unit.
+- **`.design-sync/config.json` `dtsPropsFor.ActionBar` is now stale.** It
+  hardcodes the old five-ability union and does not know about
+  `steel-yourself`. Harmless today; it will emit a wrong `.d.ts` on the next
+  design-sync push. Fix it as part of M5.
+- **`ArchGlyph`'s `steel-yourself` glyph is mine, not the design system's.** A
+  shield with a chevron, drawn to fit the existing arch. It reads fine at card
+  size but it has not been through the design pass the other twelve had — M5.
 - The deck composition is written in **three** places (`packages/ui/src/types.ts`,
-  `packages/ui/src/styles/tokens.css`, `design-system/tokens.css`) and nothing
-  enforces agreement. A parity check is M5 work; until then change all three.
+  `packages/ui/src/styles/tokens.css`, `design-system/tokens.css`). Nothing
+  enforces agreement yet; change all three together until M5 adds the check.
+- **`--md-u` is a millimetre.** Add a size step rather than changing the base.
 - Read [.design-sync/NOTES.md](../.design-sync/NOTES.md) before touching the
   sync pipeline.
-- `docs/BUILD-PLAN.md` predates the design interview. Where it disagrees with
-  `DECISIONS.md` or `canonical-rules.md` it is wrong; its lasting value is the
-  inventory and the list of prototype bugs.
-- The old prototype at `design/dc/Maze Deck.dc.html` is a reference for
-  *interaction*, not rules — its engine implements a ruleset we discarded.
+- `docs/BUILD-PLAN.md` predates the design interview; where it disagrees with
+  `DECISIONS.md` it is wrong. The prototype at `design/dc/Maze Deck.dc.html` is
+  a reference for *interaction* only — its rules were discarded.
+
+## Worth a decision from the author, eventually
+
+[reference/balance.md](reference/balance.md): the card game as written **cannot
+be lost**, the **Maze DC is nearly inert** (a failed action still lets you take
+a path), and **Forge a Path does not pay for itself** in a four-round run. None
+of it blocks the build.
+
+One more surfaced while playing: **Careful Consideration reveals two paths and
+then shuffles them back face down**, so the party cannot act on what they just
+learned — it only ever removes a bad card, never finds a good one. That is
+faithful to the rules as printed. It may not be what was intended.
 
 ## Milestones
 
 | | | |
 |---|---|---|
 | M0 | Repo consolidation | **done** |
-| M1 | Rules engine | **done** — 39 tests |
-| M2 | Single-screen GM app | next |
-| M3 | Scenario tables | |
+| M1 | Rules engine | **done** — 40 tests |
+| M2 | Single-screen GM app | **done** — playable end to end |
+| M3 | Scenario tables | next |
 | M4 | Multiplayer | |
 | M5 | Deck and print regeneration | |

@@ -164,13 +164,28 @@ describe('hidden information', () => {
     expect(openLines.some((e) => e.text.includes('commits to'))).toBe(true);
   });
 
-  it('keeps scouted cards off the open log', () => {
+  it('keeps what is looked at inside the deck off the open log', () => {
     const g = makeRun('secret-scout');
+    const used = apply(g, { type: 'USE_ABILITY', ability: 'scout-ahead' }).state;
+    const after = apply(used, { type: 'CONFIRM_CHECK', success: true }).state;
+    const { events } = apply(after, {
+      type: 'RESOLVE_CHOICE', payload: { kind: 'scout-top', cardIndex: 0 },
+    });
+
+    const named = events.filter((e) => e.text.includes('on top of the deck'));
+    const open = named.filter((e) => e.visibility === 'all');
+    // The players are told a card was set, never which one.
+    expect(named.some((e) => e.visibility === 'gm')).toBe(true);
+    expect(open.every((e) => !/Clear Path|Monster|Obstacle|Wanderer|Item/.test(e.text))).toBe(true);
+  });
+
+  it('announces a card turned face up in the river to everyone', () => {
+    const g = makeRun('open-reveal');
     const used = apply(g, { type: 'USE_ABILITY', ability: 'careful-consideration' }).state;
     const { events } = apply(used, { type: 'CONFIRM_CHECK', success: true });
 
     const revealed = events.filter((e) => e.text.startsWith('Revealed:'));
     expect(revealed.length).toBeGreaterThan(0);
-    expect(revealed.every((e) => e.visibility === 'gm')).toBe(true);
+    expect(revealed.every((e) => e.visibility === 'all')).toBe(true);
   });
 });
