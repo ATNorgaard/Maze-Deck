@@ -1,0 +1,25 @@
+{
+  "name": "@maze-deck/rules",
+  "version": "1.0.0",
+  "description": "The Maze Deck engine. Pure TypeScript, seeded, no React and no I/O.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "simulate": "vite-node scripts/simulate.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
