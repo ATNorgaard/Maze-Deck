@@ -1,0 +1,31 @@
+# --- dependencies & build output ---
+node_modules/
+packages/*/dist/
+packages/ui/harness/demo.js
+coverage/
+.wrangler/
+.vite/
+
+# --- design-system sync ---
+# .ds-sync/ is regenerable tooling; ds-bundle/ and proof/ are generated output.
+# .design-sync/ is NOT ignored — config.json, conventions.md, NOTES.md and
+# previews/ are hand-written and irreplaceable. See .design-sync/NOTES.md.
+.ds-sync/
+ds-bundle/
+proof/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
+# --- third-party reference material ---
+# Kept on disk for reference, deliberately never committed: this is someone
+# else's published product. We reimplement its mechanics under our own names
+# and wording (see docs/DECISIONS.md A7) and distribute none of its content.
+Deck-of-Dungeons_PRINT-COLOR_1.0.pdf
+MV5BYzAwZWQxY2YtOTk2NS00MTMzLThkYjgtZjhkOTUzNTNjZjY1XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg
+
+# --- local ---
+.env
+.env.local
+.DS_Store
+Thumbs.db

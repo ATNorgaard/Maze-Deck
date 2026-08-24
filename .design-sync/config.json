@@ -1,0 +1,59 @@
+{
+  "projectId": "453553a0-5ce8-409e-9767-f0c4eb86b1f7",
+  "shape": "package",
+  "pkg": "@maze-deck/ui",
+  "globalName": "MazeDeckUI",
+  "buildCmd": "npm run build",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": "dist/styles.css",
+  "tokensGlob": "src/styles/tokens.css",
+  "runtimeFontPrefixes": [
+    "Cinzel",
+    "Spectral",
+    "Inter"
+  ],
+  "provider": {
+    "component": "MazeDeckProvider",
+    "props": {
+      "size": "md"
+    }
+  },
+  "overrides": {
+    "AbilityCard": {
+      "cardMode": "column",
+      "viewport": "1000x1000"
+    },
+    "CardBack": {
+      "cardMode": "column"
+    },
+    "DeckCard": {
+      "cardMode": "column",
+      "viewport": "1000x1000"
+    },
+    "DeckPile": {
+      "cardMode": "column"
+    },
+    "DiscardPile": {
+      "cardMode": "column"
+    },
+    "MazeDeckProvider": {
+      "cardMode": "column"
+    },
+    "PrintSheet": {
+      "cardMode": "column",
+      "viewport": "1000x1100"
+    },
+    "ReferenceCard": {
+      "cardMode": "column"
+    },
+    "River": {
+      "cardMode": "column"
+    }
+  },
+  "dtsPropsFor": {
+    "River": "/** The river, left to right. Always rendered `width` slots wide even when short. */\n  slots: { /** The card in this slot. `null` renders the empty outline. */ category: \"clear-path\" | \"dead-end\" | \"obstacle\" | \"trap\" | \"monster\" | \"wanderer\" | \"item\" | null; /** Face-down slots hide the category until revealed. */ faceDown?: boolean }[];\n  /** How many cards the river holds. @default 3 */\n  width?: number;\n  /** Position labels under each slot. @default Left / Centre / Right */\n  labels?: string[];\n  /** Called with the slot index when a card is picked. */\n  onPick?: (index: number) => void;\n  /** Override scale independently of the provider. */\n  size?: \"sm\" | \"md\" | \"lg\";\n  className?: string;\n  style?: React.CSSProperties;",
+    "ActionBar": "/** Which abilities are available this session. Under 5 players, cut to party size. @default all five */\n  abilities?: (\"forge-a-path\" | \"scout-ahead\" | \"its-elementary\" | \"careful-consideration\" | \"boost-morale\")[];\n  /** Abilities disabled by the end-of-round d6 lockout. They stay visible, greyed. */\n  locked?: (\"forge-a-path\" | \"scout-ahead\" | \"its-elementary\" | \"careful-consideration\" | \"boost-morale\")[];\n  /** Difficulty shown on each check line. @default 13 */\n  dc?: number;\n  /** Called with the ability when an available action is chosen. */\n  onUse?: (ability: \"forge-a-path\" | \"scout-ahead\" | \"its-elementary\" | \"careful-consideration\" | \"boost-morale\") => void;\n  className?: string;\n  style?: React.CSSProperties;"
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

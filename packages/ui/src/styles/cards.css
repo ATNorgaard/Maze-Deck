@@ -1,0 +1,372 @@
+/* ============================================================
+   MAZE DECK — CARD COMPONENTS
+   Depends on tokens.css. Reads --md-cat-* only via .md-cat-*.
+   ============================================================ */
+
+.md-root, .md-root *, .md-root *::before, .md-root *::after { box-sizing: border-box; }
+
+/* ---------- CARD SHELL -------------------------------------
+   .md-card is the BLEED box (69x94 units). .md-card__trim is
+   the cut line, .md-card__safe the keep-out.                 */
+
+.md-card {
+  position: relative;
+  width:  var(--md-card-bleed-w);
+  height: var(--md-card-bleed-h);
+  background: var(--md-ink-900);
+  color: var(--md-parchment-200);
+  font-family: var(--md-font-body);
+  overflow: hidden;
+  break-inside: avoid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  flex: none;
+}
+
+/* Screen affordance only — never fires in print. */
+.md-card[data-interactive="true"] {
+  cursor: pointer;
+  transition: transform .18s ease, filter .18s ease;
+}
+.md-card[data-interactive="true"]:hover { transform: translateY(calc(-1.5 * var(--md-u))); }
+.md-card[data-interactive="true"]:focus-visible {
+  outline: calc(0.6 * var(--md-u)) solid var(--md-cat-path-300);
+  outline-offset: calc(0.6 * var(--md-u));
+}
+@media (prefers-reduced-motion: reduce) {
+  .md-card[data-interactive="true"] { transition: none; }
+  .md-card[data-interactive="true"]:hover { transform: none; }
+}
+
+.md-card__trim {
+  position: absolute;
+  inset: var(--md-card-bleed);
+  border-radius: var(--md-card-radius);
+  overflow: hidden;
+  background: var(--md-ink-800);
+}
+
+.md-card__safe {
+  position: absolute;
+  inset: var(--md-card-safe);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Cut + safe guides — proofing only. */
+.md-guides .md-card__trim { outline: var(--md-frame-hair) dashed rgba(255,0,255,.55); }
+.md-guides .md-card__safe { outline: var(--md-frame-hair) dashed rgba(0,255,255,.40); }
+
+/* ---------- LIGHT SOURCE -----------------------------------
+   The category hue enters as a radial pool behind the glyph,
+   never as a flat background. The signature move: colour
+   behaves like torchlight, not like paint.                   */
+
+.md-card__light {
+  position: absolute;
+  left: 50%; top: 40%;
+  width: calc(78 * var(--md-u)); height: calc(78 * var(--md-u));
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 50% 50%,
+              var(--md-cat-glow) 0%, transparent 62%);
+  pointer-events: none;
+}
+
+/* ---------- ENGRAVED FRAME --------------------------------- */
+
+.md-card__frame {
+  position: absolute;
+  inset: var(--md-frame-inset) var(--md-frame-inset)
+         var(--md-frame-inset-b) var(--md-frame-inset);
+  border: var(--md-frame-hair) solid var(--md-cat-700);
+  border-radius: calc(1.5 * var(--md-u));
+  pointer-events: none;
+}
+.md-card__frame::after {
+  content: "";
+  position: absolute;
+  inset: calc(1.1 * var(--md-u));
+  border: var(--md-frame-hair) solid
+          color-mix(in srgb, var(--md-cat-700) 55%, transparent);
+  border-radius: calc(1 * var(--md-u));
+}
+
+/* ---------- CORNER SHAPE CODE ------------------------------
+   With seven categories this is the PRIMARY identification
+   channel. Printed top-left and bottom-right so the card reads
+   either way up — which is exactly why no two categories may
+   be 180-degree rotations of each other (no triangle-up vs
+   triangle-down, no square vs diamond).
+
+   Both marks stay clear of the 4-unit safe zone: a die-cut
+   tolerance of ~0.5mm must never be able to shave one off.   */
+
+.md-card__code {
+  --md-mark: calc(3.2 * var(--md-u));
+  position: absolute;
+  width: var(--md-mark); height: var(--md-mark);
+  background: var(--md-cat-500);
+  z-index: 3;
+}
+.md-card__code--tl { top: calc(6.5 * var(--md-u)); left: calc(6.5 * var(--md-u)); }
+.md-card__code--br {
+  --md-mark: calc(2.8 * var(--md-u));
+  bottom: calc(4.6 * var(--md-u)); right: calc(5.5 * var(--md-u));
+}
+
+/* circle — open, continuous */
+.md-cat-path .md-card__code { border-radius: 50%; }
+
+/* square — walled, permanent */
+.md-cat-dead .md-card__code { border-radius: calc(0.4 * var(--md-u)); }
+
+/* bar, horizontal — a barrier laid across the way */
+.md-cat-obst .md-card__code {
+  height: calc(var(--md-mark) * 0.44);
+  border-radius: calc(var(--md-mark) * 0.22);
+}
+
+/* triangle — hazard. The only triangle in the set. */
+.md-cat-trap .md-card__code {
+  background: none; height: 0; width: 0;
+  border-left: calc(var(--md-mark) / 2) solid transparent;
+  border-right: calc(var(--md-mark) / 2) solid transparent;
+  border-bottom: var(--md-mark) solid var(--md-cat-500);
+}
+
+/* two dots — a pair of eyes, echoing the Monster glyph */
+.md-cat-mons .md-card__code {
+  background: none;
+  height: calc(var(--md-mark) * 0.44);
+  background-image:
+    radial-gradient(circle, var(--md-cat-500) 58%, transparent 60%),
+    radial-gradient(circle, var(--md-cat-500) 58%, transparent 60%);
+  background-size: calc(var(--md-mark) * 0.44) calc(var(--md-mark) * 0.44);
+  background-repeat: no-repeat;
+  background-position: left center, right center;
+}
+
+/* bar, vertical — a standing figure */
+.md-cat-wand .md-card__code {
+  width: calc(var(--md-mark) * 0.44);
+  border-radius: calc(var(--md-mark) * 0.22);
+}
+
+/* cross — a thing to pick up */
+.md-cat-item .md-card__code {
+  background:
+    linear-gradient(var(--md-cat-500), var(--md-cat-500)) center / 100% 36% no-repeat,
+    linear-gradient(var(--md-cat-500), var(--md-cat-500)) center / 36% 100% no-repeat;
+}
+
+/* ---------- GLYPH ------------------------------------------ */
+
+.md-card__glyph {
+  width: calc(30 * var(--md-u)); height: calc(33 * var(--md-u));
+  margin-top: calc(4 * var(--md-u));
+  color: var(--md-cat-300);
+  filter: drop-shadow(0 0 calc(2.2 * var(--md-u)) var(--md-cat-glow));
+  position: relative; z-index: 2;
+}
+.md-card__glyph svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- TYPE BLOCK ------------------------------------- */
+
+.md-card__eyebrow {
+  margin: calc(4 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: var(--md-type-card-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--md-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--md-parchment-400);
+  position: relative; z-index: 2;
+}
+
+.md-card__title {
+  margin: calc(1.4 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: var(--md-type-card-title);
+  font-weight: 700;
+  letter-spacing: var(--md-track-title);
+  line-height: var(--md-leading-tight);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--md-parchment-100);
+  position: relative; z-index: 2;
+}
+
+.md-card__divider {
+  margin-top: calc(2.2 * var(--md-u));
+  width: calc(34 * var(--md-u)); height: calc(1.4 * var(--md-u));
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+}
+.md-card__divider::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  height: var(--md-frame-hair); background: var(--md-cat-700);
+}
+.md-card__divider::after {
+  content: ""; width: calc(1.4 * var(--md-u)); height: calc(1.4 * var(--md-u));
+  background: var(--md-cat-500); transform: rotate(45deg); position: relative;
+}
+
+.md-card__rule {
+  margin: calc(2.4 * var(--md-u)) 0 0;
+  padding: 0 calc(4 * var(--md-u));
+  min-height: calc(12 * var(--md-u));   /* reserved: up to 3 lines */
+  font-size: var(--md-type-card-rule);
+  line-height: var(--md-leading-body);
+  text-align: center;
+  color: var(--md-parchment-300);
+  position: relative; z-index: 2;
+}
+.md-card__rule em {
+  color: var(--md-cat-300); font-style: normal; font-weight: 600;
+}
+
+.md-card__count {
+  position: absolute;
+  bottom: calc(2.6 * var(--md-u)); left: 0; right: 0;
+  margin: 0;
+  text-align: center;
+  font-family: var(--md-font-display);
+  font-size: calc(2.3 * var(--md-u));
+  letter-spacing: 0.2em;
+  color: var(--md-parchment-400);
+  z-index: 2;
+}
+
+/* ---------- CARD BACK --------------------------------------
+   Uniform across the deck. Category information must NEVER
+   appear here — the river is dealt face-down.                */
+
+.md-card--back .md-card__trim { background: var(--md-ink-900); }
+.md-card__maze {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;      /* SVG is a replaced element:
+                                     inset:0 alone will not stretch it */
+  opacity: 0.85;
+  color: var(--md-ink-500);
+}
+.md-card__vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%,
+              transparent 34%, rgba(10,15,18,.72) 92%);
+  pointer-events: none;
+}
+.md-card__seal {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  width: calc(30 * var(--md-u)); height: calc(35 * var(--md-u));
+  color: var(--md-cat-path-700);
+  filter: drop-shadow(0 0 calc(3 * var(--md-u)) rgba(227,164,69,0.18));
+}
+
+/* ---------- ABILITY CARD -----------------------------------
+   Inverted to a parchment ground so it is never mistaken for a
+   deck card face-up — but it runs the identical rhythm.      */
+
+.md-card--ability .md-card__trim {
+  background: var(--md-parchment-200);
+  color: var(--md-ink-800);
+}
+.md-card--ability .md-card__glyph {
+  width: calc(21 * var(--md-u)); height: calc(23 * var(--md-u));
+  margin-top: calc(2.5 * var(--md-u));
+  color: var(--md-ink-700);
+  filter: none;                       /* no glow on parchment */
+}
+.md-card--ability .md-card__eyebrow { margin-top: calc(3 * var(--md-u)); color: #6E6552; }
+.md-card--ability .md-card__title   { font-size: calc(4.2 * var(--md-u)); margin-top: calc(1.2 * var(--md-u)); color: var(--md-ink-900); }
+.md-card--ability .md-card__divider { margin-top: calc(1.8 * var(--md-u)); }
+.md-card--ability .md-card__divider::before { background: var(--md-parchment-400); }
+.md-card--ability .md-card__divider::after  { background: var(--md-ink-600); }
+.md-card--ability .md-card__count   { color: #6E6552; }
+.md-card--ability .md-card__frame,
+.md-card--ability .md-card__frame::after { border-color: var(--md-parchment-400); }
+
+.md-ability__effect {
+  margin: calc(2 * var(--md-u)) 0 0;
+  padding: 0 calc(3 * var(--md-u));
+  font-size: calc(2.9 * var(--md-u));
+  line-height: var(--md-leading-body);
+  text-align: center;
+  color: var(--md-ink-700);
+}
+.md-ability__why {
+  margin: auto 0 calc(5 * var(--md-u));
+  padding: calc(2 * var(--md-u)) calc(2.5 * var(--md-u)) 0;
+  border-top: var(--md-frame-hair) solid var(--md-parchment-400);
+  font-size: calc(2.3 * var(--md-u));
+  line-height: 1.32;
+  text-align: center; font-style: italic;
+  color: #5A5140;
+}
+
+/* Disabled by the end-of-round d6 lockout. */
+.md-card--ability[data-locked="true"] { filter: grayscale(0.85) brightness(0.72); }
+.md-card--ability[data-locked="true"] .md-card__trim { background: #B9B0A0; }
+
+/* ---------- REFERENCE CARD --------------------------------- */
+
+.md-card--ref { --md-frame-inset-b: var(--md-frame-inset); }
+.md-card--ref .md-card__safe {
+  align-items: stretch;
+  padding: calc(1.5 * var(--md-u)) calc(0.5 * var(--md-u)) calc(5 * var(--md-u));
+}
+.md-ref__title {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-size: calc(3.4 * var(--md-u)); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--md-track-title);
+  text-align: center; color: var(--md-parchment-100);
+}
+.md-ref__badge {
+  margin: calc(2 * var(--md-u)) auto;
+  padding: calc(1 * var(--md-u)) calc(3.4 * var(--md-u));
+  border: var(--md-frame-rule) solid var(--md-cat-path-500);
+  border-radius: calc(1 * var(--md-u));
+  font-family: var(--md-font-display);
+  font-size: calc(3.4 * var(--md-u)); font-weight: 700;
+  color: var(--md-cat-path-300); letter-spacing: 0.08em;
+  text-align: center;
+}
+.md-ref__list { margin: 0; padding: 0; list-style: none; }
+.md-ref__list li {
+  font-size: calc(2.2 * var(--md-u)); line-height: 1.3;
+  padding: calc(0.95 * var(--md-u)) 0;
+  border-bottom: var(--md-frame-hair) solid var(--md-ink-600);
+  color: var(--md-parchment-300);
+}
+.md-ref__list li:last-child { border-bottom: none; }
+.md-ref__list strong { color: var(--md-parchment-100); font-weight: 600; }
+
+/* ---------- PRINT SHEET ------------------------------------
+   A4 portrait, 2 x 3 cards, gutterless: bleed boxes butt so a
+   guillotine cut serves two neighbouring cards at once.
+
+   Three 69mm columns (207mm) do NOT fit A4 once printer
+   margins are taken — that is why the grid is 2-up.          */
+
+@page { size: A4 portrait; margin: 5mm; }
+
+.md-sheet {
+  display: grid;
+  grid-template-columns: repeat(2, var(--md-card-bleed-w));
+  justify-content: center;
+  align-content: start;
+  gap: 0;
+  break-after: page;
+}
+.md-sheet:last-child { break-after: auto; }
+
+.md-sheet__label {
+  grid-column: 1 / -1;
+  margin: 0 0 calc(2 * var(--md-u));
+  font-family: var(--md-font-ui);
+  font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+  color: #7d8f99;
+}
+@media print { .md-sheet__label { display: none; } }

@@ -1,0 +1,173 @@
+/* ============================================================
+   MAZE DECK — DESIGN TOKENS
+   Single source of truth. Nothing downstream hardcodes a value.
+
+   Everything is scoped under .md-root (the MazeDeckProvider) so
+   the design system can never leak into a host app's cascade.
+
+   GEOMETRY SCALES OFF ONE UNIT. --md-u is 1mm by default, which
+   makes the card physically correct for print. Override it to
+   resize the whole system proportionally — the size prop on
+   MazeDeckProvider and on each card does exactly that.
+   ============================================================ */
+
+.md-root {
+
+  /* ---------- 0. SCALE UNIT ------------------------------- */
+  --md-u: 1mm;
+
+  /* ---------- 1. GROUND -----------------------------------
+     The deck lives in the dark. Ground is near-black with a
+     cold cast so warm category light reads as a light SOURCE,
+     not as a flat fill. Never pure #000 (dead in print).     */
+
+  --md-ink-900: #0A0F12;
+  --md-ink-800: #10181C;
+  --md-ink-700: #182429;
+  --md-ink-600: #22323A;
+  --md-ink-500: #33474F;
+
+  --md-parchment-100: #F2EBDA;
+  --md-parchment-200: #E4D9BF;
+  --md-parchment-300: #C9BC9C;
+  --md-parchment-400: #9B8F74;
+
+  /* ---------- 2. CATEGORY LIGHT ---------------------------
+     One hue per card category. At SEVEN categories hue can no
+     longer identify on its own — the glyph and the shape code
+     do that, and hue confirms. The palette's real work is
+     GROUPING: blockers cool and desaturated, the two
+     encounters at opposite poles, and the single card that
+     means progress owning the only warm gold.               */
+
+  /* Clear Path — torchlight. The only warm gold in the deck. */
+  --md-cat-path-500:  #E3A445;
+  --md-cat-path-300:  #F2CB8A;
+  --md-cat-path-700:  #8A5E1E;
+  --md-cat-path-glow: rgba(227,164,69,0.40);
+
+  /* Dead End — stone. The only ACHROMATIC ramp: a permanent
+     nothing should have no hue at all, which also makes it
+     the one category untouched by colour-vision deficiency.  */
+  --md-cat-dead-500:  #7C7B78;
+  --md-cat-dead-300:  #B2B1AD;
+  --md-cat-dead-700:  #45443F;
+  --md-cat-dead-glow: rgba(124,123,120,0.28);
+
+  /* Obstacle — verdigris. A corroded mechanism in the way.   */
+  --md-cat-obst-500:  #43917B;
+  --md-cat-obst-300:  #7FC0AC;
+  --md-cat-obst-700:  #235347;
+  --md-cat-obst-glow: rgba(67,145,123,0.38);
+
+  /* Trap — acid. Hazard yellow-green, pushed off Clear Path's
+     gold far enough to separate.                             */
+  --md-cat-trap-500:  #97A63A;
+  --md-cat-trap-300:  #C7D477;
+  --md-cat-trap-700:  #4E5718;
+  --md-cat-trap-glow: rgba(151,166,58,0.36);
+
+  /* Monster — blood. The only true red in the system.        */
+  --md-cat-mons-500:  #A93343;
+  --md-cat-mons-300:  #D9707C;
+  --md-cat-mons-700:  #66161F;
+  --md-cat-mons-glow: rgba(169,51,67,0.42);
+
+  /* Wanderer — steel blue. Alignment unknown. Cool, but NOT
+     inert: that reading belongs to Dead End.                 */
+  --md-cat-wand-500:  #6B8CA6;
+  --md-cat-wand-300:  #A6C0D4;
+  --md-cat-wand-700:  #34495C;
+  --md-cat-wand-glow: rgba(107,140,166,0.34);
+
+  /* Item — orchid. Held clear of Wanderer's blue.            */
+  --md-cat-item-500:  #8B4F9C;
+  --md-cat-item-300:  #C08FCE;
+  --md-cat-item-700:  #4E2359;
+  --md-cat-item-glow: rgba(139,79,156,0.38);
+
+  /* ---------- 3. TYPE -------------------------------------
+     Display: engraved Roman capital — carved stone, not
+     blackletter. Body: a serif that survives 7pt print.      */
+
+  --md-font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --md-font-body:    "Spectral", "Iowan Old Style", Georgia, serif;
+  --md-font-ui:      "Inter", system-ui, sans-serif;
+
+  --md-type-card-title:   calc(6.2 * var(--md-u));
+  --md-type-card-eyebrow: calc(2.4 * var(--md-u));
+  --md-type-card-rule:    calc(2.75 * var(--md-u));
+  --md-type-card-body:    calc(3.1 * var(--md-u));
+
+  --md-track-eyebrow: 0.34em;
+  --md-track-title:   0.06em;
+  --md-leading-tight: 1.12;
+  --md-leading-body:  1.38;
+
+  /* ---------- 4. CARD GEOMETRY ---------------------------- */
+
+  --md-card-trim-w:  calc(63 * var(--md-u));
+  --md-card-trim-h:  calc(88 * var(--md-u));
+  --md-card-bleed:   calc(3 * var(--md-u));
+  --md-card-bleed-w: calc(69 * var(--md-u));
+  --md-card-bleed-h: calc(94 * var(--md-u));
+  --md-card-safe:    calc(4 * var(--md-u));
+  --md-card-radius:  calc(3 * var(--md-u));
+
+  --md-frame-inset:   calc(4.5 * var(--md-u));
+  --md-frame-inset-b: calc(7.5 * var(--md-u));
+  --md-frame-hair:    calc(0.35 * var(--md-u));
+  --md-frame-rule:    calc(0.7 * var(--md-u));
+
+  /* ---------- 5. SPACING ---------------------------------- */
+
+  --md-sp-1: calc(1 * var(--md-u));
+  --md-sp-2: calc(2 * var(--md-u));
+  --md-sp-3: calc(3 * var(--md-u));
+  --md-sp-4: calc(4 * var(--md-u));
+  --md-sp-6: calc(6 * var(--md-u));
+  --md-sp-8: calc(8 * var(--md-u));
+
+  /* ---------- 6. DECK COMPOSITION ------------------------- */
+
+  --md-deck-total:     28;
+  --md-count-path:      6;
+  --md-count-dead:      4;
+  --md-count-obstacle:  4;
+  --md-count-trap:      3;
+  --md-count-wanderer:  4;
+  --md-count-item:      4;
+  --md-count-monster:   3;
+  --md-river-width:     3;
+  --md-maze-dc:        13;
+}
+
+/* Size steps. Each just re-scales --md-u, so every dimension,
+   type size and hairline moves together and stays in ratio.
+
+   The descendant selector matters: every card takes its own
+   optional `size` prop, which lands as data-size on the card
+   itself. Scoping these to .md-root alone made that prop a
+   silent no-op - the card rendered, at the wrong scale, with
+   nothing to indicate it had ignored you. */
+.md-root[data-size="sm"], .md-root [data-size="sm"] { --md-u: 0.62mm; }
+.md-root[data-size="md"], .md-root [data-size="md"] { --md-u: 1mm; }
+.md-root[data-size="lg"], .md-root [data-size="lg"] { --md-u: 1.35mm; }
+
+/* Category scoping: set one class, get the whole palette.
+   Components only ever read --md-cat-500/300/700/glow.       */
+
+.md-cat-path { --md-cat-500:var(--md-cat-path-500); --md-cat-300:var(--md-cat-path-300);
+               --md-cat-700:var(--md-cat-path-700); --md-cat-glow:var(--md-cat-path-glow); }
+.md-cat-dead { --md-cat-500:var(--md-cat-dead-500); --md-cat-300:var(--md-cat-dead-300);
+               --md-cat-700:var(--md-cat-dead-700); --md-cat-glow:var(--md-cat-dead-glow); }
+.md-cat-obst { --md-cat-500:var(--md-cat-obst-500); --md-cat-300:var(--md-cat-obst-300);
+               --md-cat-700:var(--md-cat-obst-700); --md-cat-glow:var(--md-cat-obst-glow); }
+.md-cat-trap { --md-cat-500:var(--md-cat-trap-500); --md-cat-300:var(--md-cat-trap-300);
+               --md-cat-700:var(--md-cat-trap-700); --md-cat-glow:var(--md-cat-trap-glow); }
+.md-cat-mons { --md-cat-500:var(--md-cat-mons-500); --md-cat-300:var(--md-cat-mons-300);
+               --md-cat-700:var(--md-cat-mons-700); --md-cat-glow:var(--md-cat-mons-glow); }
+.md-cat-wand { --md-cat-500:var(--md-cat-wand-500); --md-cat-300:var(--md-cat-wand-300);
+               --md-cat-700:var(--md-cat-wand-700); --md-cat-glow:var(--md-cat-wand-glow); }
+.md-cat-item { --md-cat-500:var(--md-cat-item-500); --md-cat-300:var(--md-cat-item-300);
+               --md-cat-700:var(--md-cat-item-700); --md-cat-glow:var(--md-cat-item-glow); }

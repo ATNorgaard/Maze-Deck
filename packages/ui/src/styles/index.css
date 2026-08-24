@@ -1,0 +1,12 @@
+/* ============================================================
+   MAZE DECK — stylesheet entry.
+
+   Rendered designs receive only this file's transitive @import
+   closure, so every real style must be reachable from here.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap");
+
+@import "./tokens.css";
+@import "./cards.css";
+@import "./play.css";

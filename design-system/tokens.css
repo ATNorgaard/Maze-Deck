@@ -1,0 +1,196 @@
+/* ============================================================
+   DESIGN TOKENS  ·  Maze Deck  ·  v1.0
+   Single source of truth. Nothing downstream hardcodes a value.
+   Print target: CMYK-safe, 63x88mm trim, 3mm bleed.
+   ============================================================ */
+
+:root {
+
+  /* ---------- 1. GROUND ------------------------------------
+     The deck lives in the dark. Ground is near-black with a
+     cold cast so warm category light reads as a light SOURCE,
+     not as a flat fill. Never use pure #000 (dead in print).  */
+
+  --ink-900: #0A0F12;   /* deepest — card bleed field         */
+  --ink-800: #10181C;   /* card ground                        */
+  --ink-700: #182429;   /* raised panels                      */
+  --ink-600: #22323A;   /* engraved linework                  */
+  --ink-500: #33474F;   /* hairlines, 20% marks               */
+
+  --parchment-100: #F2EBDA;  /* brightest text on ink         */
+  --parchment-200: #E4D9BF;  /* body text on ink              */
+  --parchment-300: #C9BC9C;  /* secondary / captions          */
+  --parchment-400: #9B8F74;  /* disabled, rule lines          */
+
+  /* ---------- 2. CATEGORY LIGHT ----------------------------
+     One hue per card category. Chosen for separation under
+     dim table light AND for CMYK reachability (no neons).
+     NEVER the sole carrier of meaning -- see --shape-* below.
+
+     At SEVEN categories, hue can no longer do this job alone;
+     six chromatic hues on a dark ground are close enough that
+     the glyph and the shape code carry the identification and
+     the hue only confirms it. The palette's real work here is
+     grouping: the three blockers sit cool and desaturated, the
+     two encounters sit at opposite warm/cool poles, and the
+     one card that means progress owns the only warm gold.     */
+
+  /* -- PROGRESS -- */
+  /* Clear Path -- torchlight. The only warm gold in the deck.  */
+  --cat-path-500:  #E3A445;
+  --cat-path-300:  #F2CB8A;
+  --cat-path-700:  #8A5E1E;
+  --cat-path-glow: rgba(227,164,69,0.40);
+
+  /* -- BLOCKERS: three ways to be stopped -- */
+  /* Dead End -- stone. The only ACHROMATIC ramp in the system:
+     a permanent nothing should have no hue at all, which also
+     makes it the one category that cannot be confused with any
+     other under colour-vision deficiency.                      */
+  --cat-dead-500:  #7C7B78;
+  --cat-dead-300:  #B2B1AD;
+  --cat-dead-700:  #45443F;
+  --cat-dead-glow: rgba(124,123,120,0.28);
+
+  /* Trap -- acid. Hazard yellow-green, pushed off Clear Path's
+     gold far enough to separate; springs once, then is gone.   */
+  --cat-trap-500:  #97A63A;
+  --cat-trap-300:  #C7D477;
+  --cat-trap-700:  #4E5718;
+  --cat-trap-glow: rgba(151,166,58,0.36);
+
+  /* Obstacle -- verdigris. A corroded mechanism in the way:
+     blocking, but a thing you can work on.                     */
+  --cat-obst-500:  #43917B;
+  --cat-obst-300:  #7FC0AC;
+  --cat-obst-700:  #235347;
+  --cat-obst-glow: rgba(67,145,123,0.38);
+
+  /* -- ENCOUNTERS -- */
+  /* Monster -- blood. The only true red in the system.         */
+  --cat-mons-500:  #A93343;
+  --cat-mons-300:  #D9707C;
+  --cat-mons-700:  #66161F;
+  --cat-mons-glow: rgba(169,51,67,0.42);
+
+  /* Wanderer -- steel blue. Alignment unknown. Cool, but NOT
+     inert: that reading belongs to Dead End.                   */
+  --cat-wand-500:  #6B8CA6;
+  --cat-wand-300:  #A6C0D4;
+  --cat-wand-700:  #34495C;
+  --cat-wand-glow: rgba(107,140,166,0.34);
+
+  /* -- REWARD -- */
+  /* Item -- orchid. Held clear of Wanderer's blue.             */
+  --cat-item-500:  #8B4F9C;
+  --cat-item-300:  #C08FCE;
+  --cat-item-700:  #4E2359;
+  --cat-item-glow: rgba(139,79,156,0.38);
+
+  /* ---------- 3. SHAPE CODING ------------------------------
+     Redundant encoding for colour-vision deficiency and for
+     face-up scanning across a table. With seven categories
+     this is the PRIMARY identification channel, not a backup.
+
+     One hard constraint governs the set: the mark is printed
+     top-left AND bottom-right so the card reads either way up,
+     which means no two categories may be 180-degree rotations
+     of each other. That rules out pairing triangle-up with
+     triangle-down, and rules out square with diamond (a 45deg
+     rotation is not reliable at 3mm either way).
+
+     Bar-vertical and bar-horizontal ARE safe: a 180deg turn
+     leaves each one's orientation unchanged, and a 2:1 aspect
+     flip is one of the most salient cues at this size.         */
+
+  --shape-path: "circle";      /* (o)  open, continuous     */
+  --shape-dead: "square";      /* [ ]  walled, permanent    */
+  --shape-trap: "triangle";    /* /!\  hazard               */
+  --shape-obst: "bar-h";       /* ---  a barrier across     */
+  --shape-mons: "eyes";        /* ..   two dots; the glyph  */
+  --shape-wand: "bar-v";       /*  |   a standing figure    */
+  --shape-item: "cross";       /*  +   a thing to take      */
+
+  /* ---------- 4. TYPE --------------------------------------
+     Display: engraved Roman capital — carved stone, not
+     blackletter. Body: a serif that survives 7pt print.       */
+
+  --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --font-body:    "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-ui:      "Inter", system-ui, sans-serif;
+
+  --type-card-title:   6.2mm;   /* category name on card face */
+  --type-card-eyebrow: 2.4mm;   /* letterspaced kicker        */
+  --type-card-rule:    2.75mm;  /* mechanic line, max 3 lines */
+  --type-card-body:    3.1mm;   /* action card effect text    */
+
+  --track-eyebrow: 0.34em;      /* wide tracking on caps      */
+  --track-title:   0.06em;
+  --leading-tight: 1.12;
+  --leading-body:  1.38;
+
+  /* ---------- 5. CARD GEOMETRY (mm — print is the truth) ---- */
+
+  --card-trim-w:  63mm;
+  --card-trim-h:  88mm;
+  --card-bleed:    3mm;         /* per edge                   */
+  --card-bleed-w: 69mm;         /* trim + 2x bleed            */
+  --card-bleed-h: 94mm;
+  --card-safe:     4mm;         /* inset from trim            */
+  --card-radius:   3mm;         /* die-cut corner             */
+
+  --frame-inset:   4.5mm;       /* engraved border from trim  */
+  --frame-inset-b: 7.5mm;       /* deeper: leaves a cartouche
+                                   gap for the copies line    */
+  --frame-hair:  0.35mm;        /* thinnest printable rule    */
+  --frame-rule:  0.7mm;
+
+  /* ---------- 6. SPACING ----------------------------------- */
+
+  --sp-1: 1mm;  --sp-2: 2mm;  --sp-3: 3mm;
+  --sp-4: 4mm;  --sp-6: 6mm;  --sp-8: 8mm;  --sp-12: 12mm;
+
+  /* ---------- 7. DECK COMPOSITION --------------------------
+     Mechanical constants, exposed as tokens so card copy and
+     the reference sheet cannot drift apart. deck.html reads
+     these at runtime -- this is the only place to edit them.
+
+     Densities at 28 cards:
+       progress  Clear Path      6   21%
+       blockers  Dead End 4 + Trap 3 + Obstacle 4   = 11   39%
+       neutral   Wanderer 4 + Item 4                =  8   29%
+       threat    Monster         3   11%
+
+     Threat sits below the 13.3% of the original 15-card deck.
+     Set --count-monster: 4 (a 29-card deck, 13.8%) to restore
+     that pacing exactly.                                       */
+
+  --deck-total:      28;
+  --count-path:       6;   /* 5 collected = escape            */
+  --count-dead:       4;
+  --count-trap:       3;
+  --count-obstacle:   4;
+  --count-wanderer:   4;
+  --count-item:       4;
+  --count-monster:    3;   /* 2 revealed = confrontation      */
+  --river-width:      3;   /* cards face-down in the river    */
+  --maze-dc:         13;
+}
+
+/* Category scoping: set one class, get the whole palette.
+   Components below only ever read --cat-500/300/700/glow.     */
+
+.cat-path { --cat-500:var(--cat-path-500); --cat-300:var(--cat-path-300);
+            --cat-700:var(--cat-path-700); --cat-glow:var(--cat-path-glow); }
+.cat-dead { --cat-500:var(--cat-dead-500); --cat-300:var(--cat-dead-300);
+            --cat-700:var(--cat-dead-700); --cat-glow:var(--cat-dead-glow); }
+.cat-trap { --cat-500:var(--cat-trap-500); --cat-300:var(--cat-trap-300);
+            --cat-700:var(--cat-trap-700); --cat-glow:var(--cat-trap-glow); }
+.cat-obst { --cat-500:var(--cat-obst-500); --cat-300:var(--cat-obst-300);
+            --cat-700:var(--cat-obst-700); --cat-glow:var(--cat-obst-glow); }
+.cat-mons { --cat-500:var(--cat-mons-500); --cat-300:var(--cat-mons-300);
+            --cat-700:var(--cat-mons-700); --cat-glow:var(--cat-mons-glow); }
+.cat-wand { --cat-500:var(--cat-wand-500); --cat-300:var(--cat-wand-300);
+            --cat-700:var(--cat-wand-700); --cat-glow:var(--cat-wand-glow); }
+.cat-item { --cat-500:var(--cat-item-500); --cat-300:var(--cat-item-300);
+            --cat-700:var(--cat-item-700); --cat-glow:var(--cat-item-glow); }

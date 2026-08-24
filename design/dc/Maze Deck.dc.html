@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_ds/maze-deck-453553a0-5ce8-409e-9767-f0c4eb86b1f7/_ds_bundle.css">
+<link rel="stylesheet" href="_ds/maze-deck-453553a0-5ce8-409e-9767-f0c4eb86b1f7/styles.css">
+<script src="_ds/maze-deck-453553a0-5ce8-409e-9767-f0c4eb86b1f7/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#0A0F12;-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:#E3A445;text-decoration:none}a:hover{color:#F2CB8A}
+input,button,select,textarea{font:inherit}
+input::placeholder{color:#45443F}
+.md-root{--md-card-bleed:calc(1.3 * var(--md-u));--md-card-bleed-w:calc(65.6 * var(--md-u));--md-card-bleed-h:calc(90.6 * var(--md-u))}
+.md-root .md-card{border-radius:calc(4.2 * var(--md-u))}
+@keyframes mdRoll{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+@keyframes mdGlow{0%,100%{box-shadow:0 0 0 1px #8A5E1E}50%{box-shadow:0 0 18px 2px rgba(227,164,69,.35)}}
+</style>
+</helmet>
+<x-import component-from-global-scope="MazeDeckUI.MazeDeckProvider" size="md" hint-size="100%,100vh">
+
+<sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+<div style="min-height:100vh;background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body)">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,5vw,56px);border-bottom:1px solid #182429">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:20px;height:24px;color:#8A5E1E"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="seal" hint-size="20px,24px"></x-import></div>
+      <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#E4D9BF">The River</span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onClick="{{ goLogin }}" style="padding:9px 16px;background:transparent;color:#C9BC9C;border:1px solid #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="background:#10181C;border-color:#33474F;color:#F2EBDA">Log in</button>
+      <button onClick="{{ goSignup }}" style="padding:9px 16px;background:#E3A445;color:#0A0F12;border:1px solid #E3A445;border-radius:2px;font-family:var(--md-font-ui);font-size:10.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A;border-color:#F2CB8A">Sign up</button>
+    </div>
+  </div>
+
+  <div style="min-height:78vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(48px,10vh,110px) 24px;gap:26px">
+    <div style="width:clamp(120px,22vw,190px);aspect-ratio:63/88;color:#E3A445;filter:drop-shadow(0 0 40px rgba(227,164,69,.22))"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="seal" title="The door" hint-size="150px,210px"></x-import></div>
+    <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(38px,8vw,86px);font-weight:700;letter-spacing:.1em;line-height:1;color:#F2EBDA">THE RIVER</h1>
+    <p style="margin:0;max-width:46ch;font-size:clamp(15px,2vw,18px);line-height:1.55;color:#C9BC9C;text-wrap:pretty">A travel-time sidecar for your campaign. Three paths at a time, twenty-eight cards, five checks your characters already have. Run the dungeon, the tower, the forest — then get back to the table.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding-top:8px">
+      <button onClick="{{ goCreate }}" style="display:inline-flex;align-items:center;gap:10px;padding:15px 28px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Open a maze</button>
+      <button onClick="{{ goJoin }}" style="display:inline-flex;align-items:center;gap:10px;padding:15px 28px;background:transparent;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#10181C;border-color:#9B8F74">I have a code</button>
+    </div>
+    <div style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#45443F;padding-top:14px">One GM · up to six seats · no install</div>
+  </div>
+
+  <div style="max-width:1180px;margin:0 auto;padding:0 clamp(18px,5vw,56px) 100px;display:flex;flex-direction:column;gap:66px">
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #182429;padding-bottom:12px">
+        <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.2em;color:#8A5E1E">§1</span>
+        <h2 style="margin:0;font-family:var(--md-font-display);font-size:clamp(20px,3vw,28px);font-weight:600;letter-spacing:.08em;color:#F2EBDA">The river</h2>
+      </div>
+      <div style="display:grid;gap:14px 40px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+        <p style="margin:0;display:flex;gap:14px;line-height:1.6;color:#C9BC9C"><span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.1em;color:#9B8F74;padding-top:4px;flex:none">1.1</span><span>The river is always three cards wide. An empty slot holds its width and refills from the deck at the end of the turn; the row never closes up.</span></p>
+        <p style="margin:0;display:flex;gap:14px;line-height:1.6;color:#C9BC9C"><span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.1em;color:#9B8F74;padding-top:4px;flex:none">1.2</span><span>Cards enter face-down. A player commits to a path before knowing what is in it — acting on incomplete information is the whole design.</span></p>
+        <p style="margin:0;display:flex;gap:14px;line-height:1.6;color:#C9BC9C"><span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.1em;color:#9B8F74;padding-top:4px;flex:none">1.3</span><span>Dead End and Obstacle persist in their slot until an action clears them. Three blockers at once: clear all three and a Monster enters the river.</span></p>
+        <p style="margin:0;display:flex;gap:14px;line-height:1.6;color:#C9BC9C"><span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.1em;color:#9B8F74;padding-top:4px;flex:none">1.4</span><span>Collect five Clear Paths and the party is through. Two Monsters revealed and the journey ends in a confrontation instead — which is where you take over.</span></p>
+      </div>
+      <div style="display:flex;justify-content:center;padding:20px 0 4px;overflow:auto">
+        <x-import component-from-global-scope="MazeDeckUI.River" slots="{{ demoRiver }}" hint-size="470px,270px"></x-import>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #182429;padding-bottom:12px">
+        <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.2em;color:#8A5E1E">§2</span>
+        <h2 style="margin:0;font-family:var(--md-font-display);font-size:clamp(20px,3vw,28px);font-weight:600;letter-spacing:.08em;color:#F2EBDA">The turn</h2>
+      </div>
+      <div style="display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));border:1px solid #182429;border-radius:3px;overflow:hidden">
+        <sc-for list="{{ turnSteps }}" as="s" hint-placeholder-count="4">
+          <div style="padding:22px;background:#10181C;border-right:1px solid #182429;display:flex;flex-direction:column;gap:9px">
+            <span style="font-family:var(--md-font-display);font-size:26px;font-weight:700;color:#22323A;line-height:1">{{ s.n }}</span>
+            <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#E3A445">{{ s.title }}</span>
+            <span style="font-size:13.5px;line-height:1.55;color:#9B8F74">{{ s.body }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #182429;padding-bottom:12px">
+        <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.2em;color:#8A5E1E">§3</span>
+        <h2 style="margin:0;font-family:var(--md-font-display);font-size:clamp(20px,3vw,28px);font-weight:600;letter-spacing:.08em;color:#F2EBDA">Seven paths, twenty-eight possibilities</h2>
+      </div>
+      <p style="margin:0;max-width:70ch;line-height:1.6;color:#9B8F74">Every card is the same arch; only what stands in it changes. The glyph and the corner shape identify the category — colour only confirms it. Hover a card to bring it to the front.</p>
+      <div style="width:100%;padding:118px 0 122px;zoom:.68">
+        <div style="display:flex;align-items:flex-end;width:max-content;margin:0 auto">
+        <sc-for list="{{ fanCats }}" as="c" hint-placeholder-count="7">
+          <div style="flex:none;transform-origin:50% 118%;transform:{{ c.tf }};margin-left:{{ c.ml }};z-index:{{ c.z }};--md-fan-glow:{{ c.glow }}" style-hover="z-index:40">
+            <div style="transition:transform .24s cubic-bezier(.2,.7,.3,1),filter .24s ease" style-hover="transform:translateY(-46px) scale(1.07);filter:drop-shadow(0 26px 30px rgba(0,0,0,.92)) drop-shadow(0 0 62px var(--md-fan-glow))">
+              <sc-if value="{{ c.key }}"><x-import component-from-global-scope="MazeDeckUI.DeckCard" category="{{ c.key }}" hint-size="260px,354px"></x-import></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #182429;padding-bottom:12px">
+        <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.2em;color:#8A5E1E">§4</span>
+        <h2 style="margin:0;font-family:var(--md-font-display);font-size:clamp(20px,3vw,28px);font-weight:600;letter-spacing:.08em;color:#F2EBDA">Five actions, keyed to the sheet you already have</h2>
+      </div>
+      <p style="margin:0;max-width:70ch;line-height:1.6;color:#9B8F74">One action per player per turn, taken before any card is turned. Each is a check against the Maze DC using an ability modifier copied straight off the character sheet. At the end of a round a d6 locks one action for the round to come.</p>
+      <div style="width:100%;padding:118px 0 122px;zoom:.68">
+        <div style="display:flex;align-items:flex-end;width:max-content;margin:0 auto">
+        <sc-for list="{{ fanAbils }}" as="a" hint-placeholder-count="5">
+          <div style="flex:none;transform-origin:50% 118%;transform:{{ a.tf }};margin-left:{{ a.ml }};z-index:{{ a.z }};--md-fan-glow:{{ a.glow }}" style-hover="z-index:40">
+            <div style="transition:transform .24s cubic-bezier(.2,.7,.3,1),filter .24s ease" style-hover="transform:translateY(-46px) scale(1.07);filter:drop-shadow(0 26px 30px rgba(0,0,0,.92)) drop-shadow(0 0 62px var(--md-fan-glow))">
+              <sc-if value="{{ a.key }}"><x-import component-from-global-scope="MazeDeckUI.AbilityCard" ability="{{ a.key }}" dc="{{ dc }}" hint-size="260px,354px"></x-import></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;padding:34px;background:#10181C;border:1px solid #182429;border-radius:3px">
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:280px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#9B8F74">Next session</span>
+        <span style="font-family:var(--md-font-display);font-size:clamp(19px,3vw,25px);font-weight:600;letter-spacing:.05em;color:#F2EBDA">Give the journey some teeth.</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <button onClick="{{ goCreate }}" style="padding:14px 26px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Open a maze</button>
+        <button onClick="{{ goChar }}" style="padding:14px 26px;background:transparent;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-display);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#182429;border-color:#9B8F74">Build a character</button>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAuth }}">
+<div style="min-height:100vh;display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body)">
+  <div style="display:flex;flex-direction:column;justify-content:center;gap:26px;padding:clamp(32px,7vw,80px)">
+    <button onClick="{{ goLanding }}" style="align-self:flex-start;display:flex;align-items:center;gap:10px;padding:0;background:none;border:none;color:#9B8F74;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;cursor:pointer" style-hover="color:#E3A445">← The River</button>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#8A5E1E">{{ authKicker }}</span>
+      <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(28px,4.4vw,42px);font-weight:600;letter-spacing:.06em;color:#F2EBDA">{{ authTitle }}</h1>
+      <p style="margin:0;max-width:42ch;line-height:1.6;color:#9B8F74">{{ authBlurb }}</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:420px">
+      <sc-if value="{{ isSignup }}">
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Display name</span>
+          <input value="{{ auth.name }}" onChange="{{ onAuthName }}" placeholder="Table name, not character name" style="width:100%;padding:13px 14px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:15px" style-focus="border-color:#E3A445;outline:none">
+        </label>
+      </sc-if>
+      <label style="display:flex;flex-direction:column;gap:7px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Email</span>
+        <input value="{{ auth.email }}" onChange="{{ onAuthEmail }}" placeholder="you@table.net" style="width:100%;padding:13px 14px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:15px" style-focus="border-color:#E3A445;outline:none">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:7px">
+        <span style="display:flex;justify-content:space-between;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Password</span>
+        <input type="password" value="{{ auth.pw }}" onChange="{{ onAuthPw }}" placeholder="••••••••" style="width:100%;padding:13px 14px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:15px" style-focus="border-color:#E3A445;outline:none">
+      </label>
+      <sc-if value="{{ isSignup }}">
+        <p style="margin:0;font-size:12.5px;line-height:1.5;color:#45443F">Eight characters minimum. Your account only holds your roster and your runs.</p>
+      </sc-if>
+      <button onClick="{{ submitAuth }}" style="margin-top:6px;padding:15px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">{{ authCta }}</button>
+      <div style="display:flex;align-items:center;gap:14px;padding:6px 0">
+        <span style="flex:1;height:1px;background:#182429"></span>
+        <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:#45443F">or</span>
+        <span style="flex:1;height:1px;background:#182429"></span>
+      </div>
+      <button onClick="{{ submitAuth }}" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:13px;background:#10181C;color:#E4D9BF;border:1px solid #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:12.5px;letter-spacing:.04em;cursor:pointer" style-hover="border-color:#33474F;background:#182429">
+        <span style="width:16px;height:16px;border-radius:50%;background:#E4D9BF;flex:none"></span>Continue with Google
+      </button>
+      <button onClick="{{ playGuest }}" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:transparent;color:#9B8F74;border:1px dashed #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:12.5px;letter-spacing:.04em;cursor:pointer" style-hover="color:#E4D9BF;border-color:#33474F">Play as guest — no account, no saved roster</button>
+      <p style="margin:8px 0 0;font-size:13px;color:#9B8F74">{{ authSwitchLabel }} <a href="#" onClick="{{ toggleAuth }}" style="color:#E3A445;border-bottom:1px solid #8A5E1E">{{ authSwitchCta }}</a></p>
+    </div>
+  </div>
+  <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:60px 32px;background:#10181C;border-left:1px solid #182429;overflow:hidden">
+    <div style="display:flex;gap:0;zoom:.62">
+      <div style="transform:rotate(-9deg) translateY(10px)"><x-import component-from-global-scope="MazeDeckUI.CardBack" size="sm" hint-size="150px,225px"></x-import></div>
+      <div style="transform:translateY(-6px);margin:0 -30px;z-index:1"><x-import component-from-global-scope="MazeDeckUI.DeckCard" category="clear-path" size="sm" hint-size="150px,225px"></x-import></div>
+      <div style="transform:rotate(9deg) translateY(10px)"><x-import component-from-global-scope="MazeDeckUI.CardBack" size="sm" hint-size="150px,225px"></x-import></div>
+    </div>
+    <p style="margin:0;max-width:34ch;text-align:center;font-family:var(--md-font-body);font-style:italic;font-size:15.5px;line-height:1.6;color:#9B8F74">“The party sees three doors. Nobody sees what is behind them. That is the entire game.”</p>
+    <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#45443F">Maze DC {{ dc }} · 28 cards · 3 wide</span>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isChar }}">
+<div style="min-height:100vh;background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body)">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(18px,5vw,44px);border-bottom:1px solid #182429">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ goLanding }}" style="padding:0;background:none;border:none;color:#9B8F74;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;cursor:pointer" style-hover="color:#E3A445">←</button>
+      <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#9B8F74">Roster · new character</span>
+    </div>
+    <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#45443F">Copy the modifiers off your sheet</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:clamp(24px,4vw,44px) clamp(18px,5vw,44px) 100px;display:grid;gap:clamp(24px,3vw,44px);grid-template-columns:repeat(auto-fit,minmax(330px,1fr))">
+    <div style="display:flex;flex-direction:column;gap:30px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(26px,4vw,36px);font-weight:600;letter-spacing:.06em">Bring your character in</h1>
+        <p style="margin:0;max-width:48ch;line-height:1.6;color:#9B8F74">The maze only ever asks for five modifiers — STR, DEX, INT, WIS and CHA. Constitution is carried for completeness; nothing in the river checks it.</p>
+      </div>
+
+      <label style="display:flex;flex-direction:column;gap:7px;max-width:460px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Character name</span>
+        <input value="{{ char.name }}" onChange="{{ onCharName }}" placeholder="Brakka Ironmoor" style="width:100%;padding:13px 14px;background:#10181C;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-display);font-size:19px;letter-spacing:.05em" style-focus="border-color:#E3A445;outline:none">
+      </label>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Class — sets a starting spread you can edit</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ archetypes }}" as="a" hint-placeholder-count="8">
+            <button onClick="{{ a.pick }}" style="padding:10px 15px;background:{{ a.bg }};color:{{ a.fg }};border:1px solid {{ a.bd }};border-radius:2px;font-family:var(--md-font-ui);font-size:11.5px;letter-spacing:.1em;cursor:pointer" style-hover="border-color:#9B8F74">{{ a.name }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Ability modifiers</span>
+          <span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.1em;color:{{ budgetColor }}">{{ budgetLabel }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;border:1px solid #182429;border-radius:3px;overflow:hidden">
+          <sc-for list="{{ statRows }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:{{ s.bg }};border-bottom:1px solid #10181C">
+              <span style="width:44px;flex:none;font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.16em;color:{{ s.labelColor }}">{{ s.abbr }}</span>
+              <span style="flex:1;min-width:0;font-size:13px;color:#9B8F74">{{ s.used }}</span>
+              <div style="display:flex;align-items:center;gap:2px;flex:none">
+                <button onClick="{{ s.dec }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;line-height:1;cursor:pointer" style-hover="border-color:#9B8F74;color:#F2EBDA">–</button>
+                <span style="width:52px;text-align:center;font-family:var(--md-font-display);font-size:19px;font-weight:700;color:{{ s.valColor }}">{{ s.display }}</span>
+                <button onClick="{{ s.inc }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;line-height:1;cursor:pointer" style-hover="border-color:#9B8F74;color:#F2EBDA">+</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin:0;font-size:12.5px;line-height:1.5;color:#45443F">Budget is +9 across the six, each between −1 and +5. Go over and the seat is flagged for the GM rather than blocked — house rules win.</p>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <button onClick="{{ saveChar }}" style="padding:15px 28px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Save to roster</button>
+        <button onClick="{{ goJoin }}" style="padding:15px 28px;background:transparent;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#182429;border-color:#9B8F74">Save &amp; join a maze</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:16px;padding:24px;background:#10181C;border:1px solid #182429;border-radius:3px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Table read</span>
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#45443F">vs Maze DC {{ dc }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <sc-for list="{{ readRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #182429">
+              <span style="width:22px;height:26px;flex:none;color:{{ r.color }}"><sc-if value="{{ r.key }}"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="{{ r.key }}" hint-size="22px,26px"></x-import></sc-if></span>
+              <span style="flex:1;min-width:0;font-size:14px;color:#E4D9BF">{{ r.name }}</span>
+              <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;color:#45443F;flex:none">{{ r.stat }}</span>
+              <span style="width:44px;text-align:right;font-family:var(--md-font-display);font-size:15px;font-weight:700;color:{{ r.color }};flex:none">{{ r.mod }}</span>
+              <span style="width:82px;text-align:right;font-family:var(--md-font-ui);font-size:11px;color:#9B8F74;flex:none">{{ r.needs }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9B8F74">{{ readSummary }}</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+        <span style="align-self:flex-start;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Their strongest door</span>
+        <x-import component-from-global-scope="MazeDeckUI.AbilityCard" ability="{{ bestAbility }}" dc="{{ dc }}" show-rationale="{{ true }}" hint-size="240px,340px"></x-import>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCreate }}">
+<div style="min-height:100vh;background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body)">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(18px,5vw,44px);border-bottom:1px solid #182429">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ goLanding }}" style="padding:0;background:none;border:none;color:#9B8F74;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;cursor:pointer" style-hover="color:#E3A445">←</button>
+      <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#9B8F74">Game master · new maze</span>
+    </div>
+    <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#45443F">Nothing is shuffled until you open the door</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:clamp(24px,4vw,44px) clamp(18px,5vw,44px) 100px;display:grid;gap:clamp(24px,3vw,44px);grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div style="display:flex;flex-direction:column;gap:30px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(26px,4vw,36px);font-weight:600;letter-spacing:.06em">Open a maze</h1>
+        <p style="margin:0;max-width:50ch;line-height:1.6;color:#9B8F74">A maze covers one stretch of travel: a dungeon crawl, a tower climb, four days of thick forest. Reskin it so the cards read in your world, then hand out the code.</p>
+      </div>
+
+      <label style="display:flex;flex-direction:column;gap:7px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Maze name</span>
+        <input value="{{ run.name }}" onChange="{{ onRunName }}" placeholder="Ascent of the Ashen Tower" style="width:100%;padding:13px 14px;background:#10181C;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-display);font-size:19px;letter-spacing:.05em" style-focus="border-color:#E3A445;outline:none">
+      </label>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Biome — reskins the card copy at the table</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ biomes }}" as="b" hint-placeholder-count="6">
+            <button onClick="{{ b.pick }}" style="padding:10px 15px;background:{{ b.bg }};color:{{ b.fg }};border:1px solid {{ b.bd }};border-radius:2px;font-family:var(--md-font-ui);font-size:11.5px;letter-spacing:.1em;cursor:pointer" style-hover="border-color:#9B8F74">{{ b.name }}</button>
+          </sc-for>
+        </div>
+        <div style="padding:14px 16px;background:#10181C;border-left:2px solid #8A5E1E;font-size:13.5px;line-height:1.55;color:#C9BC9C;font-style:italic">{{ biomeFlavour }}</div>
+      </div>
+
+      <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div style="display:flex;flex-direction:column;gap:10px;padding:18px;background:#10181C;border:1px solid #182429;border-radius:3px">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Clear paths to escape</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{ decEscape }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;cursor:pointer" style-hover="border-color:#9B8F74">–</button>
+            <span style="flex:1;text-align:center;font-family:var(--md-font-display);font-size:26px;font-weight:700;color:#E3A445">{{ run.escape }}</span>
+            <button onClick="{{ incEscape }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;cursor:pointer" style-hover="border-color:#9B8F74">+</button>
+          </div>
+          <span style="font-size:12.5px;color:#45443F">{{ escapeNote }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:18px;background:#10181C;border:1px solid #182429;border-radius:3px">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Maze DC</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{ decDc }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;cursor:pointer" style-hover="border-color:#9B8F74">–</button>
+            <span style="flex:1;text-align:center;font-family:var(--md-font-display);font-size:26px;font-weight:700;color:#F2EBDA">{{ dc }}</span>
+            <button onClick="{{ incDc }}" style="width:32px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-size:16px;cursor:pointer" style-hover="border-color:#9B8F74">+</button>
+          </div>
+          <span style="font-size:12.5px;color:#45443F">{{ dcNote }}</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Seats — {{ seatCount }} of 6</span>
+          <button onClick="{{ addSeat }}" style="padding:7px 13px;background:transparent;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="border-color:#E3A445;color:#E3A445">+ Seat</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ seatRows }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:26px;flex:none;text-align:center;font-family:var(--md-font-display);font-size:14px;font-weight:700;color:#45443F">{{ s.order }}</span>
+              <input value="{{ s.name }}" onChange="{{ s.onName }}" placeholder="Empty seat" style="flex:1;min-width:0;padding:11px 13px;background:#10181C;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:14.5px" style-focus="border-color:#E3A445;outline:none">
+              <span style="width:120px;flex:none;font-family:var(--md-font-ui);font-size:11px;letter-spacing:.06em;color:#9B8F74;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.detail }}</span>
+              <button onClick="{{ s.remove }}" style="width:32px;height:32px;flex:none;background:transparent;border:1px solid #182429;border-radius:2px;color:#45443F;cursor:pointer" style-hover="border-color:#A93343;color:#D9707C">×</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:18px;padding:24px;background:#10181C;border:1px solid #182429;border-radius:3px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Invite</span>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <span style="font-family:var(--md-font-display);font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:.22em;color:#E3A445">{{ code }}</span>
+          <button onClick="{{ copyCode }}" style="padding:9px 14px;background:transparent;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="border-color:#E3A445;color:#E3A445">{{ copyLabel }}</button>
+        </div>
+        <p style="margin:0;font-size:13px;line-height:1.55;color:#9B8F74">Players enter this, pick a character off their roster, and wait. You control every reveal.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 24px; background: #10181C; border: 1px solid #182429; border-radius: 3px; width: 554px; height: 587px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Deck — 28 cards, unchanged</span>
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <sc-for list="{{ compRows }}" as="r" hint-placeholder-count="7">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #182429; width: 498px; height: 64px">
+              <span style="width:20px;height:24px;flex:none;color:{{ r.color }}"><sc-if value="{{ r.key }}"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="{{ r.key }}" hint-size="20px,24px"></x-import></sc-if></span>
+              <span style="flex:1;min-width:0;font-size:13.5px;color:#E4D9BF">{{ r.name }}</span>
+              <span style="width:120px;height:4px;flex:none;background:#182429;border-radius:2px;overflow:hidden"><span style="display:block;height:4px;width:{{ r.pct }};background:{{ r.color }}"></span></span>
+              <span style="width:26px;text-align:right;font-family:var(--md-font-display);font-size:14px;font-weight:700;color:#C9BC9C;flex:none">{{ r.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <button onClick="{{ startRun }}" style="padding:18px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:13.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Shuffle &amp; open the door</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isJoin }}">
+<div style="min-height:100vh;background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body);display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(18px,5vw,44px);border-bottom:1px solid #182429">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ goLanding }}" style="padding:0;background:none;border:none;color:#9B8F74;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;cursor:pointer" style-hover="color:#E3A445">←</button>
+      <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#9B8F74">{{ joinKicker }}</span>
+    </div>
+  </div>
+
+  <sc-if value="{{ notJoined }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:64px 24px;text-align:center">
+    <div style="width:74px;aspect-ratio:63/88;color:#33474F"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="seal" hint-size="74px,104px"></x-import></div>
+    <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(24px,4vw,34px);font-weight:600;letter-spacing:.06em">Enter the maze code</h1>
+    <p style="margin:0;max-width:40ch;line-height:1.6;color:#9B8F74">Six characters from your GM. You will pick a character from your roster on the next screen.</p>
+    <input value="{{ joinCode }}" onChange="{{ onJoinCode }}" placeholder="RIVER-000" style="width:min(360px,90vw);padding:18px;background:#10181C;border:1px solid #22323A;border-radius:2px;color:#E3A445;font-family:var(--md-font-display);font-size:26px;font-weight:700;letter-spacing:.22em;text-align:center;text-transform:uppercase" style-focus="border-color:#E3A445;outline:none">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+      <button onClick="{{ doJoin }}" style="padding:15px 28px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Knock</button>
+      <button onClick="{{ prefillCode }}" style="padding:15px 28px;background:transparent;color:#9B8F74;border:1px dashed #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:11.5px;letter-spacing:.1em;cursor:pointer" style-hover="color:#E4D9BF;border-color:#33474F">Use {{ code }}</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ joined }}">
+  <div style="flex:1;max-width:1100px;width:100%;margin:0 auto;padding:clamp(24px,4vw,48px) clamp(18px,5vw,44px) 80px;display:grid;gap:clamp(24px,3vw,40px);grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#8A5E1E">{{ run.biome }} · Maze DC {{ dc }}</span>
+        <h1 style="margin:0;font-family:var(--md-font-display);font-size:clamp(24px,4vw,34px);font-weight:600;letter-spacing:.05em">{{ run.name }}</h1>
+        <p style="margin:0;max-width:46ch;line-height:1.6;color:#9B8F74">{{ biomeFlavour }}</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Initiative — set by the GM</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ lobbyRows }}" as="s" hint-placeholder-count="4">
+            <x-import component-from-global-scope="MazeDeckUI.PlayerSeat" name="{{ s.name }}" order="{{ s.order }}" detail="{{ s.detail }}" active="{{ s.active }}" hint-size="100%,54px"></x-import>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <button onClick="{{ toggleReady }}" style="padding:14px 26px;background:{{ readyBg }};color:{{ readyFg }};border:1px solid {{ readyBd }};border-radius:2px;font-family:var(--md-font-display);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer">{{ readyLabel }}</button>
+        <button onClick="{{ goChar }}" style="padding:14px 22px;background:transparent;color:#9B8F74;border:1px solid #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer" style-hover="color:#E4D9BF;border-color:#33474F">Swap character</button>
+      </div>
+      <p style="margin:0;font-family:var(--md-font-ui);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#45443F">{{ lobbyStatus }}</p>
+      <button onClick="{{ startRun }}" style="align-self:flex-start;padding:15px 28px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">GM: begin the run</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;padding:24px;background:#10181C;border:1px solid #182429;border-radius:3px;align-items:center">
+      <span style="align-self:flex-start;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Your character</span>
+      <div style="width:100%;display:flex;flex-direction:column;gap:1px">
+        <sc-for list="{{ readRows }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #182429">
+            <span style="width:20px;height:24px;flex:none;color:{{ r.color }}"><sc-if value="{{ r.key }}"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="{{ r.key }}" hint-size="20px,24px"></x-import></sc-if></span>
+            <span style="flex:1;min-width:0;font-size:13.5px;color:#E4D9BF">{{ r.name }}</span>
+            <span style="width:44px;text-align:right;font-family:var(--md-font-display);font-size:15px;font-weight:700;color:{{ r.color }};flex:none">{{ r.mod }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;align-self:flex-start;padding-top:6px">
+        <span style="font-family:var(--md-font-display);font-size:20px;font-weight:600;letter-spacing:.04em;color:#F2EBDA">{{ charName }}</span>
+        <span style="font-family:var(--md-font-ui);font-size:11px;letter-spacing:.12em;color:#9B8F74">{{ char.cls }}</span>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSession }}">
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#0A0F12;color:#F2EBDA;font-family:var(--md-font-body)">
+
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:clamp(12px,2.5vw,28px);padding:12px clamp(14px,3vw,28px);background:#10181C;border-bottom:1px solid #182429">
+    <div style="display:flex;align-items:center;gap:11px;flex:none">
+      <div style="width:17px;height:21px;color:#8A5E1E"><x-import component-from-global-scope="MazeDeckUI.ArchGlyph" state="seal" hint-size="17px,21px"></x-import></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-family:var(--md-font-display);font-size:13.5px;font-weight:600;letter-spacing:.06em;color:#F2EBDA;white-space:nowrap">{{ run.name }}</span>
+        <span style="font-family:var(--md-font-ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#45443F">{{ run.biome }} · Round {{ round }} · DC {{ dc }}</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:clamp(10px,2vw,22px);align-items:center;flex:1;min-width:200px">
+      <x-import component-from-global-scope="MazeDeckUI.ScoreTrack" value="{{ progress }}" total="{{ run.escape }}" label="Escape" hint-size="150px,26px"></x-import>
+      <x-import component-from-global-scope="MazeDeckUI.ScoreTrack" value="{{ threats }}" variant="threat" label="Threat" hint-size="110px,26px"></x-import>
+    </div>
+    <div style="display:flex;gap:8px;flex:none">
+      <button onClick="{{ toggleGm }}" style="padding:9px 14px;background:{{ gmBg }};color:{{ gmFg }};border:1px solid {{ gmBd }};border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">GM</button>
+      <button onClick="{{ goLanding }}" style="padding:9px 14px;background:transparent;color:#45443F;border:1px solid #182429;border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer" style-hover="color:#C9BC9C;border-color:#33474F">Leave</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ gmOpen }}">
+  <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:18px clamp(14px,3vw,28px);background:#182429;border-bottom:1px solid #22323A">
+    <label style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Maze name</span>
+      <input value="{{ run.name }}" onChange="{{ onRunName }}" style="width:100%;padding:9px 11px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:14px" style-focus="border-color:#E3A445;outline:none">
+    </label>
+    <label style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Biome</span>
+      <input value="{{ run.biome }}" onChange="{{ onBiomeText }}" style="width:100%;padding:9px 11px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#F2EBDA;font-family:var(--md-font-body);font-size:14px" style-focus="border-color:#E3A445;outline:none">
+    </label>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Maze DC</span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button onClick="{{ decDc }}" style="width:30px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;cursor:pointer" style-hover="border-color:#9B8F74">–</button>
+        <span style="flex:1;text-align:center;font-family:var(--md-font-display);font-size:17px;font-weight:700;color:#F2EBDA">{{ dc }}</span>
+        <button onClick="{{ incDc }}" style="width:30px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;cursor:pointer" style-hover="border-color:#9B8F74">+</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#9B8F74">Escape target</span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button onClick="{{ decEscape }}" style="width:30px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;cursor:pointer" style-hover="border-color:#9B8F74">–</button>
+        <span style="flex:1;text-align:center;font-family:var(--md-font-display);font-size:17px;font-weight:700;color:#E3A445">{{ run.escape }}</span>
+        <button onClick="{{ incEscape }}" style="width:30px;height:32px;background:#0A0F12;border:1px solid #22323A;border-radius:2px;color:#C9BC9C;cursor:pointer" style-hover="border-color:#9B8F74">+</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onClick="{{ pauseRun }}" style="flex:1;padding:10px;background:#0A0F12;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="border-color:#E3A445;color:#E3A445">{{ pauseLabel }}</button>
+        <button onClick="{{ copyLog }}" style="flex:1;padding:10px;background:#0A0F12;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="border-color:#E3A445;color:#E3A445">{{ logCopyLabel }}</button>
+      </div>
+      <button onClick="{{ resetRun }}" style="padding:10px;background:transparent;color:#45443F;border:1px dashed #22323A;border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="color:#D9707C;border-color:#66161F">Reshuffle from scratch</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <div style="flex:1;display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:stretch">
+
+    <div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(16px,2.5vh,26px);padding:clamp(18px,4vh,40px) clamp(14px,3vw,28px)">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center">
+        <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:{{ phaseColor }}">{{ phaseLabel }}</span>
+        <span style="width:1px;height:12px;background:#22323A"></span>
+        <span style="font-family:var(--md-font-display);font-size:14px;font-weight:600;letter-spacing:.08em;color:#F2EBDA">{{ activeName }}</span>
+      </div>
+      <p style="margin:0;max-width:56ch;text-align:center;font-size:14.5px;line-height:1.55;color:#9B8F74;text-wrap:pretty">{{ phaseHint }}</p>
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.5vh,26px);width:100%">
+        <div style="width:100%;overflow-x:auto;overflow-y:hidden;display:flex;justify-content:center;padding:2px">
+          <div style="display: flex; flex-direction: column; gap: 12px; padding: 20px clamp(14px,3vw,28px); border-top: 1px solid #182429; background: #0A0F12; width: 426px; height: 465px">
+      <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Initiative</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ sessionSeats }}" as="s" hint-placeholder-count="4">
+          <div style="flex:1 1 190px;min-width:170px"><x-import component-from-global-scope="MazeDeckUI.PlayerSeat" name="{{ s.name }}" order="{{ s.order }}" detail="{{ s.detail }}" active="{{ s.active }}" hint-size="100%,54px"></x-import></div>
+        </sc-for>
+      </div>
+    </div><x-import component-from-global-scope="MazeDeckUI.River" slots="{{ riverSlots }}" on-pick="{{ onPick }}" hint-size="860px,420px"></x-import><x-import component-from-global-scope="MazeDeckUI.DeckPile" count="{{ deckCount }}" label="Deck" hint-size="260px,360px"></x-import><x-import component-from-global-scope="MazeDeckUI.DiscardPile" count="{{ discardCount }}" top="{{ discardTop }}" label="Discard" hint-size="260px,360px"></x-import>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:clamp(12px,2vw,24px);padding:16px 22px;background:#10181C;border:1px solid {{ pendingBd }};border-radius:3px;animation:mdRoll .22s ease-out">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:170px">
+            <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:#9B8F74">{{ pending.kicker }}</span>
+            <span style="font-family:var(--md-font-display);font-size:16px;font-weight:600;letter-spacing:.05em;color:#F2EBDA">{{ pending.title }}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;font-family:var(--md-font-display);font-size:19px;font-weight:700;color:#C9BC9C">
+            <span style="color:#F2EBDA">{{ pending.d20 }}</span>
+            <span style="font-size:12px;color:#45443F">d20</span>
+            <span style="color:#45443F">+</span>
+            <span style="color:#F2EBDA">{{ pending.modText }}</span>
+            <span style="font-size:12px;color:#45443F">{{ pending.stat }}</span>
+            <span style="color:#45443F">=</span>
+            <span style="font-size:25px;color:{{ pendingBd }}">{{ pending.total }}</span>
+            <span style="font-size:12px;color:#45443F">vs {{ pending.dc }}</span>
+          </div>
+          <span style="font-family:var(--md-font-display);font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:{{ pendingBd }}">{{ pending.verdict }}</span>
+          <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+            <button onClick="{{ flipPending }}" style="padding:11px 16px;background:transparent;color:#9B8F74;border:1px dashed #33474F;border-radius:2px;font-family:var(--md-font-ui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="color:#E3A445;border-color:#8A5E1E">GM override</button>
+            <button onClick="{{ applyPending }}" style="padding:11px 20px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">Resolve</button>
+          </div>
+        </div><div style="padding:clamp(12px,2vw,20px) clamp(14px,3vw,28px);background:#10181C;border-top:1px solid #182429;overflow-x:auto;zoom:1.22">
+    <x-import component-from-global-scope="MazeDeckUI.ActionBar" abilities="{{ barAbilities }}" locked="{{ barLocked }}" dc="{{ dc }}" on-use="{{ onUse }}" hint-size="100%,140px"></x-import>
+  </div><div style="display:flex;flex-direction:column;gap:10px;padding:20px clamp(14px,3vw,28px);border-top:1px solid #182429;border-left:1px solid #182429;background:#0A0F12;max-height:340px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+        <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:#9B8F74">Session log</span>
+        <span style="font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#45443F">{{ lockNote }}</span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:9px;padding-right:4px">
+        <sc-for list="{{ logRows }}" as="l" hint-placeholder-count="4">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="width:34px;flex:none;font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.1em;color:#45443F;padding-top:3px">{{ l.stamp }}</span>
+            <span style="flex:1;min-width:0;font-size:13px;line-height:1.5;color:{{ l.color }}">{{ l.text }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div><div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 32px;background:#10181C;border:1px solid {{ outcomeColor }};border-radius:3px;text-align:center">
+          <span style="font-family:var(--md-font-ui);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#9B8F74">{{ outcomeKicker }}</span>
+          <span style="font-family:var(--md-font-display);font-size:clamp(20px,3.5vw,30px);font-weight:700;letter-spacing:.08em;color:{{ outcomeColor }}">{{ outcomeTitle }}</span>
+          <p style="margin:0;max-width:44ch;line-height:1.6;color:#C9BC9C">{{ outcomeBody }}</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+            <button onClick="{{ copyLog }}" style="padding:13px 22px;background:transparent;color:#E4D9BF;border:1px solid #33474F;border-radius:2px;font-family:var(--md-font-ui);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="border-color:#E3A445;color:#E3A445">{{ logCopyLabel }}</button>
+            <button onClick="{{ resetRun }}" style="padding:13px 22px;background:#E3A445;color:#0A0F12;border:none;border-radius:2px;font-family:var(--md-font-display);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer" style-hover="background:#F2CB8A">New maze</button>
+          </div>
+        </div><div style="display:flex;gap:clamp(12px,2vw,26px);align-items:flex-start;zoom:.52">
+          
+          
+        </div>
+      </div>
+
+      <sc-if value="{{ hasPending }}">
+        
+      </sc-if>
+
+      <sc-if value="{{ isOver }}">
+        
+      </sc-if>
+    </div>
+
+    
+
+    
+  </div>
+
+  
+</div>
+</sc-if>
+
+<sc-if value="{{ showJump }}">
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 12px;background:rgba(10,15,18,.92);border-top:1px solid #182429;backdrop-filter:blur(6px)">
+  <span style="font-family:var(--md-font-ui);font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#33474F;padding-right:4px">Prototype</span>
+  <sc-for list="{{ jumpRows }}" as="j" hint-placeholder-count="7">
+    <button onClick="{{ j.go }}" style="padding:5px 10px;background:{{ j.bg }};color:{{ j.fg }};border:1px solid {{ j.bd }};border-radius:2px;font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">{{ j.label }}</button>
+  </sc-for>
+  <button onClick="{{ hideJump }}" style="margin-left:auto;padding:5px 9px;background:transparent;color:#33474F;border:none;font-family:var(--md-font-ui);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer" style-hover="color:#9B8F74">Hide</button>
+</div>
+<div style="height:38px"></div>
+</sc-if>
+
+</x-import>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;landing&quot;,&quot;auth&quot;,&quot;character&quot;,&quot;create&quot;,&quot;join&quot;,&quot;session&quot;],&quot;default&quot;:&quot;landing&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mazeDc&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:13,&quot;min&quot;:8,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;},&quot;escapeTarget&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:3,&quot;max&quot;:8,&quot;tsType&quot;:&quot;number&quot;},&quot;showJump&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const CATS = [
+  { key: 'clear-path', name: 'Clear Path', count: 6, color: '#F2CB8A' },
+  { key: 'dead-end', name: 'Dead End', count: 4, color: '#B2B1AD' },
+  { key: 'obstacle', name: 'Obstacle', count: 4, color: '#7FC0AC' },
+  { key: 'trap', name: 'Trap', count: 3, color: '#C7D477' },
+  { key: 'wanderer', name: 'Wanderer', count: 4, color: '#A6C0D4' },
+  { key: 'item', name: 'Item', count: 4, color: '#C08FCE' },
+  { key: 'monster', name: 'Monster', count: 3, color: '#D9707C' }
+];
+const CATNAME = {};
+CATS.forEach(function (c) { CATNAME[c.key] = c.name; });
+
+const ABIL = [
+  { key: 'forge-a-path', name: 'Forge a Path', stat: 'str', statLabel: 'STR' },
+  { key: 'scout-ahead', name: 'Scout Ahead', stat: 'dex', statLabel: 'DEX' },
+  { key: 'its-elementary', name: "It's Elementary", stat: 'int', statLabel: 'INT' },
+  { key: 'careful-consideration', name: 'Careful Consideration', stat: 'wis', statLabel: 'WIS' },
+  { key: 'boost-morale', name: 'Boost Morale', stat: 'cha', statLabel: 'CHA' }
+];
+
+const STATS = [
+  { key: 'str', abbr: 'STR', used: 'Forge a Path — force an Obstacle out of the river' },
+  { key: 'dex', abbr: 'DEX', used: 'Scout Ahead — turn one face-down path' },
+  { key: 'con', abbr: 'CON', used: 'Carried for the sheet. Nothing in the maze checks it.' },
+  { key: 'int', abbr: 'INT', used: "It's Elementary — read the top of the deck" },
+  { key: 'wis', abbr: 'WIS', used: 'Careful Consideration — turn two face-down paths' },
+  { key: 'cha', abbr: 'CHA', used: 'Boost Morale — abandon a Dead End' }
+];
+
+const ARCH = [
+  { name: 'Fighter', mods: { str: 3, dex: 1, con: 2, int: 0, wis: 1, cha: 0 } },
+  { name: 'Barbarian', mods: { str: 4, dex: 1, con: 3, int: -1, wis: 1, cha: 0 } },
+  { name: 'Rogue', mods: { str: 0, dex: 4, con: 1, int: 2, wis: 1, cha: 1 } },
+  { name: 'Ranger', mods: { str: 2, dex: 3, con: 2, int: 0, wis: 2, cha: 0 } },
+  { name: 'Cleric', mods: { str: 1, dex: 0, con: 2, int: 1, wis: 4, cha: 1 } },
+  { name: 'Wizard', mods: { str: -1, dex: 1, con: 1, int: 4, wis: 2, cha: 0 } },
+  { name: 'Bard', mods: { str: 0, dex: 2, con: 1, int: 1, wis: 1, cha: 4 } },
+  { name: 'Paladin', mods: { str: 3, dex: 0, con: 2, int: 0, wis: 1, cha: 3 } }
+];
+
+const BIOMES = [
+  { name: 'Dungeon', flavour: 'Wet stone, three corridors, and no map. Clear Path is a corridor that keeps going.' },
+  { name: 'Tower', flavour: 'Stairwells and landings. A Dead End is a sealed floor; the party loses the height, not the day.' },
+  { name: 'Deep forest', flavour: 'Game trails that all look the same. An Obstacle is deadfall; someone has to cut it.' },
+  { name: 'Desert', flavour: 'Dune lines instead of doors. Traps are sinkholes and they resolve the moment you step.' },
+  { name: 'Undercity', flavour: 'Sewer junctions. Wanderers are common here and rarely hostile on sight.' },
+  { name: 'Frozen pass', flavour: 'Switchbacks in whiteout. Monsters are heard two turns before they are seen.' }
+];
+
+const POS = ['left', 'centre', 'right'];
+
+function shuffled() {
+  const d = [];
+  CATS.forEach(function (c) { for (let i = 0; i < c.count; i++) d.push(c.key); });
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = d[i]; d[i] = d[j]; d[j] = t;
+  }
+  return d;
+}
+const GLOW_KEY = { 'clear-path': 'path', 'dead-end': 'dead', obstacle: 'obst', trap: 'trap', monster: 'mons', wanderer: 'wand', item: 'item' };
+/* The lift glow takes the card's own category light, so the shade behind a
+   hovered card matches the symbol printed on it. Abilities are all gold. */
+function withGlow(list) {
+  return list.map(function (it) {
+    const k = GLOW_KEY[it.key];
+    return Object.assign({}, it, { glow: 'var(--md-cat-' + (k || 'path') + '-glow)' });
+  });
+}
+
+/* A held hand: each card rotated off a shared pivot below the fan, dipped at
+   the edges, and overlapped so the row reads as one arc. */
+function fan(list, stepDeg, overlap) {
+  const mid = (list.length - 1) / 2;
+  return list.map(function (item, i) {
+    const off = i - mid;
+    const rot = off * stepDeg;
+    const dy = Math.abs(off) * 13;
+    return Object.assign({}, item, {
+      tf: 'rotate(' + rot.toFixed(2) + 'deg) translateY(' + dy.toFixed(0) + 'px)',
+      tfHover: 'rotate(' + (rot * 0.18).toFixed(2) + 'deg) translateY(' + (dy - 56).toFixed(0) + 'px) scale(1.09)',
+      ml: i === 0 ? '0px' : '-' + overlap + 'px',
+      z: String(i + 1)
+    });
+  });
+}
+
+function isBlocker(k) { return k === 'dead-end' || k === 'obstacle'; }
+function sgn(n) { return (n >= 0 ? '+' : '') + n; }
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const dc = props.mazeDc || 13;
+    const escape = props.escapeTarget || 5;
+    this.state = {
+      screen: props.startScreen || 'landing',
+      authMode: 'signup',
+      auth: { name: '', email: '', pw: '' },
+      char: { name: '', cls: 'Fighter', mods: { str: 3, dex: 1, con: 2, int: 0, wis: 1, cha: 0 } },
+      run: { name: 'Ascent of the Ashen Tower', biome: 'Tower', escape: escape, dc: dc },
+      code: 'RIVER-4K2',
+      copied: false,
+      logCopied: false,
+      joinCode: '',
+      joined: false,
+      ready: false,
+      gmOpen: false,
+      paused: false,
+      showJump: props.showJump !== false,
+      game: null
+    };
+  }
+
+  componentDidMount() {
+    try {
+      const raw = window.localStorage.getItem('mazedeck.run.v1');
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && saved.game) this.setState({ game: saved.game, run: saved.run || this.state.run });
+      }
+    } catch (e) { /* no saved run */ }
+  }
+
+  persist(game, run) {
+    try {
+      window.localStorage.setItem('mazedeck.run.v1', JSON.stringify({ game: game, run: run || this.state.run }));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  /* ---------- run lifecycle ---------- */
+
+  seatList() {
+    const me = this.state.char.name ? this.state.char.name : 'Brakka';
+    const cls = this.state.char.cls;
+    const mine = { name: me, cls: cls, mods: Object.assign({}, this.state.char.mods) };
+    return [
+      mine,
+      { name: 'Wren', cls: 'Rogue', mods: { str: 0, dex: 4, con: 1, int: 2, wis: 1, cha: 1 } },
+      { name: 'Odalis', cls: 'Cleric', mods: { str: 1, dex: 0, con: 2, int: 1, wis: 4, cha: 1 } },
+      { name: 'Sable', cls: 'Wizard', mods: { str: -1, dex: 1, con: 1, int: 4, wis: 2, cha: 0 } }
+    ];
+  }
+
+  freshGame() {
+    const deck = shuffled();
+    const river = [0, 1, 2].map(function () { return { category: deck.pop(), faceDown: true }; });
+    return {
+      deck: deck, river: river, discard: [], top: null,
+      progress: 0, threats: 0, turn: 0, round: 1,
+      phase: 'act', locked: [], pending: null, outcome: null,
+      seats: this.seatList(),
+      log: [{ t: 'The deck is shuffled. Three paths are dealt face-down.', k: 'sys', n: 1 }]
+    };
+  }
+
+  startRun = () => {
+    const g = this.freshGame();
+    this.persist(g);
+    this.setState({ game: g, screen: 'session', paused: false });
+  };
+
+  resetRun = () => {
+    const g = this.freshGame();
+    this.persist(g);
+    this.setState({ game: g, screen: 'session', paused: false });
+  };
+
+  game() {
+    return this.state.game || this.freshGame();
+  }
+
+  push(g, text, kind) {
+    g.log = [{ t: text, k: kind || 'sys', n: (g.log[0] ? g.log[0].n : 0) + 1 }].concat(g.log);
+  }
+
+  clone() {
+    const g = this.game();
+    return {
+      deck: g.deck.slice(), river: g.river.map(function (s) { return Object.assign({}, s); }),
+      discard: g.discard.slice(), top: g.top, progress: g.progress, threats: g.threats,
+      turn: g.turn, round: g.round, phase: g.phase, locked: g.locked.slice(),
+      pending: g.pending ? Object.assign({}, g.pending) : null, outcome: g.outcome,
+      seats: g.seats, log: g.log.slice()
+    };
+  }
+
+  commit(g) {
+    this.persist(g);
+    this.setState({ game: g });
+  }
+
+  /* ---------- action phase ---------- */
+
+  onUse = (ability) => {
+    const g = this.clone();
+    if (g.phase !== 'act' || g.pending || g.outcome) return;
+    const ab = ABIL.find(function (a) { return a.key === ability; });
+    const seat = g.seats[g.turn % g.seats.length];
+    const mod = (seat.mods && seat.mods[ab.stat]) || 0;
+    const d20 = 1 + Math.floor(Math.random() * 20);
+    const dc = this.state.run.dc;
+    g.pending = {
+      kind: 'action', ability: ability, kicker: seat.name + ' · ' + ab.statLabel + ' check',
+      title: ab.name, d20: d20, mod: mod, stat: ab.statLabel, total: d20 + mod, dc: dc,
+      success: d20 + mod >= dc
+    };
+    this.commit(g);
+  };
+
+  flipPending = () => {
+    const g = this.clone();
+    if (!g.pending) return;
+    g.pending.success = !g.pending.success;
+    g.pending.overridden = true;
+    this.commit(g);
+  };
+
+  applyPending = () => {
+    const g = this.clone();
+    const p = g.pending;
+    if (!p) return;
+    g.pending = null;
+    const tag = p.overridden ? ' (GM ruling)' : '';
+    if (p.kind === 'action') {
+      const ok = p.success;
+      this.push(g, p.title + ': ' + p.total + ' vs ' + p.dc + ' — ' + (ok ? 'success' : 'failure') + tag + '.', ok ? 'good' : 'bad');
+      if (ok) this.push(g, this.actionEffect(g, p.ability), 'sys');
+      g.phase = 'reveal';
+    } else if (p.kind === 'trap') {
+      if (p.success) {
+        this.push(g, 'Trap avoided on ' + p.total + ' vs ' + p.dc + tag + '.', 'good');
+      } else {
+        const lost = g.progress > 0;
+        if (lost) g.progress -= 1;
+        this.push(g, 'The trap lands' + tag + '. ' + (lost ? 'One Clear Path is lost.' : 'Nothing left to lose.'), 'bad');
+      }
+      this.afterReveal(g);
+    }
+    this.commit(g);
+  };
+
+  actionEffect(g, ability) {
+    let i;
+    if (ability === 'forge-a-path') {
+      i = g.river.findIndex(function (s) { return !s.faceDown && s.category === 'obstacle'; });
+      if (i < 0) return 'No Obstacle is face-up. Nothing to force.';
+      g.discard.push('obstacle'); g.top = 'obstacle'; g.river[i] = { category: null };
+      return 'The Obstacle in the ' + POS[i] + ' slot is forced out of the river.';
+    }
+    if (ability === 'boost-morale') {
+      i = g.river.findIndex(function (s) { return !s.faceDown && s.category === 'dead-end'; });
+      if (i < 0) return 'No Dead End face-up. The rally lands on nothing.';
+      g.discard.push('dead-end'); g.top = 'dead-end'; g.river[i] = { category: null };
+      return 'The party turns back from the Dead End in the ' + POS[i] + ' slot.';
+    }
+    if (ability === 'scout-ahead') {
+      i = g.river.findIndex(function (s) { return s.faceDown; });
+      if (i < 0) return 'Nothing is face-down. The scout returns with news you have.';
+      g.river[i].faceDown = false;
+      return 'Scouted: the ' + POS[i] + ' path is ' + CATNAME[g.river[i].category] + '.';
+    }
+    if (ability === 'careful-consideration') {
+      let n = 0; const names = [];
+      g.river.forEach(function (s, idx) {
+        if (s.faceDown && n < 2) { s.faceDown = false; n++; names.push(POS[idx] + ' is ' + CATNAME[s.category]); }
+      });
+      return n ? 'Considered at length: ' + names.join('; ') + '.' : 'Nothing is face-down.';
+    }
+    const next = g.deck[g.deck.length - 1];
+    return next ? 'The next card off the deck will be ' + CATNAME[next] + '.' : 'The deck is spent.';
+  }
+
+  /* ---------- reveal phase ---------- */
+
+  onPick = (i) => {
+    const g = this.clone();
+    if (g.outcome || g.pending) return;
+    const slot = g.river[i];
+    if (!slot || !slot.category) return;
+    if (g.phase === 'act') {
+      this.push(g, 'Take an action first — the maze is entered on a check, not a hunch.', 'muted');
+      this.commit(g);
+      return;
+    }
+    const seat = g.seats[g.turn % g.seats.length];
+    if (slot.faceDown) {
+      slot.faceDown = false;
+      this.push(g, seat.name + ' commits to the ' + POS[i] + ' path: ' + CATNAME[slot.category] + '.', 'card');
+    } else {
+      this.push(g, seat.name + ' takes the ' + POS[i] + ' path — ' + CATNAME[slot.category] + ', already turned.', 'card');
+    }
+    const cat = slot.category;
+
+    if (cat === 'clear-path') {
+      g.progress += 1;
+      g.discard.push(cat); g.top = cat; g.river[i] = { category: null };
+      this.push(g, 'Ground gained. ' + g.progress + ' of ' + this.state.run.escape + ' Clear Paths.', 'good');
+      this.afterReveal(g);
+    } else if (cat === 'monster') {
+      g.threats += 1;
+      g.discard.push(cat); g.top = cat; g.river[i] = { category: null };
+      this.push(g, 'Something is in the dark with them. Threat ' + g.threats + ' of 2.', 'bad');
+      this.afterReveal(g);
+    } else if (cat === 'wanderer' || cat === 'item') {
+      g.discard.push(cat); g.top = cat; g.river[i] = { category: null };
+      this.push(g, cat === 'wanderer'
+        ? 'A Wanderer. Hand this one to the table — the maze has no opinion.'
+        : 'An Item is recovered. Rule it as loot and move on.', 'sys');
+      this.afterReveal(g);
+    } else if (cat === 'trap') {
+      const dc = this.state.run.dc + 1;
+      let best = ABIL[0], bestMod = -99;
+      ABIL.forEach(function (a) {
+        const m = (seat.mods && seat.mods[a.stat]) || 0;
+        if (m > bestMod) { bestMod = m; best = a; }
+      });
+      const d20 = 1 + Math.floor(Math.random() * 20);
+      g.discard.push(cat); g.top = cat; g.river[i] = { category: null };
+      g.pending = {
+        kind: 'trap', kicker: seat.name + ' · ' + best.statLabel + ' save', title: 'Trap',
+        d20: d20, mod: bestMod, stat: best.statLabel, total: d20 + bestMod, dc: dc,
+        success: d20 + bestMod >= dc
+      };
+    } else {
+      this.push(g, cat === 'dead-end'
+        ? 'A Dead End. It stays in the river until someone rallies the party past it (CHA).'
+        : 'An Obstacle. It stays until someone forces it (STR).', 'bad');
+      this.afterReveal(g);
+    }
+    this.commit(g);
+  };
+
+  afterReveal(g) {
+    /* refill empty slots */
+    for (let i = 0; i < 3; i++) {
+      if (!g.river[i].category) {
+        if (!g.deck.length && g.discard.length) {
+          g.deck = g.discard.slice(); g.discard = [];
+          for (let k = g.deck.length - 1; k > 0; k--) {
+            const j = Math.floor(Math.random() * (k + 1));
+            const t = g.deck[k]; g.deck[k] = g.deck[j]; g.deck[j] = t;
+          }
+          this.push(g, 'The discard is reshuffled back into the deck.', 'muted');
+        }
+        if (g.deck.length) g.river[i] = { category: g.deck.pop(), faceDown: true };
+      }
+    }
+    /* three blockers */
+    const blockers = g.river.filter(function (s) { return s.category && !s.faceDown && isBlocker(s.category); });
+    if (blockers.length >= 3) {
+      g.river.forEach(function (s) { if (s.category) g.discard.push(s.category); });
+      g.top = 'monster';
+      g.river = [{ category: 'monster', faceDown: false }, { category: null }, { category: null }];
+      g.threats += 1;
+      this.push(g, 'Three blockers at once. The river is cleared and a Monster walks into it. Threat ' + g.threats + ' of 2.', 'bad');
+      for (let i = 1; i < 3; i++) if (g.deck.length) g.river[i] = { category: g.deck.pop(), faceDown: true };
+    }
+    /* outcome */
+    if (g.progress >= this.state.run.escape) {
+      g.outcome = 'escape'; g.phase = 'over';
+      this.push(g, 'The party is through. Hand the scene back to the table.', 'good');
+      return;
+    }
+    if (g.threats >= 2) {
+      g.outcome = 'confrontation'; g.phase = 'over';
+      this.push(g, 'Two Monsters revealed. Travel ends; roll initiative for real.', 'bad');
+      return;
+    }
+    /* next seat */
+    const n = g.seats.length;
+    const wrapped = (g.turn + 1) % n === 0;
+    g.turn = (g.turn + 1) % n;
+    g.phase = 'act';
+    if (wrapped) {
+      g.round += 1;
+      const d6 = 1 + Math.floor(Math.random() * 6);
+      if (d6 <= 5) {
+        const ab = ABIL[d6 - 1];
+        g.locked = [ab.key];
+        this.push(g, 'End of round: d6 ' + d6 + ' — ' + ab.name + ' is locked for round ' + g.round + '.', 'muted');
+      } else {
+        g.locked = [];
+        this.push(g, 'End of round: d6 6 — every action stays open.', 'muted');
+      }
+    }
+  }
+
+  /* ---------- navigation & forms ---------- */
+
+  go(screen) { return () => this.setState({ screen: screen }); }
+  goLanding = () => this.setState({ screen: 'landing' });
+  goLogin = () => this.setState({ screen: 'auth', authMode: 'login' });
+  goSignup = () => this.setState({ screen: 'auth', authMode: 'signup' });
+  goChar = () => this.setState({ screen: 'character' });
+  goCreate = () => this.setState({ screen: 'create' });
+  goJoin = () => this.setState({ screen: 'join' });
+  toggleAuth = (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ authMode: this.state.authMode === 'signup' ? 'login' : 'signup' }); };
+  submitAuth = () => this.setState({ screen: 'character' });
+  playGuest = () => this.setState({ screen: 'character' });
+
+  onAuthName = (e) => this.setState({ auth: Object.assign({}, this.state.auth, { name: e.target.value }) });
+  onAuthEmail = (e) => this.setState({ auth: Object.assign({}, this.state.auth, { email: e.target.value }) });
+  onAuthPw = (e) => this.setState({ auth: Object.assign({}, this.state.auth, { pw: e.target.value }) });
+  onCharName = (e) => this.setState({ char: Object.assign({}, this.state.char, { name: e.target.value }) });
+  onRunName = (e) => this.setState({ run: Object.assign({}, this.state.run, { name: e.target.value }) });
+  onBiomeText = (e) => this.setState({ run: Object.assign({}, this.state.run, { biome: e.target.value }) });
+  onJoinCode = (e) => this.setState({ joinCode: e.target.value.toUpperCase() });
+  prefillCode = () => this.setState({ joinCode: this.state.code });
+  doJoin = () => this.setState({ joined: true });
+  toggleReady = () => this.setState({ ready: !this.state.ready });
+  toggleGm = () => this.setState({ gmOpen: !this.state.gmOpen });
+  hideJump = () => this.setState({ showJump: false });
+  saveChar = () => this.setState({ screen: 'create' });
+
+  bump(stat, d) {
+    const mods = Object.assign({}, this.state.char.mods);
+    mods[stat] = Math.max(-1, Math.min(5, mods[stat] + d));
+    this.setState({ char: Object.assign({}, this.state.char, { mods: mods }) });
+  }
+  pickClass(a) {
+    this.setState({ char: Object.assign({}, this.state.char, { cls: a.name, mods: Object.assign({}, a.mods) }) });
+  }
+  pickBiome(b) {
+    this.setState({ run: Object.assign({}, this.state.run, { biome: b.name }) });
+  }
+  incDc = () => this.setState({ run: Object.assign({}, this.state.run, { dc: Math.min(20, this.state.run.dc + 1) }) });
+  decDc = () => this.setState({ run: Object.assign({}, this.state.run, { dc: Math.max(8, this.state.run.dc - 1) }) });
+  incEscape = () => this.setState({ run: Object.assign({}, this.state.run, { escape: Math.min(8, this.state.run.escape + 1) }) });
+  decEscape = () => this.setState({ run: Object.assign({}, this.state.run, { escape: Math.max(3, this.state.run.escape - 1) }) });
+  addSeat = () => {
+    const seats = (this.state.extraSeats || []).slice();
+    if (this.seatRowsData().length >= 6) return;
+    seats.push({ name: '', cls: 'Open' });
+    this.setState({ extraSeats: seats });
+  };
+  copyCode = () => {
+    try { navigator.clipboard.writeText(this.state.code); } catch (e) { /* ignore */ }
+    this.setState({ copied: true });
+    window.setTimeout(() => this.setState({ copied: false }), 1600);
+  };
+  copyLog = () => {
+    const g = this.game();
+    const text = g.log.slice().reverse().map(function (l) { return l.n + '. ' + l.t; }).join('\n');
+    try { navigator.clipboard.writeText(this.state.run.name + '\n\n' + text); } catch (e) { /* ignore */ }
+    this.setState({ logCopied: true });
+    window.setTimeout(() => this.setState({ logCopied: false }), 1600);
+  };
+  pauseRun = () => {
+    this.persist(this.game());
+    this.setState({ paused: true });
+    window.setTimeout(() => this.setState({ paused: false }), 2000);
+  };
+
+  seatRowsData() {
+    const base = this.state.game ? this.state.game.seats : this.seatList();
+    return base.concat(this.state.extraSeats || []);
+  }
+
+  renderVals() {
+    const st = this.state;
+    const g = this.game();
+    const dc = st.run.dc;
+    const mods = st.char.mods;
+    const spent = STATS.reduce(function (a, s) { return a + mods[s.key]; }, 0);
+
+    let best = ABIL[0], bestMod = -99;
+    ABIL.forEach(function (a) { if (mods[a.stat] > bestMod) { bestMod = mods[a.stat]; best = a; } });
+
+    const seats = this.seatRowsData();
+    const activeIdx = g.seats.length ? g.turn % g.seats.length : 0;
+    const activeSeat = g.seats[activeIdx] || { name: '—', cls: '' };
+    const biome = BIOMES.find(function (b) { return b.name === st.run.biome; }) || BIOMES[1];
+
+    const phaseLabels = {
+      act: 'Phase 1 — act', reveal: 'Phase 2 — commit to a path', over: 'Run closed'
+    };
+    const phaseHints = {
+      act: 'One action, then the reveal. Locked actions stay visible so the table can see what is unavailable this round.',
+      reveal: 'Pick a slot in the river. Face-down is the honest way to do it; a scouted card can be taken too.',
+      over: 'Copy the log into your notes and pick the scene back up.'
+    };
+
+    const cls = (v, t, f) => (v ? t : f);
+
+    return {
+      /* routing */
+      isLanding: st.screen === 'landing',
+      isAuth: st.screen === 'auth',
+      isSignup: st.authMode === 'signup',
+      isChar: st.screen === 'character',
+      isCreate: st.screen === 'create',
+      isJoin: st.screen === 'join',
+      isSession: st.screen === 'session',
+      showJump: st.showJump,
+      goLanding: this.goLanding, goLogin: this.goLogin, goSignup: this.goSignup,
+      goChar: this.goChar, goCreate: this.goCreate, goJoin: this.goJoin,
+      hideJump: this.hideJump,
+      jumpRows: [
+        ['landing', 'Landing'], ['auth', 'Sign up'], ['character', 'Character'],
+        ['create', 'Create'], ['join', 'Join'], ['session', 'Session']
+      ].map((p) => ({
+        label: p[1],
+        go: p[0] === 'session' ? (st.game ? this.go('session') : this.startRun) : this.go(p[0]),
+        bg: st.screen === p[0] ? '#182429' : 'transparent',
+        fg: st.screen === p[0] ? '#E3A445' : '#9B8F74',
+        bd: st.screen === p[0] ? '#8A5E1E' : '#182429'
+      })),
+
+      /* shared */
+      dc: dc,
+      categories: CATS,
+      abilities: ABIL,
+      fanCats: fan(withGlow(CATS), 5.5, 118),
+      fanAbils: fan(withGlow(ABIL), 6.5, 108),
+      demoRiver: [{ category: 'obstacle' }, { category: 'clear-path', faceDown: true }, { category: 'wanderer', faceDown: true }],
+      turnSteps: [
+        { n: '1', title: 'Act', body: 'The active player spends one of the five actions. It is a check against the Maze DC using their own modifier.' },
+        { n: '2', title: 'Commit', body: 'Then, and only then, they pick one of the three paths and it is turned over.' },
+        { n: '3', title: 'Resolve', body: 'Progress, threat, or a blocker that stays put. The river refills to three.' },
+        { n: '4', title: 'Lock', body: 'At the end of a round a d6 takes one action off the table for the round to come.' }
+      ],
+
+      /* auth */
+      auth: st.auth,
+      authKicker: st.authMode === 'signup' ? 'New account' : 'Returning',
+      authTitle: st.authMode === 'signup' ? 'Keep a roster' : 'Back to the maze',
+      authBlurb: st.authMode === 'signup'
+        ? 'An account holds your characters between dungeons and lets a paused run resume next session. Nothing else.'
+        : 'Your roster and any paused run are where you left them.',
+      authCta: st.authMode === 'signup' ? 'Create account' : 'Log in',
+      authSwitchLabel: st.authMode === 'signup' ? 'Already have one?' : 'No account yet?',
+      authSwitchCta: st.authMode === 'signup' ? 'Log in' : 'Sign up',
+      toggleAuth: this.toggleAuth, submitAuth: this.submitAuth, playGuest: this.playGuest,
+      onAuthName: this.onAuthName, onAuthEmail: this.onAuthEmail, onAuthPw: this.onAuthPw,
+
+      /* character */
+      char: st.char,
+      charName: st.char.name || 'Unnamed',
+      onCharName: this.onCharName,
+      saveChar: this.saveChar,
+      archetypes: ARCH.map((a) => ({
+        name: a.name, pick: () => this.pickClass(a),
+        bg: cls(st.char.cls === a.name, '#182429', 'transparent'),
+        fg: cls(st.char.cls === a.name, '#E3A445', '#9B8F74'),
+        bd: cls(st.char.cls === a.name, '#8A5E1E', '#22323A')
+      })),
+      statRows: STATS.map((s) => ({
+        abbr: s.abbr, used: s.used, display: sgn(mods[s.key]),
+        bg: cls(s.key === 'con', '#0A0F12', '#10181C'),
+        labelColor: cls(s.key === 'con', '#45443F', '#E4D9BF'),
+        valColor: cls(mods[s.key] > 0, '#E3A445', '#9B8F74'),
+        inc: () => this.bump(s.key, 1), dec: () => this.bump(s.key, -1)
+      })),
+      budgetLabel: spent + ' of +9 spent' + (spent > 9 ? ' — over budget, flagged for the GM' : ''),
+      budgetColor: spent > 9 ? '#D9707C' : '#9B8F74',
+      readRows: ABIL.map(function (a) {
+        const m = mods[a.stat];
+        return {
+          key: a.key, name: a.name, stat: a.statLabel, mod: sgn(m),
+          needs: 'needs ' + Math.max(2, Math.min(20, dc - m)) + '+',
+          color: m >= 3 ? '#F2CB8A' : m >= 1 ? '#C9BC9C' : '#45443F'
+        };
+      }),
+      readSummary: 'Strongest door: ' + best.name + ' at ' + sgn(bestMod) + '. Against DC ' + dc +
+        ' that lands on a ' + Math.max(2, dc - bestMod) + ' or better — roughly ' +
+        Math.round(((21 - Math.max(2, dc - bestMod)) / 20) * 100) + '% of the time.',
+      bestAbility: best.key,
+
+      /* create */
+      run: st.run,
+      code: st.code,
+      copyCode: this.copyCode,
+      copyLabel: st.copied ? 'Copied' : 'Copy',
+      onRunName: this.onRunName, onBiomeText: this.onBiomeText,
+      biomes: BIOMES.map((b) => ({
+        name: b.name, pick: () => this.pickBiome(b),
+        bg: cls(st.run.biome === b.name, '#182429', 'transparent'),
+        fg: cls(st.run.biome === b.name, '#E3A445', '#9B8F74'),
+        bd: cls(st.run.biome === b.name, '#8A5E1E', '#22323A')
+      })),
+      biomeFlavour: biome.flavour,
+      incDc: this.incDc, decDc: this.decDc, incEscape: this.incEscape, decEscape: this.decEscape,
+      escapeNote: 'Six Clear Paths exist in 28 cards. ' + st.run.escape + ' is a ' +
+        (st.run.escape <= 4 ? 'short hop' : st.run.escape === 5 ? 'standard crossing' : 'long haul') + '.',
+      dcNote: dc <= 12 ? 'Forgiving — most parties clear this.' : dc === 13 ? 'The printed default.' : 'Punishing. Expect failed actions.',
+      seatCount: seats.length,
+      seatRows: seats.map((s, i) => ({
+        order: i + 1, name: s.name,
+        detail: s.cls + (s.mods ? ' · ' + sgn(s.mods.str) + '/' + sgn(s.mods.dex) + '/' + sgn(s.mods.wis) : ''),
+        onName: (e) => {
+          const extra = (this.state.extraSeats || []).slice();
+          const base = this.state.game ? this.state.game.seats.length : this.seatList().length;
+          if (i >= base) { extra[i - base] = Object.assign({}, extra[i - base], { name: e.target.value }); this.setState({ extraSeats: extra }); }
+          else if (i === 0) this.setState({ char: Object.assign({}, this.state.char, { name: e.target.value }) });
+        },
+        remove: () => {
+          const base = this.state.game ? this.state.game.seats.length : this.seatList().length;
+          if (i < base) return;
+          const extra = (this.state.extraSeats || []).slice();
+          extra.splice(i - base, 1);
+          this.setState({ extraSeats: extra });
+        }
+      })),
+      addSeat: this.addSeat,
+      compRows: CATS.map(function (c) {
+        return { key: c.key, name: c.name, count: c.count, color: c.color, pct: Math.round((c.count / 28) * 100 * 2.4) + '%' };
+      }),
+      startRun: this.startRun,
+
+      /* join */
+      joinCode: st.joinCode,
+      onJoinCode: this.onJoinCode,
+      prefillCode: this.prefillCode,
+      doJoin: this.doJoin,
+      joined: st.joined,
+      notJoined: !st.joined,
+      joinKicker: st.joined ? 'Lobby · waiting on the GM' : 'Player · join a maze',
+      lobbyRows: seats.map(function (s, i) {
+        const isMe = i === 0;
+        return {
+          name: (isMe ? (st.char.name || s.name) : s.name) || 'Open seat',
+          order: i + 1, active: isMe,
+          detail: (isMe ? st.char.cls : s.cls) + (isMe ? ' · you' : ' · ready')
+        };
+      }),
+      toggleReady: this.toggleReady,
+      readyLabel: st.ready ? 'Ready — waiting' : 'Mark ready',
+      readyBg: st.ready ? '#182429' : '#E3A445',
+      readyFg: st.ready ? '#E3A445' : '#0A0F12',
+      readyBd: st.ready ? '#8A5E1E' : '#E3A445',
+      lobbyStatus: st.ready ? 'The GM opens the door when every seat is in.' : 'Confirm your character to take the seat.',
+
+      /* session */
+      riverSlots: g.river,
+      onPick: this.onPick,
+      onUse: this.onUse,
+      deckCount: g.deck.length,
+      discardCount: g.discard.length,
+      discardTop: g.top || undefined,
+      progress: g.progress,
+      threats: g.threats,
+      round: g.round,
+      barAbilities: ABIL.map(function (a) { return a.key; }),
+      barLocked: g.phase === 'act' && !g.pending && !g.outcome ? g.locked : ABIL.map(function (a) { return a.key; }),
+      phaseLabel: phaseLabels[g.phase] || '',
+      phaseHint: g.pending ? 'Read the roll out, then resolve it. The GM can flip any result before it lands.' : (phaseHints[g.phase] || ''),
+      phaseColor: g.phase === 'act' ? '#E3A445' : g.phase === 'reveal' ? '#7FC0AC' : '#9B8F74',
+      activeName: activeSeat.name + (activeSeat.cls ? ' · ' + activeSeat.cls : ''),
+      sessionSeats: g.seats.map(function (s, i) {
+        return { name: s.name, order: i + 1, active: i === activeIdx, detail: s.cls };
+      }),
+      hasPending: !!g.pending,
+      pending: g.pending ? Object.assign({}, g.pending, {
+        modText: sgn(g.pending.mod),
+        verdict: g.pending.success ? 'Success' : 'Failure'
+      }) : {},
+      pendingBd: g.pending && g.pending.success ? '#7FC0AC' : '#D9707C',
+      flipPending: this.flipPending,
+      applyPending: this.applyPending,
+      isOver: !!g.outcome,
+      outcomeKicker: g.outcome === 'escape' ? 'Travel resolved' : 'Travel interrupted',
+      outcomeTitle: g.outcome === 'escape' ? 'The party is through' : 'Confrontation',
+      outcomeColor: g.outcome === 'escape' ? '#E3A445' : '#D9707C',
+      outcomeBody: g.outcome === 'escape'
+        ? st.run.escape + ' Clear Paths collected in ' + g.round + ' rounds. Note the cost and start the scene on the far side.'
+        : 'Two Monsters were revealed. The journey stops here and the fight is yours to run.',
+      logRows: g.log.slice(0, 40).map(function (l) {
+        return {
+          text: l.t, stamp: String(l.n).padStart(2, '0'),
+          color: l.k === 'good' ? '#F2CB8A' : l.k === 'bad' ? '#D9707C' : l.k === 'card' ? '#E4D9BF' : l.k === 'muted' ? '#45443F' : '#9B8F74'
+        };
+      }),
+      lockNote: g.locked.length ? 'Locked: ' + g.locked.map(function (k) { return (ABIL.find(function (a) { return a.key === k; }) || {}).name; }).join(', ') : 'No lockout',
+      gmOpen: st.gmOpen,
+      toggleGm: this.toggleGm,
+      gmBg: st.gmOpen ? '#182429' : 'transparent',
+      gmFg: st.gmOpen ? '#E3A445' : '#9B8F74',
+      gmBd: st.gmOpen ? '#8A5E1E' : '#22323A',
+      pauseRun: this.pauseRun,
+      pauseLabel: st.paused ? 'Saved' : 'Pause & save',
+      copyLog: this.copyLog,
+      logCopyLabel: st.logCopied ? 'Copied' : 'Copy log',
+      resetRun: this.resetRun
+    };
+  }
+}
+
+</script>
+</body>
+</html>

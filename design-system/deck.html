@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maze Deck — print sheets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+</head>
+<body>
+
+<!-- ============================================================
+     ICON SYSTEM
+     One motif, four states. Every category is THE SAME DOORWAY:
+       Right Path  open, corridor receding into light
+       Dead End    the same arch, bricked shut
+       Trap        the same arch, portcullis dropping
+       Monster     the same arch, full of dark, something in it
+     Drawn on a 120x140 grid, stroke-first, currentColor only.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+    <!-- The shared arch: outer band, evenodd-cut opening. -->
+    <path id="archBand"
+      d="M16,132 L16,70 A44,44 0 0 1 104,70 L104,132 L92,132 L92,70
+         A32,32 0 0 0 28,70 L28,132 Z"/>
+    <path id="archOpening"
+      d="M28,132 L28,70 A32,32 0 0 1 92,70 L92,132 Z"/>
+    <clipPath id="clipOpening"><use href="#archOpening"/></clipPath>
+
+    <!-- Base plinth, shared by all four. -->
+    <g id="plinth">
+      <rect x="8" y="132" width="104" height="7" rx="1"/>
+      <rect x="4" y="130" width="112" height="2.6" rx="1" opacity=".55"/>
+    </g>
+
+    <!-- ---------- RIGHT PATH ---------- -->
+    <symbol id="ic-path" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="none" stroke="currentColor"
+         stroke-linecap="square">
+        <path d="M38,132 L38,84 A22,22 0 0 1 82,84 L82,132" stroke-width="3.4" opacity=".85"/>
+        <path d="M47,132 L47,95 A13,13 0 0 1 73,95 L73,132" stroke-width="2.8" opacity=".6"/>
+        <path d="M54,132 L54,104 A6,6 0 0 1 66,104 L66,132" stroke-width="2.2" opacity=".4"/>
+      </g>
+      <circle cx="60" cy="118" r="7" fill="currentColor" opacity=".9"/>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- DEAD END (the arch bricked shut) ---------- -->
+    <symbol id="ic-dead" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" stroke="currentColor" stroke-width="2.6"
+         fill="none" stroke-linecap="square">
+        <path d="M24,80 H96 M24,93 H96 M24,106 H96 M24,119 H96"/>
+        <path d="M44,68 V80 M60,68 V80 M76,68 V80"/>
+        <path d="M36,80 V93 M52,80 V93 M68,80 V93 M84,80 V93"/>
+        <path d="M44,93 V106 M60,93 V106 M76,93 V106"/>
+        <path d="M36,106 V119 M52,106 V119 M68,106 V119 M84,106 V119"/>
+        <path d="M44,119 V132 M60,119 V132 M76,119 V132"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- OBSTACLE (portcullis dropping) ---------- -->
+    <symbol id="ic-obst" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="currentColor">
+        <rect x="24" y="66" width="72" height="7" rx="1"/>
+        <rect x="34" y="70" width="4.5" height="34"/><path d="M32,104 h8.5 L36.2,115 Z"/>
+        <rect x="46" y="70" width="4.5" height="38"/><path d="M44,108 h8.5 L48.2,119 Z"/>
+        <rect x="58" y="70" width="4.5" height="34"/><path d="M56,104 h8.5 L60.2,115 Z"/>
+        <rect x="70" y="70" width="4.5" height="38"/><path d="M68,108 h8.5 L72.2,119 Z"/>
+        <rect x="82" y="70" width="4.5" height="34"/><path d="M80,104 h8.5 L84.2,115 Z"/>
+        <rect x="24" y="79" width="72" height="4" rx="1" opacity=".85"/>
+        <rect x="24" y="94" width="72" height="4" rx="1" opacity=".85"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- TRAP ----------
+         Springs from the FLOOR, where Obstacle descends from the top.
+         Opposite direction of travel is what keeps the two blockers
+         apart at 12mm. -->
+    <symbol id="ic-trap" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="currentColor">
+        <rect x="28" y="86" width="64" height="2.6" rx="1.3" opacity=".8"/>
+        <rect x="29" y="79" width="4" height="16" rx="1"/>
+        <rect x="87" y="79" width="4" height="16" rx="1"/>
+        <path d="M33,132 L39,104 L45,132 Z"/>
+        <path d="M47,132 L53,99  L59,132 Z"/>
+        <path d="M61,132 L67,99  L73,132 Z"/>
+        <path d="M75,132 L81,104 L87,132 Z"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- MONSTER ---------- -->
+    <symbol id="ic-mons" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)">
+        <g fill="currentColor">
+          <path d="M36,92 Q47,86 57,99 Q45,105 36,92 Z"/>
+          <path d="M84,92 Q73,86 63,99 Q75,105 84,92 Z"/>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"
+           opacity=".75">
+          <path d="M40,116 L47,124 L54,116 L60,124 L66,116 L73,124 L80,116"/>
+        </g>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- WANDERER ----------
+         The arch with someone standing in it. The face is cut as a
+         real hole (fill-rule evenodd) rather than painted dark, so
+         the figure reads as a silhouette on any ground. -->
+    <symbol id="ic-wand" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)">
+        <rect x="79.5" y="64" width="3.4" height="68" fill="currentColor" opacity=".9"/>
+        <circle cx="81.2" cy="59" r="4.2" fill="none" stroke="currentColor" stroke-width="2.4"/>
+        <path fill="currentColor" fill-rule="evenodd"
+              d="M45,84 A11,11 0 0 1 67,84 L74,132 L38,132 Z
+                 M51,82 a5,5.5 0 1 0 10,0 a5,5.5 0 1 0 -10,0 Z"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- ITEM ----------
+         The arch with something left in it. The wedge of light is
+         drawn first and the chest over it, so the glow reads as
+         escaping from behind the lid -- the same "light, not paint"
+         rule the card grounds use. -->
+    <symbol id="ic-item" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)">
+        <g stroke="currentColor" stroke-width="3.6" stroke-linecap="round" fill="none" opacity=".8">
+          <path d="M60,84 L60,72"/><path d="M43,88 L35,78"/><path d="M77,88 L85,78"/>
+        </g>
+        <g fill="currentColor">
+          <path d="M33,103 L33,99 A27,8 0 0 1 87,99 L87,103 Z"/>
+          <rect x="36" y="106" width="48" height="25"/>
+          <rect x="55" y="100" width="10" height="13" rx="1"/>
+        </g>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ============================================================
+         ABILITY GLYPHS
+         The arch carries these too: an ability is another doorway,
+         and what stands in it is the tool the character brings.
+         ============================================================ -->
+
+    <!-- Forge a Path (STR) -- a smith's hammer -->
+    <symbol id="ic-act-str" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="currentColor">
+        <g stroke="currentColor" stroke-width="3.2" stroke-linecap="round" opacity=".75">
+          <path d="M44,58 L40,50"/><path d="M76,58 L80,50"/>
+        </g>
+        <path d="M34,66 L86,66 L86,88 L34,88 Z"/>
+        <path d="M34,68 L25,74 L25,80 L34,86 Z"/>
+        <rect x="55" y="88" width="10" height="44" rx="2"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- Scout Ahead (DEX) -- a lantern carried forward -->
+    <symbol id="ic-act-dex" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)">
+        <g stroke="currentColor" fill="none">
+          <circle cx="60" cy="56" r="7" stroke-width="3"/>
+          <g stroke-width="3.2" stroke-linecap="round" opacity=".7">
+            <path d="M38,92 L29,88"/><path d="M82,92 L91,88"/>
+          </g>
+        </g>
+        <g fill="currentColor">
+          <rect x="58.5" y="62" width="3" height="10"/>
+          <path d="M46,72 L74,72 L70,79 L50,79 Z"/>
+          <path d="M50,79 L70,79 L72,110 L48,110 Z"/>
+          <rect x="45" y="110" width="30" height="6" rx="1"/>
+        </g>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- It's Elementary (INT) -- a magnifier -->
+    <symbol id="ic-act-int" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="none" stroke="currentColor">
+        <circle cx="54" cy="80" r="19" stroke-width="6"/>
+        <path d="M67,94 L84,117" stroke-width="9" stroke-linecap="round"/>
+        <path d="M46,72 L42,78" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- Careful Consideration (WIS) -- a balance -->
+    <symbol id="ic-act-wis" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="currentColor">
+        <rect x="58" y="66" width="4" height="60"/>
+        <rect x="46" y="126" width="28" height="5" rx="1"/>
+        <rect x="34" y="76" width="52" height="4" rx="2"/>
+        <rect x="37" y="80" width="2.4" height="10"/>
+        <rect x="80.6" y="80" width="2.4" height="10"/>
+        <path d="M30,90 L46,90 L42,99 L34,99 Z"/>
+        <path d="M74,90 L90,90 L86,99 L78,99 Z"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- Boost Morale (CHA) -- a rallying banner -->
+    <symbol id="ic-act-cha" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)" fill="currentColor">
+        <circle cx="42.2" cy="55" r="3.6"/>
+        <rect x="40" y="58" width="4.5" height="74"/>
+        <path d="M44.5,63 L84,63 L76,75 L84,87 L44.5,87 Z"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
+    <!-- ---------- SEAL (card back only, category-neutral) ---------- -->
+    <symbol id="ic-seal" viewBox="0 0 120 140">
+      <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square">
+        <use href="#archOpening"/>
+        <path d="M16,132 L16,70 A44,44 0 0 1 104,70 L104,132"/>
+        <path d="M4,134 H116"/>
+      </g>
+    </symbol>
+
+    <!-- ---------- LABYRINTH FIELD (card back) ---------- -->
+    <pattern id="pt-maze" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M0,24 V4 H20 V20 H8 V12 H16 V16 H12"
+            fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </pattern>
+
+  </defs>
+</svg>
+
+<script>
+/* ============================================================
+   DECK MODEL
+   Composition and card copy live here and nowhere else. Change
+   a count once and the print sheets follow. Mechanics are the
+   15-card "River" ruleset.
+   ============================================================ */
+
+/* Read the mechanical constants straight out of tokens.css so the
+   stylesheet really is the single source of truth it claims to be.
+   Stylesheets are render-blocking, so they are parsed by the time
+   this runs; the fallbacks only matter if tokens.css fails to load. */
+const T = getComputedStyle(document.documentElement);
+const tok = (name, fallback) => {
+  const v = parseFloat(T.getPropertyValue(name));
+  return Number.isFinite(v) ? v : fallback;
+};
+
+const MAZE_DC = tok('--maze-dc', 13);
+
+/* Seven categories. Dead End / Obstacle / Trap are three DIFFERENT
+   ways to be stopped, and each is stopped differently:
+     Dead End  cannot be solved  -- only Boost Morale clears it
+     Obstacle  can be worked on  -- an action check resolves it
+     Trap      resolves at once  -- and leaves the game either way   */
+
+const CATEGORIES = [
+  { key:'path', cls:'cat-path', icon:'ic-path', copies: tok('--count-path', 6),
+    eyebrow:'Progress', title:'Clear Path',
+    rule:'Score <em>1 point</em>. Collect <em>5</em> and the party escapes.' },
+
+  { key:'dead', cls:'cat-dead', icon:'ic-dead', copies: tok('--count-dead', 4),
+    eyebrow:'Setback', title:'Dead End',
+    rule:'<em>No check clears it.</em> Only Boost Morale. Blocks the river.' },
+
+  { key:'obst', cls:'cat-obst', icon:'ic-obst', copies: tok('--count-obstacle', 4),
+    eyebrow:'Blocked', title:'Obstacle',
+    rule:'<em>Stays in the river</em> until an action check resolves it.' },
+
+  { key:'trap', cls:'cat-trap', icon:'ic-trap', copies: tok('--count-trap', 3),
+    eyebrow:'Hazard', title:'Trap',
+    rule:'Check <em>DC ' + MAZE_DC + ' ± 1</em> at once. Leaves the game either way.' },
+
+  { key:'mons', cls:'cat-mons', icon:'ic-mons', copies: tok('--count-monster', 3),
+    eyebrow:'Threat', title:'Monster',
+    rule:'<em>Two revealed</em> forces a confrontation. Beat it and it is gone.' },
+
+  { key:'wand', cls:'cat-wand', icon:'ic-wand', copies: tok('--count-wanderer', 4),
+    eyebrow:'Encounter', title:'Wanderer',
+    rule:'A traveller or lost soul. <em>Friend or foe</em> — some stay, some leave.' },
+
+  { key:'item', cls:'cat-item', icon:'ic-item', copies: tok('--count-item', 4),
+    eyebrow:'Salvage', title:'Item',
+    rule:'Treasure, trinket, or trash. Keep or leave — it <em>discards</em> either way.' },
+];
+
+const DECK_TOTAL = CATEGORIES.reduce((n,c) => n + c.copies, 0);
+
+const ACTIONS = [
+  { stat:'STR', score:'Strength', icon:'ic-act-str', name:'Forge a Path',
+    effect:'Add <strong>2 Clear Path cards</strong> from the reserve into the discard pile.',
+    why:'Deck dilution: lowers threat density for the rest of the run.' },
+  { stat:'DEX', score:'Dexterity', icon:'ic-act-dex', name:'Scout Ahead',
+    effect:'Look at the top card of the deck <strong>and</strong> one river card. Take either.',
+    why:'Buys information and converts it straight into a guaranteed pick.' },
+  { stat:'INT', score:'Intelligence', icon:'ic-act-int', name:'It’s Elementary',
+    effect:'Look at the top <strong>3</strong> cards. One to the bottom, two back on top in any order.',
+    why:'Removes the worst immediate danger and sets up the next two turns.' },
+  { stat:'WIS', score:'Wisdom', icon:'ic-act-wis', name:'Careful Consideration',
+    effect:'Reveal <strong>2</strong> cards in the river before anyone commits to a choice.',
+    why:'Short-term safety. The cheapest way to not walk into a trap.' },
+  { stat:'CHA', score:'Charisma', icon:'ic-act-cha', name:'Boost Morale',
+    effect:'Permanently remove one <strong>Dead End</strong> from the river and replace it.',
+    why:'The only way a Dead End ever leaves the river.' },
+];
+
+/* ---------- renderers ---------- */
+
+function cardFace(cat) {
+  return `<article class="card ${cat.cls}">
+    <div class="card__trim">
+      <div class="card__light"></div>
+      <div class="card__frame"></div>
+      <span class="card__code card__code--tl"></span>
+      <span class="card__code card__code--br"></span>
+      <div class="card__safe">
+        <div class="card__glyph"><svg><use href="#${cat.icon}"/></svg></div>
+        <p class="card__eyebrow">${cat.eyebrow}</p>
+        <h2 class="card__title">${cat.title}</h2>
+        <div class="card__divider"></div>
+        <p class="card__rule">${cat.rule}</p>
+      </div>
+      <p class="card__count">${cat.copies} of ${DECK_TOTAL} in deck</p>
+    </div>
+  </article>`;
+}
+
+function cardBack() {
+  return `<article class="card card--back cat-path">
+    <div class="card__trim">
+      <svg class="card__maze" style="color:var(--ink-500)">
+        <rect width="100%" height="100%" fill="url(#pt-maze)"/>
+      </svg>
+      <div class="card__vignette"></div>
+      <div class="card__seal-disc"></div>
+      <div class="card__frame"></div>
+      <svg class="card__seal" viewBox="0 0 120 140"><use href="#ic-seal"/></svg>
+    </div>
+  </article>`;
+}
+
+function cardAction(a) {
+  return `<article class="card card--action cat-path">
+    <div class="card__trim">
+      <div class="card__frame"></div>
+      <div class="card__safe">
+        <div class="card__glyph"><svg><use href="#${a.icon}"/></svg></div>
+        <p class="card__eyebrow">${a.score}</p>
+        <h2 class="card__title">${a.name}</h2>
+        <div class="card__divider"></div>
+        <p class="action__effect">${a.effect}</p>
+        <p class="action__why">${a.why}</p>
+      </div>
+      <p class="card__count">${a.stat} check · DC ${MAZE_DC}</p>
+    </div>
+  </article>`;
+}
+
+function cardRef() {
+  return `<article class="card card--ref cat-path">
+    <div class="card__trim">
+      <div class="card__light"></div>
+      <div class="card__frame"></div>
+      <div class="card__safe">
+        <h2 class="ref__title">The Loop</h2>
+        <div class="ref__dc" style="text-align:center">Maze DC ${MAZE_DC}</div>
+        <ul class="ref__list">
+          <li><strong>River.</strong> ${tok('--river-width',3)} cards, face-down. Refill on every pick.</li>
+          <li><strong>Turn.</strong> Act first, reveal second — never the reverse.</li>
+          <li><strong>Three blockers</strong> in the river: clear all, add a Monster.</li>
+          <li><strong>Reshuffle.</strong> New cards enter the <em>discard</em> first.</li>
+          <li><strong>Lockout.</strong> End of round, roll d6: that action is off next round.</li>
+          <li><strong>Scaling.</strong> Under 5 players, cut actions to party size.</li>
+        </ul>
+      </div>
+    </div>
+  </article>`;
+}
+
+function cardIndex() {
+  const rows = CATEGORIES.map(c =>
+    `<li><strong>${c.title}</strong> ×${c.copies} — ${c.rule.replace(/<\/?em>/g,'')}</li>`
+  ).join('');
+  return `<article class="card card--ref cat-path">
+    <div class="card__trim">
+      <div class="card__light"></div>
+      <div class="card__frame"></div>
+      <div class="card__safe">
+        <h2 class="ref__title">The Deck</h2>
+        <div class="ref__dc" style="text-align:center">${DECK_TOTAL} cards</div>
+        <ul class="ref__list">${rows}</ul>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------- sheet assembly ---------- */
+
+const PER_SHEET = 6;   // 2 x 3 on A4 portrait -- see components.css
+
+function sheets(cards, label) {
+  let out = '', i = 0;
+  while (i < cards.length) {
+    out += `<section class="sheet"><p class="sheet__label">${label} — sheet ${Math.floor(i/PER_SHEET)+1}</p>`
+         + cards.slice(i, i+PER_SHEET).join('') + `</section>`;
+    i += PER_SHEET;
+  }
+  return out;
+}
+
+const proof = [
+  ...CATEGORIES.map(cardFace),
+  cardBack(),
+  ...ACTIONS.map(cardAction),
+  cardRef(),
+  cardIndex(),
+];
+
+const faces = CATEGORIES.flatMap(c => Array(c.copies).fill(cardFace(c)));
+const backs = Array(DECK_TOTAL).fill(cardBack());
+const extras = [...ACTIONS.map(cardAction), cardRef(), cardIndex()];
+
+/* ?guides=1 draws the trim + safe outlines for cutting by hand. */
+if (new URLSearchParams(location.search).get('guides')) {
+  document.documentElement.classList.add('with-guides');
+}
+
+document.write(
+    sheets(proof, 'Proof — one of each design')
+  + sheets(faces,  'Deck faces')
+  + sheets(backs,  'Card backs')
+  + sheets(extras, 'Actions + GM reference')
+);
+</script>
+
+</body>
+</html>
