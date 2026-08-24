@@ -11,7 +11,7 @@ then [DECISIONS.md](DECISIONS.md), then
 **M0, M1 and M2 complete. A full crossing is playable on one screen.**
 
 ```bash
-cd packages/rules && npm test            # 40 tests, ~8s, no browser needed
+cd packages/rules && npm test            # 44 tests, ~10s, no browser needed
 cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev             # http://localhost:5180
 cd apps/table && npm run build           # tsc --noEmit && vite build
@@ -20,7 +20,7 @@ cd packages/ui && npm run build          # tsup + the CSS flattening step
 
 - **`packages/ui`** — the component layer, unchanged except for the canonical
   deck data. Builds; design-sync converter runs clean at 13/13.
-- **`packages/rules`** — the engine. Pure, seeded, 40 tests.
+- **`packages/rules`** — the engine. Pure, seeded, 44 tests.
   `createGame` → `apply(state, action)` → `available(state)`.
 - **`apps/table`** — the GM's screen. Vite + React, both packages aliased to
   **source** (no workspace root; hoisting breaks design-sync).
@@ -114,7 +114,7 @@ faithful to the rules as printed. It may not be what was intended.
 | | | |
 |---|---|---|
 | M0 | Repo consolidation | **done** |
-| M1 | Rules engine | **done** — 40 tests |
+| M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | next |
 | M4 | Multiplayer | |
