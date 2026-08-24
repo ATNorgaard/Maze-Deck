@@ -13,6 +13,7 @@ import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { SCORES } from '../campaign';
+import type { DrawnPrompt } from '../tables';
 import { useFittingSize } from '../useFittingSize';
 
 interface Props {
@@ -20,6 +21,8 @@ interface Props {
   dispatch: (action: GameAction) => void;
   onExit: () => void;
   runName: string;
+  /** The line drawn for the card in front of the table, if any. */
+  prompt: DrawnPrompt | null;
   error: string | null;
 }
 
@@ -46,8 +49,11 @@ const PHASE_NOTE: Record<GameState['phase'], string> = {
   over: 'Copy the log into your notes and pick the scene back up.',
 };
 
-export function SessionScreen({ state, dispatch, onExit, runName, error }: Props) {
+export function SessionScreen({
+  state, dispatch, onExit, runName, prompt, error,
+}: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
+  const [dcNudge, setDcNudge] = React.useState(0);
   const [covered, setCovered] = React.useState<number | null>(null);
   const [handFlight, setHandFlight] = React.useState<FlightRequest | null>(null);
   const riverRef = React.useRef<HTMLDivElement>(null);
@@ -107,6 +113,18 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
     }
     dispatch({ type: 'RESOLVE_CHOICE', payload });
   };
+
+  // R6: the table entry suggests the check, the GM overrides before the
+  // roll. Adopting it here rather than forcing a choice from cold.
+  const suggestedScore = prompt?.score;
+  const suggestedOffset = prompt?.dcOffset;
+  React.useEffect(() => {
+    if (suggestedScore === undefined) return;
+    setScore(suggestedScore);
+    setDcNudge(suggestedOffset ?? 0);
+  }, [suggestedScore, suggestedOffset]);
+
+  const obstacleDc = state.config.mazeDc + dcNudge;
 
   const pulse = revealCategory === 'clear-path' ? 'escape'
     : revealCategory === 'monster' ? 'threat' : null;
@@ -181,6 +199,12 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
             {PHASE_NOTE[state.phase]}
             {seat && state.phase !== 'over' ? ` — ${seat.name}` : ''}
           </p>
+          {prompt ? (
+            <p className="t-phase__scene">
+              <span className="t-kicker">The scene</span>
+              {prompt.text}
+            </p>
+          ) : null}
         </div>
 
         <div
@@ -233,10 +257,23 @@ export function SessionScreen({ state, dispatch, onExit, runName, error }: Props
                   >
                     {SCORES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
+                  <select
+                    className="t-input"
+                    style={{ width: 'calc(34 * var(--md-u))' }}
+                    aria-label="Difficulty of the attempt"
+                    value={String(dcNudge)}
+                    onChange={(e) => setDcNudge(Number(e.target.value))}
+                  >
+                    {[-2, -1, 0, 1, 2].map((n) => (
+                      <option key={n} value={n}>DC {state.config.mazeDc + n}</option>
+                    ))}
+                  </select>
                   {a.obstacleSlots.map((i) => (
                     <button
                       key={i} type="button" className="t-btn"
-                      onClick={() => dispatch({ type: 'ATTEMPT_OBSTACLE', slot: i, score })}
+                      onClick={() => dispatch({
+                        type: 'ATTEMPT_OBSTACLE', slot: i, score, dc: obstacleDc,
+                      })}
                     >
                       Clear the {position(i)}
                     </button>

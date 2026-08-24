@@ -293,6 +293,122 @@ html, body, #root {
 
 .t-flip__face--front { transform: rotateY(180deg); }
 
+/* ---------------- the scene ----------------
+   The line drawn from the campaign's table for whatever card is in
+   front of the party. GM-facing: in M4 this must not reach a player's
+   screen, which is what `visibility` on the event is for. */
+
+.t-phase__scene {
+  margin: calc(3 * var(--md-u)) 0 0;
+  padding-top: calc(3 * var(--md-u));
+  border-top: 1px solid var(--md-ink-700);
+  font-family: var(--md-font-body);
+  font-size: 16px;
+  line-height: var(--md-leading-body);
+  color: var(--md-parchment-200);
+}
+
+.t-phase__scene .t-kicker {
+  display: block;
+  margin-bottom: calc(1.5 * var(--md-u));
+  color: var(--md-cat-path-300);
+}
+
+/* ---------------- tables editor ---------------- */
+
+.t-tables {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: calc(6 * var(--md-u));
+  align-items: start;
+  padding: calc(6 * var(--md-u));
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .t-tables { grid-template-columns: minmax(0, 1fr); }
+}
+
+.t-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.5 * var(--md-u));
+  margin-top: calc(3 * var(--md-u));
+}
+
+.t-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(2 * var(--md-u));
+  padding: calc(2.4 * var(--md-u)) calc(3 * var(--md-u));
+  border: 1px solid var(--md-ink-700);
+  border-radius: calc(1.4 * var(--md-u));
+  background: var(--md-ink-900);
+  color: var(--md-parchment-300);
+  font-family: var(--md-font-display);
+  font-size: 15px;
+  letter-spacing: var(--md-track-title);
+  cursor: pointer;
+}
+
+.t-tab:hover { border-color: var(--md-cat-path-700); color: var(--md-cat-path-300); }
+.t-tab[aria-pressed='true'] {
+  border-color: var(--md-cat-path-700);
+  background: var(--md-ink-700);
+  color: var(--md-cat-path-300);
+}
+
+.t-tab__count {
+  font-family: var(--md-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--md-parchment-400);
+}
+
+.t-tab__count[data-empty] { color: var(--md-cat-mons-300); }
+
+.t-entries {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2.5 * var(--md-u));
+  margin-top: calc(4 * var(--md-u));
+}
+
+.t-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: calc(2.5 * var(--md-u));
+  align-items: start;
+  padding: calc(2.5 * var(--md-u));
+  border: 1px solid var(--md-ink-700);
+  border-radius: calc(1.6 * var(--md-u));
+  background: var(--md-ink-900);
+}
+
+@media (max-width: 1000px) {
+  .t-entry { grid-template-columns: auto minmax(0, 1fr); }
+}
+
+.t-entry__n {
+  font-family: var(--md-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--md-ink-500);
+  padding-top: calc(2.4 * var(--md-u));
+  min-width: 2ch;
+}
+
+.t-entry__text {
+  font-size: 15px;
+  line-height: var(--md-leading-body);
+  resize: vertical;
+  min-height: calc(18 * var(--md-u));
+}
+
+.t-entry__check { display: flex; flex-direction: column; gap: calc(1.5 * var(--md-u)); min-width: calc(38 * var(--md-u)); }
+
 /* ---------------- modals ---------------- */
 
 .t-scrim {

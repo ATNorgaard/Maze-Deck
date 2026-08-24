@@ -4,11 +4,12 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M2, second revision)
+**Last updated:** 2026-08-24 (M3 complete)
 
 ## Where we are
 
-**M0, M1 and M2 complete. A full crossing is playable on one screen.**
+**M0 through M3 complete. A full crossing is playable, and the GM is handed
+a line to narrate from for every card the party turns over.**
 
 ```bash
 cd packages/rules && npm test            # 44 tests, ~10s, no browser needed
@@ -53,28 +54,52 @@ devices, either the Durable Object schedules it (an alarm is the clean answer)
 or one client is elected — but two clients both dispatching `ADVANCE_REVEAL`
 must not double-resolve, so the server has to make it idempotent.
 
+**Scenario tables are live.** `apps/table/src/tables.ts` holds the type, the
+default set (six lines per category, three for Monster, two each for the
+expansion cards) and the draw. Tables belong to the campaign, so they are
+written once and reused every crossing.
+
+When a card is committed to, the app draws a line from that card's table and
+holds it under the phase signpost until the next reveal. The draw avoids the
+entry used last for that category, so the same obstacle never turns up twice
+running. It uses `Math.random`, deliberately **not** the engine's seeded
+generator: narration is not game state, and keeping it out of `GameState` means
+a campaign's tables never have to be serialised into every run. The cost is that
+prompts are not part of a replay.
+
+Obstacle entries carry a suggested ability and a DC written as an **offset from
+the Maze DC**, not an absolute number, so raising the Maze DC still scales
+everything from one dial. The attempt controls adopt whatever the drawn entry
+suggests and stay editable — DECISIONS R6, delivered.
+
+The campaign schema is **v2**, and `migrate()` carries a v1 blob forward rather
+than discarding it. Verified against a real in-progress save: the run survived.
+
 ## Next single action
 
-**Start M3: scenario tables.** This is the feature that makes the app better
-than the cards rather than a copy of them — see DECISIONS A5.
+**Start M4: multiplayer.** The largest remaining milestone, and the first that
+needs a server.
 
-1. Add `tables: Record<CardCategory, TableEntry[]>` to `Campaign` in
-   `apps/table/src/campaign.ts`, bumping `SCHEMA_VERSION` to 2 and writing the
-   migration from v1 (v1 blobs currently get discarded — see `load()`).
-2. `TableEntry` needs at minimum `{ id, text }`, plus optional
-   `{ score, dc }` for Obstacles, which is what DECISIONS R6 promised: the
-   entry suggests the check, the GM overrides before the roll.
-3. Draw an entry when a card resolves, and surface it to the GM as the prompt to
-   narrate from. It must come off the **seeded** generator if it lives in engine
-   state — otherwise keep it in the app layer and out of `GameState`, which is
-   the simpler option and the one I would take.
-4. A per-campaign editor screen. Ship a default set written by us — roughly six
-   entries per category, two or three for Monster.
-5. Wire the Obstacle entry's suggested score/DC into the existing
-   `ATTEMPT_OBSTACLE` control, which currently makes the GM pick a score cold.
+1. Extract the session into a transport-agnostic interface (DECISIONS A3) with
+   the current in-process adapter behind it, so the single-screen build keeps
+   working while the network one is written.
+2. Cloudflare Worker + one Durable Object per session; join by code.
+3. Redact per client **before the wire**: strip face-down river categories, and
+   keep the scenario prompt GM-only — that is what `visibility` on the event was
+   always for, and M3 has now given it a real payload.
+4. Give `ADVANCE_REVEAL` an owner. The reveal advances on a timer; on one screen
+   the GM's browser fires it, but across devices either the Durable Object
+   schedules it with an alarm or one client is elected. **Two clients both
+   dispatching it must not double-resolve, so make it idempotent server-side.**
+5. `apps/table` becomes the GM view; the player view is a different screen with
+   different content, which is why the current layout was never tuned for
+   phones.
 
 ## Watch out for
 
+- **Prompts are GM-facing and currently rendered on the shared board.** That is
+  correct today because the board *is* the GM's screen. When M4 adds a player
+  view, `.t-phase__scene` must not be sent to it.
 - **CSS regressions from bulk edits.** The `.t-panel` rules were silently lost
   in an earlier rewrite of the layout section, which is why every panel — the
   modals included — painted transparent. Several follow-up patches then no-opped
@@ -121,6 +146,6 @@ faithful to the rules as printed. It may not be what was intended.
 | M0 | Repo consolidation | **done** |
 | M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
-| M3 | Scenario tables | next |
-| M4 | Multiplayer | |
+| M3 | Scenario tables | **done** |
+| M4 | Multiplayer | next |
 | M5 | Deck and print regeneration | |

@@ -8,6 +8,7 @@ interface Props {
   onStart: () => void;
   hasRun: boolean;
   onResume: () => void;
+  onEditTables: () => void;
 }
 
 function Stepper({
@@ -34,7 +35,9 @@ function Stepper({
   );
 }
 
-export function CampaignScreen({ campaign, onChange, onStart, hasRun, onResume }: Props) {
+export function CampaignScreen({
+  campaign, onChange, onStart, hasRun, onResume, onEditTables,
+}: Props) {
   const set = <K extends keyof Campaign>(key: K, value: Campaign[K]) =>
     onChange({ ...campaign, [key]: value });
 
@@ -52,6 +55,9 @@ export function CampaignScreen({ campaign, onChange, onStart, hasRun, onResume }
           Maze Deck
         </span>
         <span className="t-spacer" />
+        <button type="button" className="t-btn" onClick={onEditTables}>
+          Scenario tables
+        </button>
         {hasRun ? (
           <button type="button" className="t-btn" onClick={onResume}>
             Back to the run

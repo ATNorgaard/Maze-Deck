@@ -4,12 +4,18 @@ import { apply, createGame, IllegalActionError } from '@maze-deck/rules';
 import type { GameAction } from '@maze-deck/rules';
 import { load, newId, runConfigFor, save } from './campaign';
 import type { Campaign } from './campaign';
+import { drawPrompt } from './tables';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { SessionScreen } from './screens/SessionScreen';
+import { TablesScreen } from './screens/TablesScreen';
+
+type Screen = 'campaign' | 'tables' | 'session';
 
 export function App() {
   const [campaign, setCampaign] = React.useState<Campaign>(() => load());
-  const [inRun, setInRun] = React.useState(() => campaign.run !== null);
+  const [screen, setScreen] = React.useState<Screen>(
+    () => (campaign.run !== null ? 'session' : 'campaign'),
+  );
   const [error, setError] = React.useState<string | null>(null);
 
   // Every change is written straight through. A closed tab loses nothing.
@@ -21,6 +27,22 @@ export function App() {
       try {
         const { state } = apply(prev.run, action);
         setError(null);
+
+        // A card has just been turned over: draw the GM a line to
+        // describe it with, and hold it until the next reveal.
+        if (action.type === 'PICK_SLOT' && state.revealed) {
+          const { category } = state.revealed;
+          const drawn = drawPrompt(prev.tables, category, prev.lastPrompt[category]);
+          return {
+            ...prev,
+            run: state,
+            prompt: drawn,
+            lastPrompt: drawn
+              ? { ...prev.lastPrompt, [category]: drawn.entryId }
+              : prev.lastPrompt,
+          };
+        }
+
         return { ...prev, run: state };
       } catch (e) {
         // An illegal action is a bug or a stale click, never a crash.
@@ -34,20 +56,29 @@ export function App() {
     setCampaign((prev) => ({
       ...prev,
       run: createGame(runConfigFor(prev, newId())),
+      prompt: null,
+      lastPrompt: {},
     }));
     setError(null);
-    setInRun(true);
+    setScreen('session');
   }, []);
 
   return (
     <MazeDeckProvider size="md" className="t-app">
-      {inRun && campaign.run ? (
+      {screen === 'session' && campaign.run ? (
         <SessionScreen
           state={campaign.run}
           dispatch={dispatch}
           error={error}
           runName={campaign.runName}
-          onExit={() => setInRun(false)}
+          prompt={campaign.prompt}
+          onExit={() => setScreen('campaign')}
+        />
+      ) : screen === 'tables' ? (
+        <TablesScreen
+          campaign={campaign}
+          onChange={setCampaign}
+          onBack={() => setScreen('campaign')}
         />
       ) : (
         <CampaignScreen
@@ -55,7 +86,8 @@ export function App() {
           onChange={setCampaign}
           onStart={startRun}
           hasRun={campaign.run !== null}
-          onResume={() => setInRun(true)}
+          onResume={() => setScreen('session')}
+          onEditTables={() => setScreen('tables')}
         />
       )}
     </MazeDeckProvider>

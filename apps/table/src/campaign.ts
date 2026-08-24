@@ -10,9 +10,11 @@ import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC, RIVER_WIDTH, OBSTACLE_JAM } from 
 import type {
   AbilityKey, AbilityScore, ExpansionCategory, GameState, RollMode, RunConfig, Seat,
 } from '@maze-deck/rules';
+import { DEFAULT_TABLES, emptyTables } from './tables';
+import type { DrawnPrompt, Tables } from './tables';
 
 export const STORAGE_KEY = 'mazedeck.campaign.v1';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const SCORES: AbilityScore[] = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
 
@@ -39,6 +41,12 @@ export interface Campaign {
   extraClearPath: number;
   extraMonster: number;
   expansions: ExpansionCategory[];
+  /** Narration tables. Written once, reused every crossing. */
+  tables: Tables;
+  /** The prompt drawn for the card currently in front of the table. */
+  prompt: DrawnPrompt | null;
+  /** Last entry used per category, so the same one does not repeat. */
+  lastPrompt: Partial<Record<string, string>>;
   /** The crossing in progress, or null between runs. */
   run: GameState | null;
 }
@@ -76,6 +84,11 @@ export function newCampaign(): Campaign {
     extraClearPath: 0,
     extraMonster: 0,
     expansions: [],
+    // Cloned: DEFAULT_TABLES is a module constant and the editor
+    // writes straight into the campaign.
+    tables: structuredClone(DEFAULT_TABLES),
+    prompt: null,
+    lastPrompt: {},
     run: null,
   };
 }
@@ -108,16 +121,43 @@ export function load(): Campaign {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return newCampaign();
-    const parsed = JSON.parse(raw) as Partial<Campaign>;
-    if (parsed.version !== SCHEMA_VERSION) {
-      // Nothing to migrate from yet. A stored blob from a future or
-      // unknown schema is discarded rather than half-read.
-      return newCampaign();
-    }
-    return { ...newCampaign(), ...parsed } as Campaign;
+    const parsed = JSON.parse(raw) as Partial<Campaign> & { version?: number };
+    const migrated = migrate(parsed);
+    if (!migrated) return newCampaign();
+    return { ...newCampaign(), ...migrated } as Campaign;
   } catch {
     return newCampaign();
   }
+}
+
+/**
+ * Bring a stored blob up to the current schema, or give up on it.
+ *
+ * v1 knew nothing about tables, so it gets the defaults and keeps
+ * everything else — a campaign in progress is not worth throwing away
+ * over a field that did not exist yet.
+ */
+function migrate(
+  blob: Partial<Campaign> & { version?: number },
+): Partial<Campaign> | null {
+  let c = blob;
+
+  if (c.version === 1) {
+    c = {
+      ...c,
+      version: 2,
+      tables: structuredClone(DEFAULT_TABLES),
+      prompt: null,
+      lastPrompt: {},
+    };
+  }
+
+  if (c.version !== SCHEMA_VERSION) return null;
+
+  // A campaign saved with an emptied table set is still valid; only a
+  // missing one is a problem.
+  if (!c.tables) c = { ...c, tables: emptyTables() };
+  return c;
 }
 
 export function save(campaign: Campaign): void {
