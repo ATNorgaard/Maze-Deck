@@ -63,6 +63,7 @@ export function River({
     <div
       className={['md-river', className].filter(Boolean).join(' ')}
       data-blockers={blockers}
+      data-size={size}
       style={style}
       role="group"
       aria-label="The river"

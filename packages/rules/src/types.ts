@@ -64,6 +64,11 @@ export type Phase =
   | 'choice'
   /** The action is done; the player owes a pick from the river. */
   | 'pick'
+  /**
+   * A picked card is face up and being shown to the table. Nothing
+   * has resolved yet. Advances on its own — see ADVANCE_REVEAL.
+   */
+  | 'reveal'
   /** Strikes hit the limit. The table is running combat. */
   | 'encounter'
   | 'over';
@@ -124,6 +129,8 @@ export type GameAction =
   | { type: 'CONFIRM_CHECK'; success?: boolean }
   | { type: 'RESOLVE_CHOICE'; payload: ChoicePayload }
   | { type: 'PICK_SLOT'; index: number }
+  /** The table has seen the card. Let it resolve. */
+  | { type: 'ADVANCE_REVEAL' }
   /** Combat happened at the table; this is the result coming back. */
   | { type: 'RESOLVE_ENCOUNTER'; won: boolean; endRun?: boolean }
   | { type: 'END_RUN' };
@@ -159,6 +166,16 @@ export interface Available {
   needsConfirm: boolean;
   choice: Choice | null;
   encounter: boolean;
+  /** The card currently face up in front of the table, if any. */
+  revealed: Revealed | null;
+}
+
+/** A picked card, face up, not yet resolved. */
+export interface Revealed {
+  slot: number;
+  category: CardCategory;
+  /** False for cards that stay in the river rather than going to the discard. */
+  leavesRiver: boolean;
 }
 
 export interface GameState {
@@ -182,6 +199,8 @@ export interface GameState {
   advantage: string[];
   phase: Phase;
   pending: Pending | null;
+  /** Set only during the reveal phase. */
+  revealed: Revealed | null;
   outcome: Outcome | null;
   log: GameEvent[];
 }

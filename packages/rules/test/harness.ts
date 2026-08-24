@@ -106,6 +106,10 @@ export function nextAction(g: GameState, rng: RngState): GameAction | null {
       return { type: 'PICK_SLOT', index };
     }
 
+    // The reveal is a beat for the table, not a decision.
+    case 'reveal':
+      return { type: 'ADVANCE_REVEAL' };
+
     case 'encounter':
       return { type: 'RESOLVE_ENCOUNTER', won: int(rng, 4) > 0 };
 

@@ -10,20 +10,21 @@ const COLOUR: Record<GameEvent['kind'], string> = {
 
 interface Props {
   log: GameEvent[];
-  /** A player's screen never receives the gm-only lines at all. */
-  asGm: boolean;
 }
 
-export function EventLog({ log, asGm }: Props) {
-  const visible = log.filter((e) => asGm || e.visibility === 'all');
-
-  // Players are numbered sequentially over what they can actually see.
-  // Showing the engine's own numbering would leave gaps, and a gap tells
-  // a player exactly how much is being kept from them.
-  const numbered = visible.map((e, i) => ({ e, n: asGm ? e.n : i + 1 }));
+/**
+ * Every line is public now: the picked card is named to the table and
+ * the deck peeks are shared aloud. `visibility` stays on the event for
+ * M3's GM-only scenario prompts and for M4, where a player's payload
+ * still has to have face-down river cards stripped from it.
+ */
+export function EventLog({ log }: Props) {
+  const numbered = log
+    .filter((e) => e.visibility === 'all')
+    .map((e, i) => ({ e, n: i + 1 }));
 
   return (
-    <div className="t-panel">
+    <div className="t-panel t-panel--log">
       <h2 className="t-panel__title">The log</h2>
       <div className="t-log">
         {numbered.length === 0
@@ -31,10 +32,7 @@ export function EventLog({ log, asGm }: Props) {
           : [...numbered].reverse().map(({ e, n }) => (
               <p className="t-log__line" key={e.n}>
                 <span className="t-log__n">{String(n).padStart(2, '0')}</span>
-                <span style={{ color: COLOUR[e.kind] }}>
-                  {e.visibility === 'gm' ? <span className="t-log__gm">GM</span> : null}
-                  {e.text}
-                </span>
+                <span style={{ color: COLOUR[e.kind] }}>{e.text}</span>
               </p>
             ))}
       </div>

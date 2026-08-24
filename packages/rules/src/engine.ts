@@ -168,6 +168,7 @@ export function createGame(config: RunConfig): GameState {
     advantage: [],
     phase: 'act',
     pending: null,
+    revealed: null,
     outcome: null,
     log: [],
   };
@@ -358,10 +359,10 @@ function applyChoice(
       g.deck.push(...rest);
       shuffle(g.rng, g.deck);
       g.deck.push(chosen);
-      push(g, events, 'card', 'gm',
-        `${getCategory(chosen).title} is set on top of the deck.`);
-      push(g, events, 'sys', 'all',
-        'One card is placed on top of the deck; the rest are shuffled back in.');
+      // The table talks. One player looking at three cards and keeping
+      // it to themselves is theatre, so the peek is public.
+      push(g, events, 'card', 'all',
+        `${getCategory(chosen).title} goes on top of the deck; the rest are shuffled back in.`);
       return;
     }
 
@@ -376,7 +377,7 @@ function applyChoice(
       // in expectation.
       if (slot.category !== null) {
         g.discard.push(slot.category);
-        push(g, events, 'card', 'gm',
+        push(g, events, 'card', 'all',
           `${getCategory(slot.category).title} is pulled out of the ${positionName(payloadT.slot)} slot.`);
       }
       slot.category = chosen;
@@ -396,7 +397,7 @@ function applyChoice(
       const slot = slotAt(g, payloadT.slot);
       if (slot.category !== null) {
         g.discard.push(slot.category);
-        push(g, events, 'card', 'gm',
+        push(g, events, 'card', 'all',
           `${getCategory(slot.category).title} is discarded from the ${positionName(payloadT.slot)} slot.`);
       }
       slot.category = null;
@@ -518,17 +519,38 @@ function afterPick(g: GameState, events: GameEvent[]): void {
   endTurn(g);
 }
 
-function resolvePick(g: GameState, events: GameEvent[], index: number): void {
+/**
+ * A player commits to a path. The card turns face up in front of the
+ * whole table and NOTHING else happens yet — the reveal is its own
+ * phase so every screen gets a beat to show what was drawn.
+ */
+function revealPick(g: GameState, events: GameEvent[], index: number): void {
   const slot = slotAt(g, index);
   const category = slot.category;
   if (category === null) throw new IllegalActionError('That slot is empty');
-  const seat = activeSeat(g);
-  const def = getCategory(category);
 
-  push(g, events, 'card', 'gm',
-    `${seat.name} takes the ${positionName(index)} path — ${def.title}.`);
+  slot.faceUp = true;
+  g.revealed = {
+    slot: index,
+    category,
+    // Blockers stay put; everything else is on its way to the discard.
+    leavesRiver: !getCategory(category).blocker,
+  };
+  g.phase = 'reveal';
+
   push(g, events, 'card', 'all',
-    `${seat.name} commits to the ${positionName(index)} path.`);
+    `${activeSeat(g).name} takes the ${positionName(index)} path — ${getCategory(category).title}.`);
+}
+
+function resolveRevealed(g: GameState, events: GameEvent[]): void {
+  const revealed = g.revealed;
+  if (!revealed) throw new IllegalActionError('No card is being revealed');
+  const index = revealed.slot;
+  const category = revealed.category;
+  g.revealed = null;
+
+  const slot = slotAt(g, index);
+  const seat = activeSeat(g);
 
   switch (category) {
     case 'clear-path':
@@ -704,7 +726,13 @@ export function apply(state: GameState, action: GameAction): ApplyResult {
       if (g.phase !== 'pick') {
         throw new IllegalActionError('Take an action before choosing a path');
       }
-      resolvePick(g, events, action.index);
+      revealPick(g, events, action.index);
+      break;
+    }
+
+    case 'ADVANCE_REVEAL': {
+      if (g.phase !== 'reveal') throw new IllegalActionError('No card is being revealed');
+      resolveRevealed(g, events);
       break;
     }
 
@@ -777,5 +805,6 @@ export function available(g: GameState): Available {
     needsConfirm: isCheck !== null && isCheck.d20 !== null,
     choice: pending?.kind === 'choice' ? pending.choice : null,
     encounter: g.phase === 'encounter',
+    revealed: g.phase === 'reveal' ? g.revealed : null,
   };
 }

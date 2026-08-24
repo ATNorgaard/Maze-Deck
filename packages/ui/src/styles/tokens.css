@@ -94,39 +94,13 @@
   --md-font-body:    "Spectral", "Iowan Old Style", Georgia, serif;
   --md-font-ui:      "Inter", system-ui, sans-serif;
 
-  --md-type-card-title:   calc(6.2 * var(--md-u));
-  --md-type-card-eyebrow: calc(2.4 * var(--md-u));
-  --md-type-card-rule:    calc(2.75 * var(--md-u));
-  --md-type-card-body:    calc(3.1 * var(--md-u));
-
   --md-track-eyebrow: 0.34em;
   --md-track-title:   0.06em;
   --md-leading-tight: 1.12;
   --md-leading-body:  1.38;
 
-  /* ---------- 4. CARD GEOMETRY ---------------------------- */
-
-  --md-card-trim-w:  calc(63 * var(--md-u));
-  --md-card-trim-h:  calc(88 * var(--md-u));
-  --md-card-bleed:   calc(3 * var(--md-u));
-  --md-card-bleed-w: calc(69 * var(--md-u));
-  --md-card-bleed-h: calc(94 * var(--md-u));
-  --md-card-safe:    calc(4 * var(--md-u));
-  --md-card-radius:  calc(3 * var(--md-u));
-
-  --md-frame-inset:   calc(4.5 * var(--md-u));
-  --md-frame-inset-b: calc(7.5 * var(--md-u));
-  --md-frame-hair:    calc(0.35 * var(--md-u));
-  --md-frame-rule:    calc(0.7 * var(--md-u));
-
-  /* ---------- 5. SPACING ---------------------------------- */
-
-  --md-sp-1: calc(1 * var(--md-u));
-  --md-sp-2: calc(2 * var(--md-u));
-  --md-sp-3: calc(3 * var(--md-u));
-  --md-sp-4: calc(4 * var(--md-u));
-  --md-sp-6: calc(6 * var(--md-u));
-  --md-sp-8: calc(8 * var(--md-u));
+  /* Sections 4 and 5 (card geometry, spacing) are declared below,
+     alongside the size steps — see the note there. */
 
   /* ---------- 6. DECK COMPOSITION ------------------------- */
 
@@ -160,6 +134,50 @@
 .md-root[data-size="sm"], .md-root [data-size="sm"] { --md-u: 0.62mm; }
 .md-root[data-size="md"], .md-root [data-size="md"] { --md-u: 1mm; }
 .md-root[data-size="lg"], .md-root [data-size="lg"] { --md-u: 1.35mm; }
+
+/* ---------- DERIVED FROM --md-u -------------------------------
+   Everything scaled by the base unit is declared HERE, against both
+   .md-root and any descendant carrying its own data-size.
+
+   A custom property is substituted where it is DECLARED, not where
+   it is used. Declaring --md-card-bleed-w only on .md-root froze it
+   at the root's millimetre, so a card carrying size="lg" inherited a
+   md-sized length: its type grew and its trim did not. Re-declaring
+   the whole set on the descendant selector makes every derived token
+   resolve against that element's own --md-u.
+
+   One list, two selectors — do not split it into two copies, they
+   will drift.                                                       */
+.md-root,
+.md-root [data-size] {
+  /* type */
+  --md-type-card-title:   calc(6.2 * var(--md-u));
+  --md-type-card-eyebrow: calc(2.4 * var(--md-u));
+  --md-type-card-rule:    calc(2.75 * var(--md-u));
+  --md-type-card-body:    calc(3.1 * var(--md-u));
+
+  /* card geometry */
+  --md-card-trim-w:  calc(63 * var(--md-u));
+  --md-card-trim-h:  calc(88 * var(--md-u));
+  --md-card-bleed:   calc(3 * var(--md-u));
+  --md-card-bleed-w: calc(69 * var(--md-u));
+  --md-card-bleed-h: calc(94 * var(--md-u));
+  --md-card-safe:    calc(4 * var(--md-u));
+  --md-card-radius:  calc(3 * var(--md-u));
+
+  --md-frame-inset:   calc(4.5 * var(--md-u));
+  --md-frame-inset-b: calc(7.5 * var(--md-u));
+  --md-frame-hair:    calc(0.35 * var(--md-u));
+  --md-frame-rule:    calc(0.7 * var(--md-u));
+
+  /* spacing */
+  --md-sp-1: calc(1 * var(--md-u));
+  --md-sp-2: calc(2 * var(--md-u));
+  --md-sp-3: calc(3 * var(--md-u));
+  --md-sp-4: calc(4 * var(--md-u));
+  --md-sp-6: calc(6 * var(--md-u));
+  --md-sp-8: calc(8 * var(--md-u));
+}
 
 /* Category scoping: set one class, get the whole palette.
    Components only ever read --md-cat-500/300/700/glow.       */

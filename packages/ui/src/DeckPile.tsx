@@ -25,7 +25,7 @@ export interface DeckPileProps {
 export function DeckPile({ count, label = 'Deck', onDraw, size, className, style }: DeckPileProps) {
   const empty = count <= 0;
   return (
-    <div className={['md-pile', className].filter(Boolean).join(' ')} style={style}>
+    <div className={['md-pile', className].filter(Boolean).join(' ')} data-size={size} style={style}>
       <div className="md-pile__stack" data-depth={empty ? 0 : Math.min(count, 3)}>
         {empty ? (
           <div className="md-pile__empty">Reshuffle discard</div>

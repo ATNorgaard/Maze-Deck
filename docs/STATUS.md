@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24
+**Last updated:** 2026-08-24 (M2 revised)
 
 ## Where we are
 
@@ -31,13 +31,27 @@ choice phase renders real cards, an Obstacle stays face up in the river and
 offers the "work on what is blocking them" action, and a mid-run reload restores
 round, turn, phase, river, deck, discard and log intact.
 
-**The hidden-information model is real and tested in the browser.** The
-"Viewing as GM / as player" toggle in the session header filters `visibility:
-'gm'` events out and hides the discard's top card. Player-side log lines are
-renumbered sequentially, because raw engine numbering left gaps and a gap tells
-a player exactly how much is being withheld. When M4 adds the network, this
-filter moves server-side — it is currently a client-side demonstration of the
-right shape, not a security boundary.
+**The table sees the cards now.** A second design pass reversed the canonical
+"never name the card" rule: a committed card is flipped and named to everyone,
+and the deck peeks (Scout Ahead, It's Elementary) are public too, because one
+player looking at three cards and keeping quiet is theatre. Nothing currently
+flows through the GM-only channel, and the viewer toggle was removed for having
+nothing left to demonstrate.
+
+`visibility` stays on every event regardless. M3 gives it a real job — the
+scenario prompt is the GM's to read before they narrate it — and M4 still has to
+strip face-down river categories from a player's payload, which was always the
+actual reason it exists.
+
+**The reveal is its own engine phase.** `PICK_SLOT` flips the card and stops;
+`ADVANCE_REVEAL` resolves it. In between, the board holds the card face up, the
+Escape or Threat track pulses if one is about to move, and a clone flies to the
+discard. It advances on a timer with nothing to dismiss.
+
+That timer needs an owner in M4. On one screen the GM's browser does it. Across
+devices, either the Durable Object schedules it (an alarm is the clean answer)
+or one client is elected — but two clients both dispatching `ADVANCE_REVEAL`
+must not double-resolve, so the server has to make it idempotent.
 
 ## Next single action
 
@@ -61,6 +75,11 @@ than the cards rather than a copy of them — see DECISIONS A5.
 
 ## Watch out for
 
+- **The board wants width.** Three `lg` river cards need ~1104px of centre
+  column, which with the 320px + 300px side columns means roughly a 1810px
+  window. `useFittingSize` steps the river down to `md` then `sm` as the column
+  shrinks, so it degrades instead of overflowing. The board's `max-width` is
+  1960 specifically so `lg` is reachable at all — at 1800 it missed by 8px.
 - **`.design-sync/config.json` `dtsPropsFor.ActionBar` is now stale.** It
   hardcodes the old five-ability union and does not know about
   `steel-yourself`. Harmless today; it will emit a wrong `.d.ts` on the next

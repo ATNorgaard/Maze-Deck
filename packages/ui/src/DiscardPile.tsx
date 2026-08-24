@@ -24,7 +24,7 @@ export interface DiscardPileProps {
  */
 export function DiscardPile({ count, top, label = 'Discard', size, className, style }: DiscardPileProps) {
   return (
-    <div className={['md-pile', className].filter(Boolean).join(' ')} style={style}>
+    <div className={['md-pile', className].filter(Boolean).join(' ')} data-size={size} style={style}>
       <div className="md-pile__stack" data-depth={count > 0 ? 1 : 0}>
         {top ? (
           <DeckCard category={top} size={size} showCount={false} />

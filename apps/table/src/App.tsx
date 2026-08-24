@@ -46,6 +46,7 @@ export function App() {
           state={campaign.run}
           dispatch={dispatch}
           error={error}
+          runName={campaign.runName}
           onExit={() => setInRun(false)}
         />
       ) : (

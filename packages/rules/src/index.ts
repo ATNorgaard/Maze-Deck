@@ -30,6 +30,7 @@ export type {
   PendingCheck,
   PendingChoice,
   Phase,
+  Revealed,
   RollMode,
   RunConfig,
   Seat,

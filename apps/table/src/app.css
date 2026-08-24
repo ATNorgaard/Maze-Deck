@@ -62,63 +62,144 @@ html, body, #root {
   color: var(--md-parchment-400);
 }
 
-/* ---------------- layout ---------------- */
+/* ---------------- board ----------------
+   Three columns: initiative, the board, the log. The side columns
+   stick; the board is the only thing that scrolls the page. Below
+   1180px it becomes one column, deliberately without any further
+   tuning — the player view in M4 is a different screen. */
 
-.t-main {
+.t-board {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: 320px minmax(0, 1fr) 300px;
   gap: calc(6 * var(--md-u));
   align-items: start;
-  padding: calc(6 * var(--md-u));
-  max-width: 1400px;
+  padding: calc(5 * var(--md-u));
+  /* 1960, not 1800: the side columns take 620px plus gaps, and the
+     river needs ~1104px of centre column before it can step up to lg.
+     At 1800 the board capped the centre at 1096 and lg was
+     unreachable by eight pixels. */
+  max-width: 1960px;
   margin: 0 auto;
 }
 
-@media (max-width: 1000px) {
-  .t-main { grid-template-columns: minmax(0, 1fr); }
-}
-
-.t-stack {
+.t-col {
   display: flex;
   flex-direction: column;
   gap: calc(5 * var(--md-u));
   min-width: 0;
 }
 
-.t-row {
-  display: flex;
-  gap: calc(4 * var(--md-u));
-  flex-wrap: wrap;
-  align-items: center;
+.t-col--side {
+  position: sticky;
+  top: calc(5 * var(--md-u));
+  max-height: calc(100vh - 10 * var(--md-u));
 }
 
-.t-panel {
+.t-col--board { align-items: stretch; }
+
+@media (max-width: 1180px) {
+  .t-board { grid-template-columns: minmax(0, 1fr); }
+  .t-col--side { position: static; max-height: none; }
+}
+
+.t-tracks {
+  display: flex;
+  gap: calc(6 * var(--md-u));
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* A Clear Path or a Monster just landed on this track. */
+.t-track { border-radius: calc(2 * var(--md-u)); }
+.t-track[data-pulse] { animation: tPulse 900ms ease-out; }
+
+@keyframes tPulse {
+  0%   { box-shadow: 0 0 0 0 var(--md-cat-path-glow); }
+  35%  { box-shadow: 0 0 26px 6px var(--md-cat-path-glow); }
+  100% { box-shadow: 0 0 0 0 var(--md-cat-path-glow); }
+}
+
+.t-phase {
   border: 1px solid var(--md-ink-700);
   background: var(--md-ink-800);
   border-radius: calc(2 * var(--md-u));
-  padding: calc(4 * var(--md-u));
+  padding: calc(3 * var(--md-u)) calc(4 * var(--md-u));
 }
 
-.t-panel--live { border-color: var(--md-cat-path-700); }
-.t-panel--bad { border-color: var(--md-cat-mons-700); }
-
-.t-panel__title {
-  margin: 0 0 calc(2 * var(--md-u));
+.t-phase__title {
+  margin: 0;
   font-family: var(--md-font-display);
-  font-size: calc(4.5 * var(--md-u));
+  font-size: calc(4 * var(--md-u));
   font-weight: 600;
   letter-spacing: var(--md-track-title);
   color: var(--md-parchment-100);
 }
 
-.t-note {
-  margin: 0;
+.t-phase__note {
+  margin: calc(1 * var(--md-u)) 0 0;
+  font-size: 13px;
   color: var(--md-parchment-400);
-  font-size: 14px;
-  line-height: var(--md-leading-body);
 }
 
-.t-centre { display: flex; justify-content: center; }
+.t-river { display: flex; justify-content: center; }
+
+/* While a card is in flight the slot it came from is masked, so the
+   clone is the only copy on screen. This selects the library's own
+   markup — read-only, and the one place the app knows River's DOM.
+   The mask lands only once the card lifts, never during the held beat. */
+.t-river .md-river__slot article { transition: opacity 120ms ease; }
+.t-river[data-flying='0'] .md-river__slot:nth-child(1) article,
+.t-river[data-flying='1'] .md-river__slot:nth-child(2) article,
+.t-river[data-flying='2'] .md-river__slot:nth-child(3) article { opacity: 0; }
+
+.t-piles {
+  display: flex;
+  gap: calc(6 * var(--md-u));
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.t-actions { display: flex; flex-direction: column; align-items: stretch; min-height: calc(40 * var(--md-u)); }
+
+/* The card in flight from the river to the discard. */
+.t-fly {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+/* ---------------- modals ---------------- */
+
+.t-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: calc(6 * var(--md-u));
+  background: rgba(4, 7, 9, .74);
+  animation: tFade 140ms ease-out;
+}
+
+.t-modal {
+  max-width: min(920px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  outline: none;
+  animation: tRise 180ms cubic-bezier(.2, .7, .3, 1);
+}
+
+@keyframes tFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tRise {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-scrim, .t-modal, .t-track[data-pulse] { animation: none; }
+  .t-fly { transition: none !important; }
+}
 
 /* ---------------- controls ---------------- */
 
@@ -315,7 +396,16 @@ html, body, #root {
 
 /* ---------------- log ---------------- */
 
-.t-log { display: flex; flex-direction: column; gap: calc(2 * var(--md-u)); max-height: 60vh; overflow-y: auto; }
+.t-panel--log { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+
+.t-log {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--md-u));
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
 
 .t-log__line {
   display: grid;
