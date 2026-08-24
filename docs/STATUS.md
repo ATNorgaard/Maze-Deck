@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M4 part 1 of 3)
+**Last updated:** 2026-08-24 (M4 part 2a)
 
 ## Where we are
 
@@ -75,7 +75,7 @@ suggests and stay editable — DECISIONS R6, delivered.
 The campaign schema is **v2**, and `migrate()` carries a v1 blob forward rather
 than discarding it. Verified against a real in-progress save: the run survived.
 
-## M4 is in three parts. Part 1 is done.
+## M4 is in parts. The seam, the authority and the transport are done.
 
 **Part 1 — the redaction and the seam. Done.**
 
@@ -105,21 +105,45 @@ byte-identical views. If a secret ever becomes observable, that test fails.
 yet — the app calls `apply()` locally and then redacts for display. The seam is
 real and tested; the split is part 2.
 
-**Part 2 — the transport and the server. Next.**
+**Part 2a — authority, protocol and the transport seam. Done.**
 
-1. A `SessionTransport` interface with the current in-process behaviour behind
-   it (DECISIONS A3), so the single-screen build keeps working untouched.
-2. Cloudflare Worker plus one Durable Object per session; join by code. The DO
-   owns `GameState` and broadcasts a per-client `GameView`.
-3. Give `ADVANCE_REVEAL` an owner. The reveal advances on a timer; on one screen
-   the GM's browser fires it, but across devices either the DO schedules it with
-   an alarm or one client is elected. **Two clients both dispatching it must not
-   double-resolve — make it idempotent server-side**, e.g. by ignoring it when
-   `phase !== 'reveal'` (the engine already throws, so the DO just has to not
-   treat that as fatal).
-4. Authority: only the GM's connection may send `CONFIRM_CHECK`, `END_RUN` or
-   `RESOLVE_ENCOUNTER`; a player may only act on their own turn. The engine does
-   not check this — it is the server's job.
+`packages/rules/src/authority.ts` answers "may this actor send this action",
+taking the **view** so client and server run the same check — the client to grey
+a control out, the server to refuse. Only the server's answer counts.
+
+- A player may act only on their own turn.
+- `CONFIRM_CHECK` is GM-only. A player who could confirm a check could pass
+  every check they failed, which is the single most important rule here.
+- `RESOLVE_ENCOUNTER` and `END_RUN` are GM-only.
+- The Wanderer's stay-or-go is GM-only; every other choice belongs to the
+  acting player.
+- **`ADVANCE_REVEAL` is sendable by nobody.** Making it unsendable is what stops
+  two clients double-resolving it. The session dispatches it on its own clock
+  and `mayAdvanceReveal` guards it, so a late or duplicate timer finds the phase
+  moved on and does nothing.
+
+`src/protocol.ts` holds the wire messages and join codes (six characters, no
+I/O/0/1, so nothing is confusable read aloud).
+
+`apps/table/src/transport/` has the `SessionTransport` interface and
+`LocalSession`, which behaves exactly as the server will: it owns the state,
+refuses what `mayAct` rejects, owns the reveal timer, and emits nothing but
+redacted views. `App` no longer calls `apply()` — the board talks to a
+transport. Swapping in a socket should change nothing above it.
+
+Verified in the browser: previewing as a player and pressing "Let it land" is
+refused with *"Only the GM can do that."*, the check stays pending, and the
+phase does not move.
+
+**Part 2b — the server. Next.**
+
+1. Cloudflare Worker plus one Durable Object per session. The DO owns
+   `GameState`, runs `mayAct` on every inbound action, and broadcasts a
+   per-client `GameView`.
+2. `SocketTransport` implementing the same interface. `REVEAL_MS` is already
+   shared, so the DO's alarm and the board's animation agree.
+3. Session lifecycle: create with a join code, reconnect by `playerId`, and
+   decide what happens when the GM's tab closes mid-run.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -127,8 +151,9 @@ was never tuned for phones.
 
 ## Next single action
 
-Start M4 part 2 at step 1: the `SessionTransport` interface with the in-process
-adapter, so `App` stops calling `apply()` directly.
+Start M4 part 2b: the Durable Object. `wrangler` is not yet a dependency —
+adding it is the first step, and `wrangler dev` runs the DO locally so this is
+verifiable without deploying anything.
 
 ## Watch out for
 
@@ -182,5 +207,5 @@ faithful to the rules as printed. It may not be what was intended.
 | M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | **done** |
-| M4 | Multiplayer | **part 1 of 3 done** — redaction and the seam |
+| M4 | Multiplayer | **parts 1 + 2a done** — redaction, authority, transport |
 | M5 | Deck and print regeneration | |

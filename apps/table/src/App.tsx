@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { MazeDeckProvider } from '@maze-deck/ui';
-import { apply, createGame, IllegalActionError, view } from '@maze-deck/rules';
-import type { GameAction, Viewer } from '@maze-deck/rules';
+import { createGame } from '@maze-deck/rules';
+import type { CardCategory, GameAction, GameState, Viewer } from '@maze-deck/rules';
 import { load, newId, runConfigFor, save } from './campaign';
 import type { Campaign } from './campaign';
 import { drawPrompt } from './tables';
+import { LocalSession } from './transport/local';
+import type { Snapshot } from './transport/types';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { SessionScreen } from './screens/SessionScreen';
 import { TablesScreen } from './screens/TablesScreen';
@@ -16,77 +18,111 @@ export function App() {
   const [screen, setScreen] = React.useState<Screen>(
     () => (campaign.run !== null ? 'session' : 'campaign'),
   );
-  const [error, setError] = React.useState<string | null>(null);
+  const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
+  const [asPlayer, setAsPlayer] = React.useState(false);
+
+  const session = React.useRef<LocalSession | null>(null);
+  const unsubscribe = React.useRef<(() => void) | null>(null);
 
   /**
-   * The GM can look at their own screen as a player would see it. This
-   * is not a UI filter — it rebuilds the view through the same
-   * redaction the server will use in M4, so what disappears here is
-   * exactly what will never be sent.
+   * The run belongs to the session, not to React. The transport holds
+   * the authoritative state and hands back redacted views — exactly
+   * what the server will do — so this component never sees GameState
+   * except to hand it over and to persist it.
+   *
+   * Created once and then `reset`, deliberately: tying its lifetime to
+   * `campaign.run` would tear the session down on its own updates.
    */
-  const [asPlayer, setAsPlayer] = React.useState(false);
-  const viewer: Viewer = asPlayer && campaign.roster[0]
-    ? { role: 'player', seatId: campaign.roster[0].id }
-    : { role: 'gm' };
+  const ensureSession = React.useCallback((state: GameState) => {
+    if (session.current) {
+      session.current.reset(state);
+      return;
+    }
+    const s = new LocalSession({
+      state,
+      onState: (next) => setCampaign((prev) => ({ ...prev, run: next })),
+    });
+    session.current = s;
+    unsubscribe.current = s.subscribe(setSnapshot);
+  }, []);
 
-  // Every change is written straight through. A closed tab loses nothing.
+  React.useEffect(() => {
+    if (campaign.run) ensureSession(campaign.run);
+    return () => {
+      unsubscribe.current?.();
+      unsubscribe.current = null;
+      session.current?.close();
+      session.current = null;
+    };
+    // Mount only. Later runs come through startRun.
+  }, []);
+
   React.useEffect(() => { save(campaign); }, [campaign]);
 
-  const dispatch = React.useCallback((action: GameAction) => {
+  /**
+   * Draw the GM a line when a card turns over.
+   *
+   * Watching the VIEW for a reveal rather than the action means this
+   * keeps working when the reveal arrives from a server instead of
+   * from a click in this tab.
+   */
+  const revealed = snapshot?.view?.revealed ?? null;
+  const revealKey = revealed ? `${revealed.slot}:${revealed.category}` : '';
+  React.useEffect(() => {
+    if (!revealKey) return;
+    const category = revealKey.split(':')[1] as CardCategory;
     setCampaign((prev) => {
-      if (!prev.run) return prev;
-      try {
-        const { state } = apply(prev.run, action);
-        setError(null);
-
-        // A card has just been turned over: draw the GM a line to
-        // describe it with, and hold it until the next reveal.
-        if (action.type === 'PICK_SLOT' && state.revealed) {
-          const { category } = state.revealed;
-          const drawn = drawPrompt(prev.tables, category, prev.lastPrompt[category]);
-          return {
-            ...prev,
-            run: state,
-            prompt: drawn,
-            lastPrompt: drawn
-              ? { ...prev.lastPrompt, [category]: drawn.entryId }
-              : prev.lastPrompt,
-          };
-        }
-
-        return { ...prev, run: state };
-      } catch (e) {
-        // An illegal action is a bug or a stale click, never a crash.
-        setError(e instanceof IllegalActionError ? e.message : String(e));
-        return prev;
-      }
+      const drawn = drawPrompt(prev.tables, category, prev.lastPrompt[category]);
+      if (!drawn) return prev;
+      return {
+        ...prev,
+        prompt: drawn,
+        lastPrompt: { ...prev.lastPrompt, [category]: drawn.entryId },
+      };
     });
+  }, [revealKey]);
+
+  const dispatch = React.useCallback((action: GameAction) => {
+    session.current?.send(action);
   }, []);
+
+  const togglePlayerView = React.useCallback(() => {
+    setAsPlayer((was) => {
+      const next = !was;
+      const seatId = campaign.roster[0]?.id;
+      const viewer: Viewer = next && seatId
+        ? { role: 'player', seatId }
+        : { role: 'gm' };
+      session.current?.setViewer(viewer);
+      return next;
+    });
+  }, [campaign.roster]);
 
   const startRun = React.useCallback(() => {
-    setCampaign((prev) => ({
-      ...prev,
-      run: createGame(runConfigFor(prev, newId())),
-      prompt: null,
-      lastPrompt: {},
-    }));
-    setError(null);
+    setCampaign((prev) => {
+      const state = createGame(runConfigFor(prev, newId()));
+      ensureSession(state);
+      return { ...prev, run: state, prompt: null, lastPrompt: {} };
+    });
+    setAsPlayer(false);
     setScreen('session');
-  }, []);
+  }, [ensureSession]);
+
+  const view = snapshot?.view ?? null;
 
   return (
     <MazeDeckProvider size="md" className="t-app">
-      {screen === 'session' && campaign.run ? (
+      {screen === 'session' && view ? (
         <SessionScreen
-          view={view(campaign.run, viewer)}
+          view={view}
           dispatch={dispatch}
-          error={error}
+          error={snapshot?.error ?? null}
           runName={campaign.runName}
           // The scenario prompt is the GM's to read before they narrate
           // it, so a player's screen never carries it.
-          prompt={viewer.role === 'gm' ? campaign.prompt : null}
+          prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
           asPlayer={asPlayer}
-          onTogglePlayerView={() => setAsPlayer((v) => !v)}
+          onTogglePlayerView={togglePlayerView}
           onExit={() => setScreen('campaign')}
         />
       ) : screen === 'tables' ? (

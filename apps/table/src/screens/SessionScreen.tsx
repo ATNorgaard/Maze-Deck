@@ -83,9 +83,12 @@ export function SessionScreen({
       category: revealCategory,
       flip: true,
       fly: revealLeaves === true,
-      onDone: () => dispatch({ type: 'ADVANCE_REVEAL' }),
+      // The session advances the reveal on its own clock — a client
+      // cannot, and must not, because two of them would double-resolve
+      // it. The animation just plays out under that timer.
+      onDone: () => {},
     };
-  }, [revealSlot, revealCategory, revealLeaves, dispatch]);
+  }, [revealSlot, revealCategory, revealLeaves]);
 
   const flight = handFlight ?? revealFlight;
 

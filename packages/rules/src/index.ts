@@ -9,6 +9,14 @@ export {
 } from './engine';
 
 export { activeSeatOf, availableFor, view } from './view';
+export { REVEAL_MS, mayAct, mayAdvanceReveal } from './authority';
+export type { Verdict } from './authority';
+export {
+  CODE_ALPHABET, CODE_LENGTH, isJoinCode, makeJoinCode, normaliseJoinCode,
+} from './protocol';
+export type {
+  ClientMessage, JoinRequest, Presence, ServerMessage,
+} from './protocol';
 export type {
   Available, GameView, Viewer, ViewRules, ViewSlot,
 } from './view';
