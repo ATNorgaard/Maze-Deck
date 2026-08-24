@@ -192,17 +192,18 @@ function interior(state: ArchState): React.ReactNode {
         </g>
       );
 
+    /* Braced behind the shield, and still going forward: the action
+       sweeps the whole river aside rather than defending against it. */
     case 'steel-yourself':
       return (
         <>
-          <path
-            d="M60,52 L87,62 L87,91 C87,111 75,126 60,133 C45,126 33,111 33,91 L33,62 Z"
-            fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round"
-          />
-          <g fill="currentColor">
-            <path d="M60,68 L74,78 L60,88 L46,78 Z" />
-            <rect x="43" y="95" width="34" height="5.5" rx="1" />
-          </g>
+        <path
+          d="M60,50 L88,60 L88,90 C88,110 76,125 60,133 C44,125 32,110 32,90 L32,60 Z"
+          fill="none" stroke="currentColor" strokeWidth="4.6" strokeLinejoin="round"/>
+        <path d="M45,92 L60,77 L75,92" fill="none" stroke="currentColor"
+              strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M45,110 L60,95 L75,110" fill="none" stroke="currentColor"
+              strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity=".55"/>
         </>
       );
 

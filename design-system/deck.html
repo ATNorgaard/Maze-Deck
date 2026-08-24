@@ -218,6 +218,21 @@
     </symbol>
 
     <!-- Boost Morale (CHA) -- a rallying banner -->
+    <!-- Steel Yourself (CON) -- braced behind the shield, still going forward -->
+    <symbol id="ic-act-con" viewBox="0 0 120 140">
+      <g clip-path="url(#clipOpening)">
+        <path
+          d="M60,50 L88,60 L88,90 C88,110 76,125 60,133 C44,125 32,110 32,90 L32,60 Z"
+          fill="none" stroke="currentColor" stroke-width="4.6" stroke-linejoin="round"/>
+        <path d="M45,92 L60,77 L75,92" fill="none" stroke="currentColor"
+              stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M45,110 L60,95 L75,110" fill="none" stroke="currentColor"
+              stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+      </g>
+      <use href="#archBand" fill="currentColor" fill-rule="evenodd"/>
+      <use href="#plinth" fill="currentColor"/>
+    </symbol>
+
     <symbol id="ic-act-cha" viewBox="0 0 120 140">
       <g clip-path="url(#clipOpening)" fill="currentColor">
         <circle cx="42.2" cy="55" r="3.6"/>
@@ -264,62 +279,74 @@ const tok = (name, fallback) => {
   return Number.isFinite(v) ? v : fallback;
 };
 
-const MAZE_DC = tok('--maze-dc', 13);
+const MAZE_DC = tok('--maze-dc', 15);
 
-/* Seven categories. Dead End / Obstacle / Trap are three DIFFERENT
-   ways to be stopped, and each is stopped differently:
-     Dead End  cannot be solved  -- only Boost Morale clears it
-     Obstacle  can be worked on  -- an action check resolves it
-     Trap      resolves at once  -- and leaves the game either way   */
+/* The standard deck is FIVE categories. Obstacle covers every way
+   the maze says "not yet" -- hazard, puzzle, trap, locked door --
+   and is the only standard card that stays in the river, which is
+   what makes three of them a crisis.
 
-const CATEGORIES = [
-  { key:'path', cls:'cat-path', icon:'ic-path', copies: tok('--count-path', 6),
+   Dead End and Trap are ours, not standard. They keep their designs
+   and print with ?expansion=1, but they are not in the 23.
+   See docs/reference/canonical-rules.md.                            */
+
+const CANONICAL = [
+  { key:'path', cls:'cat-path', icon:'ic-path', copies: tok('--count-path', 5),
     eyebrow:'Progress', title:'Clear Path',
-    rule:'Score <em>1 point</em>. Collect <em>5</em> and the party escapes.' },
+    rule:'Score <em>1 point</em>. Collect <em>5</em> and the party is through.' },
 
+  { key:'obst', cls:'cat-obst', icon:'ic-obst', copies: tok('--count-obstacle', 5),
+    eyebrow:'Blocked', title:'Obstacle',
+    rule:'<em>Stays in the river</em> until somebody spends an action on it.' },
+
+  { key:'wand', cls:'cat-wand', icon:'ic-wand', copies: tok('--count-wanderer', 5),
+    eyebrow:'Encounter', title:'Wanderer',
+    rule:'<em>Friend or foe</em> is the party’s read. Some linger, some move on.' },
+
+  { key:'item', cls:'cat-item', icon:'ic-item', copies: tok('--count-item', 5),
+    eyebrow:'Salvage', title:'Item',
+    rule:'Take it or leave it. The card is <em>discarded either way</em>.' },
+
+  { key:'mons', cls:'cat-mons', icon:'ic-mons', copies: tok('--count-monster', 3),
+    eyebrow:'Threat', title:'Monster',
+    rule:'<em>One strike</em>. At 2 the party is found.' },
+];
+
+const EXPANSION = [
   { key:'dead', cls:'cat-dead', icon:'ic-dead', copies: tok('--count-dead', 4),
     eyebrow:'Setback', title:'Dead End',
-    rule:'<em>No check clears it.</em> Only Boost Morale. Blocks the river.' },
-
-  { key:'obst', cls:'cat-obst', icon:'ic-obst', copies: tok('--count-obstacle', 4),
-    eyebrow:'Blocked', title:'Obstacle',
-    rule:'<em>Stays in the river</em> until an action check resolves it.' },
+    rule:'<em>No check clears it.</em> Only a rallied party turns back.' },
 
   { key:'trap', cls:'cat-trap', icon:'ic-trap', copies: tok('--count-trap', 3),
     eyebrow:'Hazard', title:'Trap',
     rule:'Check <em>DC ' + MAZE_DC + ' ± 1</em> at once. Leaves the game either way.' },
-
-  { key:'mons', cls:'cat-mons', icon:'ic-mons', copies: tok('--count-monster', 3),
-    eyebrow:'Threat', title:'Monster',
-    rule:'<em>Two revealed</em> forces a confrontation. Beat it and it is gone.' },
-
-  { key:'wand', cls:'cat-wand', icon:'ic-wand', copies: tok('--count-wanderer', 4),
-    eyebrow:'Encounter', title:'Wanderer',
-    rule:'A traveller or lost soul. <em>Friend or foe</em> — some stay, some leave.' },
-
-  { key:'item', cls:'cat-item', icon:'ic-item', copies: tok('--count-item', 4),
-    eyebrow:'Salvage', title:'Item',
-    rule:'Treasure, trinket, or trash. Keep or leave — it <em>discards</em> either way.' },
 ];
+
+const params = new URLSearchParams(location.search);
+const WITH_EXPANSION = params.get('expansion') === '1';
+const CATEGORIES = WITH_EXPANSION ? [...CANONICAL, ...EXPANSION] : CANONICAL;
 
 const DECK_TOTAL = CATEGORIES.reduce((n,c) => n + c.copies, 0);
 
 const ACTIONS = [
   { stat:'STR', score:'Strength', icon:'ic-act-str', name:'Forge a Path',
-    effect:'Add <strong>2 Clear Path cards</strong> from the reserve into the discard pile.',
-    why:'Deck dilution: lowers threat density for the rest of the run.' },
+    effect:'Two <strong>Clear Path</strong> cards enter the discard pile from reserve.',
+    why:'Thins the danger in every turn that follows, once the discard comes back around.' },
   { stat:'DEX', score:'Dexterity', icon:'ic-act-dex', name:'Scout Ahead',
-    effect:'Look at the top card of the deck <strong>and</strong> one river card. Take either.',
-    why:'Buys information and converts it straight into a guaranteed pick.' },
+    effect:'Draw <strong>3</strong>. One goes back on top of the deck; the other 2 shuffle back in.',
+    why:'Buys the next card outright instead of gambling on it.' },
+  { stat:'CON', score:'Constitution', icon:'ic-act-con', name:'Steel Yourself',
+    effect:'Sweep all <strong>3</strong> river cards into the discard and deal 3 fresh ones.',
+    why:'The only way out of a river that has gone bad.' },
   { stat:'INT', score:'Intelligence', icon:'ic-act-int', name:'It’s Elementary',
-    effect:'Look at the top <strong>3</strong> cards. One to the bottom, two back on top in any order.',
-    why:'Removes the worst immediate danger and sets up the next two turns.' },
+    effect:'Draw <strong>2</strong>. Swap 1 into the river; the rest go back on top of the deck.',
+    why:'Replaces the worst thing in front of the party with something chosen.' },
   { stat:'WIS', score:'Wisdom', icon:'ic-act-wis', name:'Careful Consideration',
-    effect:'Reveal <strong>2</strong> cards in the river before anyone commits to a choice.',
-    why:'Short-term safety. The cheapest way to not walk into a trap.' },
+    effect:'Reveal <strong>2</strong> river cards and discard 1, then shuffle what is left back face down.',
+    why:'The cheapest way to not walk into the obvious.' },
   { stat:'CHA', score:'Charisma', icon:'ic-act-cha', name:'Boost Morale',
-    effect:'Permanently remove one <strong>Dead End</strong> from the river and replace it.',
-    why:'The only way a Dead End ever leaves the river.' },
+    effect:'Grant another character <strong>advantage</strong> on their next check or save.',
+    why:'The only action a player spends on somebody else.' },
 ];
 
 /* ---------- renderers ---------- */
@@ -384,11 +411,11 @@ function cardRef() {
         <div class="ref__dc" style="text-align:center">Maze DC ${MAZE_DC}</div>
         <ul class="ref__list">
           <li><strong>River.</strong> ${tok('--river-width',3)} cards, face-down. Refill on every pick.</li>
-          <li><strong>Turn.</strong> Act first, reveal second — never the reverse.</li>
-          <li><strong>Three blockers</strong> in the river: clear all, add a Monster.</li>
-          <li><strong>Reshuffle.</strong> New cards enter the <em>discard</em> first.</li>
-          <li><strong>Lockout.</strong> End of round, roll d6: that action is off next round.</li>
-          <li><strong>Scaling.</strong> Under 5 players, cut actions to party size.</li>
+          <li><strong>Turn.</strong> Act first, commit to a path second — never the reverse.</li>
+          <li><strong>Goal.</strong> 5 Clear Paths and the party is through.</li>
+          <li><strong>Obstacles stay.</strong> 3 at once: discard them all, a Monster follows.</li>
+          <li><strong>Monsters.</strong> One strike each. At 2 the party is found.</li>
+          <li><strong>The card is never named.</strong> Describe the scene instead.</li>
         </ul>
       </div>
     </div>
@@ -439,7 +466,7 @@ const backs = Array(DECK_TOTAL).fill(cardBack());
 const extras = [...ACTIONS.map(cardAction), cardRef(), cardIndex()];
 
 /* ?guides=1 draws the trim + safe outlines for cutting by hand. */
-if (new URLSearchParams(location.search).get('guides')) {
+if (params.get('guides')) {
   document.documentElement.classList.add('with-guides');
 }
 

@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M4 complete)
+**Last updated:** 2026-08-24 (M5 complete — all planned milestones done)
 
 ## Where we are
 
@@ -209,20 +209,58 @@ localhost. Nothing has been deployed — there is no Cloudflare account involved
 controls, no scenario prompt, no dice overrides. This is why the board layout
 was never tuned for phones.
 
+## M5 — the deck, in print. Done.
+
+`design-system/deck.html` was still laying out the old seven-category deck. It
+now prints the canonical five; Dead End and Trap keep their designs behind
+`?expansion=1` but are not in the 23. Rules text, the six actions and the
+reference card all match `types.ts`.
+
+```bash
+node scripts/print-deck.mjs                    # print/MazeDeck_PRINT_v4.pdf
+node scripts/print-deck.mjs --expansion --guides
+node scripts/check-deck-parity.mjs
+```
+
+`print-deck.mjs` drives the page with the Chromium already in
+`.ds-sync/node_modules` and writes a real PDF, so regenerating the deck no
+longer depends on somebody opening a browser and picking the right print
+settings. `scale: 1` and `preferCSSPageSize` are load-bearing — any "fit to
+page" breaks the 63 x 88mm trim and the cards stop fitting sleeves.
+
+**`MazeDeck_PRINT_v4.pdf`: 13 A4 sheets, 68 cards** — 23 faces, 23 backs, six
+actions, two reference cards and a proof sheet. Checked by eye at 110dpi.
+
+**`check-deck-parity.mjs` closes the drift NOTES.md warned about.** The
+composition is written three times and cannot be collapsed into one: the print
+page reads the numbers out of CSS at runtime with no build step, and the engine
+builds the deck from `types.ts`. The check makes them agree or fails — and it
+was proven by breaking one on purpose and watching it name the file.
+
+`steel-yourself` has a real glyph now, in both `ArchGlyph` and the print sprite:
+a shield with two chevrons, braced but still going forward, because the action
+sweeps the river aside rather than defending against it.
+
+The stale `dtsPropsFor.ActionBar` is fixed and **verified through the
+converter** — the emitted `.d.ts` now carries `steel-yourself` and `showDc`.
+`conventions.md`, which is stitched into the shipped bundle README, no longer
+describes a 28-card deck or a Monster as an instant loss.
+
 ## Next single action
 
-**M5: deck and print regeneration** — the last planned milestone. Regenerate the
-23-card print sheet, give `steel-yourself` a real glyph, fix the stale
-`dtsPropsFor.ActionBar` in `.design-sync/config.json`, and add the
-deck-composition parity check across the three files that duplicate it.
+Nothing is queued. Every planned milestone is done. Worth doing next, in rough
+order of value:
 
-Worth doing at some point, in rough order of value:
-
-1. **What happens when the GM's tab closes mid-run.** The room survives — it is
+1. **Play a real crossing at a real table.** Everything below is a guess until
+   that happens; see the balance findings, which say the card game cannot
+   currently be lost.
+2. **What happens when the GM's tab closes mid-run.** The room survives — it is
    in Durable Object storage — but players currently just see the board stop.
-2. **Deploying.** `wrangler deploy` needs a Cloudflare account; the app needs a
+3. **Deploying.** `wrangler deploy` needs a Cloudflare account; the app needs a
    static host and `VITE_SESSION_ENDPOINT` set.
-3. The player view is phone-first but has had no real device testing.
+4. The player view is phone-first but has had no real device testing.
+5. Re-enabling Dead End and Trap as a playable expansion — the engine, the
+   tokens, the art and the print page all already support them.
 
 ## Watch out for
 
@@ -245,16 +283,9 @@ Worth doing at some point, in rough order of value:
   window. `useFittingSize` steps the river down to `md` then `sm` as the column
   shrinks, so it degrades instead of overflowing. The board's `max-width` is
   1960 specifically so `lg` is reachable at all — at 1800 it missed by 8px.
-- **`.design-sync/config.json` `dtsPropsFor.ActionBar` is now stale.** It
-  hardcodes the old five-ability union and does not know about
-  `steel-yourself`. Harmless today; it will emit a wrong `.d.ts` on the next
-  design-sync push. Fix it as part of M5.
-- **`ArchGlyph`'s `steel-yourself` glyph is mine, not the design system's.** A
-  shield with a chevron, drawn to fit the existing arch. It reads fine at card
-  size but it has not been through the design pass the other twelve had — M5.
 - The deck composition is written in **three** places (`packages/ui/src/types.ts`,
-  `packages/ui/src/styles/tokens.css`, `design-system/tokens.css`). Nothing
-  enforces agreement yet; change all three together until M5 adds the check.
+  `packages/ui/src/styles/tokens.css`, `design-system/tokens.css`). Change all
+  three together — `node scripts/check-deck-parity.mjs` now fails if you don't.
 - **`--md-u` is a millimetre.** Add a size step rather than changing the base.
 - Read [.design-sync/NOTES.md](../.design-sync/NOTES.md) before touching the
   sync pipeline.
@@ -283,4 +314,4 @@ faithful to the rules as printed. It may not be what was intended.
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | **done** |
 | M4 | Multiplayer | **done** — verified across two devices |
-| M5 | Deck and print regeneration | next |
+| M5 | Deck and print regeneration | **done** |
