@@ -273,11 +273,15 @@ order of value:
   nothing. If behaviour contradicts the source, check what is actually served
   (`curl localhost:5180/src/App.tsx | grep …`) before debugging the code.
   Restarting Vite with `node_modules/.vite` removed fixes it.
-- **CSS regressions from bulk edits.** The `.t-panel` rules were silently lost
-  in an earlier rewrite of the layout section, which is why every panel — the
-  modals included — painted transparent. Several follow-up patches then no-opped
-  because their anchor text was already gone. If you edit `app.css` by script,
-  assert the anchor exists; a `.replace()` that matches nothing fails quietly.
+- **CSS regressions from bulk edits — three of them so far.** One rewrite of
+  `app.css`'s layout section silently took `.t-panel` (every panel painted
+  transparent, modals included) and then `.t-main` and `.t-stack` (the campaign
+  screen ran full-bleed with its reference cards adrift at the bottom). Several
+  follow-up patches also no-opped because their anchor text was already gone.
+  If you edit `app.css` by script, **assert the anchor exists** — a `.replace()`
+  that matches nothing fails quietly. And check for a **duplicate rule further
+  down the file** before concluding a new one is wrong: `.t-char` was defined
+  twice, and the later copy silently won.
 - **The board wants width.** Three `lg` river cards need ~1104px of centre
   column, which with the 320px + 300px side columns means roughly a 1810px
   window. `useFittingSize` steps the river down to `md` then `sm` as the column

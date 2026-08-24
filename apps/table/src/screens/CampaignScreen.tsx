@@ -57,29 +57,33 @@ export function CampaignScreen({
           Maze Deck
         </span>
         <span className="t-spacer" />
-        <button type="button" className="t-btn" onClick={onJoin}>
-          Join a maze
-        </button>
-        <button type="button" className="t-btn" onClick={onEditTables}>
-          Scenario tables
-        </button>
-        <button
-          type="button" className="t-btn" disabled={!ready} onClick={onHost}
-          title="Open a room your players can join from their own devices"
-        >
-          Host online
-        </button>
-        {hasRun ? (
-          <button type="button" className="t-btn" onClick={onResume}>
-            Back to the run
+        <span className="t-bar__group">
+          <button type="button" className="t-btn" onClick={onJoin}>
+            Join a maze
           </button>
-        ) : null}
-        <button
-          type="button" className="t-btn t-btn--primary"
-          disabled={!ready} onClick={onStart}
-        >
-          {hasRun ? 'Start a new crossing' : 'Start the crossing'}
-        </button>
+          <button type="button" className="t-btn" onClick={onEditTables}>
+            Scenario tables
+          </button>
+          {hasRun ? (
+            <button type="button" className="t-btn" onClick={onResume}>
+              Back to the run
+            </button>
+          ) : null}
+        </span>
+        <span className="t-bar__group">
+          <button
+            type="button" className="t-btn" disabled={!ready} onClick={onHost}
+            title="Open a room your players can join from their own devices"
+          >
+            Host online
+          </button>
+          <button
+            type="button" className="t-btn t-btn--primary"
+            disabled={!ready} onClick={onStart}
+          >
+            {hasRun ? 'New crossing' : 'Start the crossing'}
+          </button>
+        </span>
       </div>
 
       <div className="t-main">
@@ -105,10 +109,15 @@ export function CampaignScreen({
           </div>
 
           <div className="t-panel">
-            <h2 className="t-panel__title">The party</h2>
+            <h2 className="t-panel__title">
+              The party
+              <span className="t-panel__aside">
+                {campaign.roster.length} {campaign.roster.length === 1 ? 'seat' : 'seats'}
+              </span>
+            </h2>
             <p className="t-note">
-              Players enter their own modifiers, exactly as written on their
-              sheet. Nothing here is enforced — you are the one who checks it.
+              Modifiers exactly as written on the sheet. Nothing is enforced —
+              you are the one who checks them.
             </p>
             <div className="t-roster" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
               {campaign.roster.map((c) => (
@@ -146,10 +155,12 @@ export function CampaignScreen({
                     ))}
                   </div>
                   <button
-                    type="button" className="t-btn t-btn--danger"
+                    type="button" className="t-x"
+                    aria-label={`Remove ${c.name || 'this seat'}`}
+                    title="Remove this seat"
                     onClick={() => set('roster', campaign.roster.filter((x) => x.id !== c.id))}
                   >
-                    Remove
+                    ×
                   </button>
                 </div>
               ))}
@@ -166,7 +177,7 @@ export function CampaignScreen({
 
           <div className="t-panel">
             <h2 className="t-panel__title">The dials</h2>
-            <div className="t-row" style={{ gap: 'calc(7 * var(--md-u))' }}>
+            <div className="t-dials">
               <Stepper
                 label="Maze DC" value={campaign.mazeDc} min={8} max={22}
                 onChange={(n) => set('mazeDc', n)}
@@ -213,9 +224,9 @@ export function CampaignScreen({
           </div>
         </div>
 
-        <div className="t-stack">
-          <div className="t-centre"><ReferenceCard variant="loop" dc={campaign.mazeDc} size="sm" /></div>
-          <div className="t-centre"><ReferenceCard variant="deck" size="sm" /></div>
+        <div className="t-stack t-stack--aside">
+          <ReferenceCard variant="loop" dc={campaign.mazeDc} size="md" />
+          <ReferenceCard variant="deck" size="md" />
         </div>
       </div>
     </>
