@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { MazeDeckProvider } from '@maze-deck/ui';
-import { apply, createGame, IllegalActionError } from '@maze-deck/rules';
-import type { GameAction } from '@maze-deck/rules';
+import { apply, createGame, IllegalActionError, view } from '@maze-deck/rules';
+import type { GameAction, Viewer } from '@maze-deck/rules';
 import { load, newId, runConfigFor, save } from './campaign';
 import type { Campaign } from './campaign';
 import { drawPrompt } from './tables';
@@ -17,6 +17,17 @@ export function App() {
     () => (campaign.run !== null ? 'session' : 'campaign'),
   );
   const [error, setError] = React.useState<string | null>(null);
+
+  /**
+   * The GM can look at their own screen as a player would see it. This
+   * is not a UI filter — it rebuilds the view through the same
+   * redaction the server will use in M4, so what disappears here is
+   * exactly what will never be sent.
+   */
+  const [asPlayer, setAsPlayer] = React.useState(false);
+  const viewer: Viewer = asPlayer && campaign.roster[0]
+    ? { role: 'player', seatId: campaign.roster[0].id }
+    : { role: 'gm' };
 
   // Every change is written straight through. A closed tab loses nothing.
   React.useEffect(() => { save(campaign); }, [campaign]);
@@ -67,11 +78,15 @@ export function App() {
     <MazeDeckProvider size="md" className="t-app">
       {screen === 'session' && campaign.run ? (
         <SessionScreen
-          state={campaign.run}
+          view={view(campaign.run, viewer)}
           dispatch={dispatch}
           error={error}
           runName={campaign.runName}
-          prompt={campaign.prompt}
+          // The scenario prompt is the GM's to read before they narrate
+          // it, so a player's screen never carries it.
+          prompt={viewer.role === 'gm' ? campaign.prompt : null}
+          asPlayer={asPlayer}
+          onTogglePlayerView={() => setAsPlayer((v) => !v)}
           onExit={() => setScreen('campaign')}
         />
       ) : screen === 'tables' ? (

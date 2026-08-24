@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M3 complete)
+**Last updated:** 2026-08-24 (M4 part 1 of 3)
 
 ## Where we are
 
@@ -75,25 +75,60 @@ suggests and stay editable — DECISIONS R6, delivered.
 The campaign schema is **v2**, and `migrate()` carries a v1 blob forward rather
 than discarding it. Verified against a real in-progress save: the run survived.
 
+## M4 is in three parts. Part 1 is done.
+
+**Part 1 — the redaction and the seam. Done.**
+
+`packages/rules/src/view.ts` defines `GameView`: the wire format, and the only
+thing a client is ever given. `view(state, viewer)` builds it as an **allow-list**,
+so adding a field to `GameState` does not leak it — you have to come here and
+let it through.
+
+Three things never leave the server: **the seed, the generator state, and the
+deck**. Any one of them lets a client compute every card the party is about to
+draw. Counts go out instead of contents.
+
+The redaction is almost **role-independent**, which surprised me and is worth
+keeping: a face-down card is hidden from the GM too, because they deal blind
+like everyone else. The only thing `viewer.role` gates is the log — and, in the
+app layer, M3's scenario prompt.
+
+`availableFor(view)` replaces the old `available(state)`, so "what may I do" is
+derived from what a client can see rather than from the truth. The whole
+session screen was converted: it contains **zero** references to `GameState`.
+
+Eight tests in `test/view.test.ts` cover it, including the one that actually
+matters: two states differing **only** in hidden information produce
+byte-identical views. If a secret ever becomes observable, that test fails.
+
+**Still true today: the browser holds `GameState`,** because there is no server
+yet — the app calls `apply()` locally and then redacts for display. The seam is
+real and tested; the split is part 2.
+
+**Part 2 — the transport and the server. Next.**
+
+1. A `SessionTransport` interface with the current in-process behaviour behind
+   it (DECISIONS A3), so the single-screen build keeps working untouched.
+2. Cloudflare Worker plus one Durable Object per session; join by code. The DO
+   owns `GameState` and broadcasts a per-client `GameView`.
+3. Give `ADVANCE_REVEAL` an owner. The reveal advances on a timer; on one screen
+   the GM's browser fires it, but across devices either the DO schedules it with
+   an alarm or one client is elected. **Two clients both dispatching it must not
+   double-resolve — make it idempotent server-side**, e.g. by ignoring it when
+   `phase !== 'reveal'` (the engine already throws, so the DO just has to not
+   treat that as fatal).
+4. Authority: only the GM's connection may send `CONFIRM_CHECK`, `END_RUN` or
+   `RESOLVE_ENCOUNTER`; a player may only act on their own turn. The engine does
+   not check this — it is the server's job.
+
+**Part 3 — the player view.** A different screen with different content: no GM
+controls, no scenario prompt, no dice overrides. This is why the board layout
+was never tuned for phones.
+
 ## Next single action
 
-**Start M4: multiplayer.** The largest remaining milestone, and the first that
-needs a server.
-
-1. Extract the session into a transport-agnostic interface (DECISIONS A3) with
-   the current in-process adapter behind it, so the single-screen build keeps
-   working while the network one is written.
-2. Cloudflare Worker + one Durable Object per session; join by code.
-3. Redact per client **before the wire**: strip face-down river categories, and
-   keep the scenario prompt GM-only — that is what `visibility` on the event was
-   always for, and M3 has now given it a real payload.
-4. Give `ADVANCE_REVEAL` an owner. The reveal advances on a timer; on one screen
-   the GM's browser fires it, but across devices either the Durable Object
-   schedules it with an alarm or one client is elected. **Two clients both
-   dispatching it must not double-resolve, so make it idempotent server-side.**
-5. `apps/table` becomes the GM view; the player view is a different screen with
-   different content, which is why the current layout was never tuned for
-   phones.
+Start M4 part 2 at step 1: the `SessionTransport` interface with the in-process
+adapter, so `App` stops calling `apply()` directly.
 
 ## Watch out for
 
@@ -147,5 +182,5 @@ faithful to the rules as printed. It may not be what was intended.
 | M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | **done** |
-| M4 | Multiplayer | next |
+| M4 | Multiplayer | **part 1 of 3 done** — redaction and the seam |
 | M5 | Deck and print regeneration | |

@@ -4,10 +4,14 @@ export {
   IllegalActionError,
   activeSeat,
   apply,
-  available,
   createGame,
   defaultConfig,
 } from './engine';
+
+export { activeSeatOf, availableFor, view } from './view';
+export type {
+  Available, GameView, Viewer, ViewRules, ViewSlot,
+} from './view';
 export type { ApplyResult } from './engine';
 
 export { d, int, next, seedFrom, shuffle } from './rng';
@@ -16,7 +20,6 @@ export type { RngState } from './rng';
 export type {
   AbilityKey,
   AbilityScore,
-  Available,
   CardCategory,
   Choice,
   ChoicePayload,

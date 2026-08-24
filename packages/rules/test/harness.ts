@@ -1,6 +1,7 @@
 /* Shared test helpers: build a run, and play one to the end. */
 
-import { apply, available, createGame, defaultConfig } from '../src/engine';
+import { apply, createGame, defaultConfig } from '../src/engine';
+import { availableFor, view } from '../src/view';
 import { int, seedFrom } from '../src/rng';
 import type { RngState } from '../src/rng';
 import type {
@@ -58,7 +59,8 @@ export function cardsInRun(g: GameState): CardCategory[] {
 
 /** One legal action for whatever the state is waiting on. */
 export function nextAction(g: GameState, rng: RngState): GameAction | null {
-  const a = available(g);
+  // Drive from the redacted view, exactly as a client would.
+  const a = availableFor(view(g, { role: 'gm' }));
 
   switch (g.phase) {
     case 'act': {

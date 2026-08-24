@@ -153,23 +153,6 @@ export interface GameEvent {
 
 export type Outcome = 'through' | 'lost';
 
-/** What the UI may offer in the current state. Derived, never stored. */
-export interface Available {
-  abilities: AbilityKey[];
-  /** River slots holding something that can be attempted. */
-  obstacleSlots: number[];
-  /** River slots the active player may commit to. */
-  pickSlots: number[];
-  /** Manual roll mode is waiting for a die. */
-  needsRoll: boolean;
-  /** A rolled check is waiting for the GM to let it land. */
-  needsConfirm: boolean;
-  choice: Choice | null;
-  encounter: boolean;
-  /** The card currently face up in front of the table, if any. */
-  revealed: Revealed | null;
-}
-
 /** A picked card, face up, not yet resolved. */
 export interface Revealed {
   slot: number;

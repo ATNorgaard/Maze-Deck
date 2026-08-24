@@ -18,8 +18,8 @@ import {
 import type { AbilityKey, AbilityScore, CardCategory } from '../../ui/src/types';
 import { d, seedFrom, shuffle } from './rng';
 import type {
-  Available, Choice, ChoicePayload, GameAction, GameEvent, GameState,
-  Pending, PendingCheck, RunConfig, Seat, Slot,
+  Choice, ChoicePayload, GameAction, GameEvent, GameState,
+  PendingCheck, RunConfig, Seat, Slot,
 } from './types';
 
 export class IllegalActionError extends Error {
@@ -786,27 +786,6 @@ export function apply(state: GameState, action: GameAction): ApplyResult {
   return { state: g, events };
 }
 
-/* ---------------------------------------------------------------
-   What the UI is allowed to offer right now.
-   --------------------------------------------------------------- */
-
-export function available(g: GameState): Available {
-  const pending: Pending | null = g.pending;
-  const isCheck = pending?.kind === 'check' ? pending : null;
-
-  return {
-    abilities: g.phase === 'act' ? [...g.config.abilities] : [],
-    obstacleSlots: g.phase === 'act'
-      ? g.river.flatMap((s, i) =>
-          s.category !== null && getCategory(s.category).blocker ? [i] : [])
-      : [],
-    pickSlots: g.phase === 'pick'
-      ? g.river.flatMap((s, i) => (s.category !== null ? [i] : []))
-      : [],
-    needsRoll: isCheck !== null && isCheck.d20 === null,
-    needsConfirm: isCheck !== null && isCheck.d20 !== null,
-    choice: pending?.kind === 'choice' ? pending.choice : null,
-    encounter: g.phase === 'encounter',
-    revealed: g.phase === 'reveal' ? g.revealed : null,
-  };
-}
+/* Views, redaction and `availableFor` live in view.ts — a client is
+   never handed GameState, so "what may I do" is derived from the
+   view, not from the authoritative state. */

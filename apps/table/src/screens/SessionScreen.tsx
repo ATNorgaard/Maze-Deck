@@ -2,9 +2,9 @@ import * as React from 'react';
 import {
   ActionBar, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, ScoreTrack,
 } from '@maze-deck/ui';
-import { activeSeat, available } from '@maze-deck/rules';
+import { activeSeatOf, availableFor } from '@maze-deck/rules';
 import type {
-  AbilityScore, ChoicePayload, GameAction, GameState,
+  AbilityScore, ChoicePayload, GameAction, GameView, Phase,
 } from '@maze-deck/rules';
 import { CardFlight } from '../components/CardFlight';
 import type { FlightRequest } from '../components/CardFlight';
@@ -17,19 +17,23 @@ import type { DrawnPrompt } from '../tables';
 import { useFittingSize } from '../useFittingSize';
 
 interface Props {
-  state: GameState;
+  /** The redacted view. This screen never sees GameState. */
+  view: GameView;
   dispatch: (action: GameAction) => void;
   onExit: () => void;
   runName: string;
   /** The line drawn for the card in front of the table, if any. */
   prompt: DrawnPrompt | null;
+  /** Previewing what a player's own screen would carry. */
+  asPlayer: boolean;
+  onTogglePlayerView: () => void;
   error: string | null;
 }
 
 const POSITION = ['left', 'centre', 'right'];
 const position = (i: number) => POSITION[i] ?? `slot ${i + 1}`;
 
-const PHASE_TITLE: Record<GameState['phase'], string> = {
+const PHASE_TITLE: Record<Phase, string> = {
   act: 'Take an action',
   check: 'A roll is on the table',
   choice: 'A decision is owed',
@@ -39,7 +43,7 @@ const PHASE_TITLE: Record<GameState['phase'], string> = {
   over: 'The run is closed',
 };
 
-const PHASE_NOTE: Record<GameState['phase'], string> = {
+const PHASE_NOTE: Record<Phase, string> = {
   act: 'One action, then a path — never the other way round.',
   check: 'Read it out, then let it land.',
   choice: 'The action is not finished until this is answered.',
@@ -50,7 +54,7 @@ const PHASE_NOTE: Record<GameState['phase'], string> = {
 };
 
 export function SessionScreen({
-  state, dispatch, onExit, runName, prompt, error,
+  view, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView, error,
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
   const [dcNudge, setDcNudge] = React.useState(0);
@@ -60,10 +64,10 @@ export function SessionScreen({
   const discardRef = React.useRef<HTMLDivElement>(null);
   const riverSize = useFittingSize(riverRef);
 
-  const a = available(state);
-  const seat = state.order.length ? activeSeat(state) : null;
-  const activeIdx = state.turn % Math.max(state.order.length, 1);
-  const pending = state.pending;
+  const a = availableFor(view);
+  const seat = activeSeatOf(view);
+  const activeIdx = view.turn % Math.max(view.order.length, 1);
+  const pending = view.pending;
   const revealed = a.revealed;
 
   const revealSlot = revealed?.slot;
@@ -96,7 +100,7 @@ export function SessionScreen({
       payload.kind === 'wanderer-stays' && !payload.stays
       && choice?.kind === 'wanderer-stays'
     ) {
-      const leaving = state.river[choice.slot]?.category;
+      const leaving = view.river[choice.slot]?.category;
       if (leaving) {
         setHandFlight({
           slot: choice.slot,
@@ -124,7 +128,7 @@ export function SessionScreen({
     setDcNudge(suggestedOffset ?? 0);
   }, [suggestedScore, suggestedOffset]);
 
-  const obstacleDc = state.config.mazeDc + dcNudge;
+  const obstacleDc = view.rules.mazeDc + dcNudge;
 
   const pulse = revealCategory === 'clear-path' ? 'escape'
     : revealCategory === 'monster' ? 'threat' : null;
@@ -134,24 +138,24 @@ export function SessionScreen({
       <div className="t-col t-col--side">
         <div className="t-panel">
           <h2 className="t-panel__title">
-            {runName} <span className="t-panel__aside">DC {state.config.mazeDc}</span>
+            {runName} <span className="t-panel__aside">DC {view.rules.mazeDc}</span>
           </h2>
-          <p className="t-note">Round {state.round} · {state.deck.length} cards left</p>
+          <p className="t-note">Round {view.round} · {view.deckCount} cards left</p>
         </div>
 
         <div className="t-panel">
           <h2 className="t-panel__title">Initiative</h2>
           <div className="t-seats">
-            {state.order.map((id, i) => {
-              const s = state.config.seats.find((x) => x.id === id);
+            {view.order.map((id, i) => {
+              const s = view.seats.find((x) => x.id === id);
               if (!s) return null;
               return (
                 <PlayerSeat
                   key={id}
                   name={s.name}
                   order={i + 1}
-                  active={i === activeIdx && state.phase !== 'over'}
-                  detail={[s.cls, state.advantage.includes(id) ? 'advantage' : null]
+                  active={i === activeIdx && view.phase !== 'over'}
+                  detail={[s.cls, view.advantage.includes(id) ? 'advantage' : null]
                     .filter(Boolean).join(' · ')}
                 />
               );
@@ -162,7 +166,16 @@ export function SessionScreen({
         <div className="t-panel">
           <div className="t-row">
             <button type="button" className="t-btn" onClick={onExit}>Campaign</button>
-            {state.phase !== 'over' ? (
+            <button
+              type="button"
+              className="t-btn"
+              aria-pressed={asPlayer}
+              onClick={onTogglePlayerView}
+              title="Rebuild this screen from the data a player's device would actually receive"
+            >
+              {asPlayer ? 'Seeing a player’s screen' : 'Preview a player’s screen'}
+            </button>
+            {view.phase !== 'over' ? (
               <button
                 type="button" className="t-btn t-btn--danger"
                 onClick={() => dispatch({ type: 'END_RUN' })}
@@ -180,10 +193,10 @@ export function SessionScreen({
       <div className="t-col t-col--board">
         <div className="t-tracks">
           <div className="t-track" data-pulse={pulse === 'escape' || undefined}>
-            <ScoreTrack value={state.progress} total={state.config.escapeTarget} />
+            <ScoreTrack value={view.progress} total={view.rules.escapeTarget} />
           </div>
           <div className="t-track" data-pulse={pulse === 'threat' || undefined}>
-            <ScoreTrack value={state.strikes} total={state.config.encounterAt} variant="threat" />
+            <ScoreTrack value={view.strikes} total={view.rules.encounterAt} variant="threat" />
           </div>
         </div>
 
@@ -194,10 +207,10 @@ export function SessionScreen({
         ) : null}
 
         <div className="t-phase">
-          <h2 className="t-phase__title">{PHASE_TITLE[state.phase]}</h2>
+          <h2 className="t-phase__title">{PHASE_TITLE[view.phase]}</h2>
           <p className="t-phase__note">
-            {PHASE_NOTE[state.phase]}
-            {seat && state.phase !== 'over' ? ` — ${seat.name}` : ''}
+            {PHASE_NOTE[view.phase]}
+            {seat && view.phase !== 'over' ? ` — ${seat.name}` : ''}
           </p>
           {prompt ? (
             <p className="t-phase__scene">
@@ -215,7 +228,11 @@ export function SessionScreen({
         >
           <River
             size={riverSize}
-            slots={state.river.map((s) => ({ category: s.category, faceDown: !s.faceUp }))}
+            slots={view.river.map((s) => (
+              s.filled
+                ? { category: s.category ?? 'clear-path', faceDown: !s.faceUp }
+                : { category: null, faceDown: false }
+            ))}
             {...(a.pickSlots.length
               ? { onPick: (i: number) => dispatch({ type: 'PICK_SLOT', index: i }) }
               : {})}
@@ -223,24 +240,22 @@ export function SessionScreen({
         </div>
 
         <div className="t-piles">
-          <DeckPile count={state.deck.length} size="sm" />
+          <DeckPile count={view.deckCount} size="sm" />
           <div ref={discardRef}>
             <DiscardPile
-              count={state.discard.length}
+              count={view.discardCount}
               size="sm"
-              {...(state.discard.length
-                ? { top: state.discard[state.discard.length - 1] }
-                : {})}
+              {...(view.discardTop ? { top: view.discardTop } : {})}
             />
           </div>
         </div>
 
         <div className="t-actions">
-          {state.phase === 'act' ? (
+          {view.phase === 'act' ? (
             <>
               <MazeDeckProvider size="lg" className="t-actions__bar">
                 <ActionBar
-                  abilities={state.config.abilities}
+                  abilities={view.rules.abilities}
                   showDc={false}
                   onUse={(ability) => dispatch({ type: 'USE_ABILITY', ability })}
                 />
@@ -265,7 +280,7 @@ export function SessionScreen({
                     onChange={(e) => setDcNudge(Number(e.target.value))}
                   >
                     {[-2, -1, 0, 1, 2].map((n) => (
-                      <option key={n} value={n}>DC {state.config.mazeDc + n}</option>
+                      <option key={n} value={n}>DC {view.rules.mazeDc + n}</option>
                     ))}
                   </select>
                   {a.obstacleSlots.map((i) => (
@@ -286,7 +301,7 @@ export function SessionScreen({
       </div>
 
       <div className="t-col t-col--side">
-        <EventLog log={state.log} />
+        <EventLog log={view.log} />
       </div>
 
       <CardFlight
@@ -297,10 +312,10 @@ export function SessionScreen({
         onOccupy={setCovered}
       />
 
-      {state.phase === 'check' && pending?.kind === 'check' ? (
+      {view.phase === 'check' && pending?.kind === 'check' ? (
         <Modal label="A roll is on the table">
           <CheckPanel
-            state={state}
+            seats={view.seats}
             check={pending}
             onEnterRoll={(d20, d20b) => dispatch(
               d20b === undefined
@@ -318,17 +333,17 @@ export function SessionScreen({
 
       {/* Stand the modal down while the Wanderer is on its way out, so
           the card being discarded is actually visible leaving. */}
-      {state.phase === 'choice' && pending?.kind === 'choice' && !handFlight ? (
+      {view.phase === 'choice' && pending?.kind === 'choice' && !handFlight ? (
         <Modal label="A decision is owed">
           <ChoicePanel
-            state={state}
+            view={view}
             choice={pending.choice}
             onResolve={onResolveChoice}
           />
         </Modal>
       ) : null}
 
-      {state.phase === 'encounter' ? (
+      {view.phase === 'encounter' ? (
         <Modal label="The party is found">
           <div className="t-panel t-panel--bad">
             <h2 className="t-panel__title">Roll initiative</h2>
@@ -361,15 +376,15 @@ export function SessionScreen({
         </Modal>
       ) : null}
 
-      {state.phase === 'over' ? (
+      {view.phase === 'over' ? (
         <Modal label="The run is closed">
-          <div className={`t-panel ${state.outcome === 'through' ? 't-panel--live' : 't-panel--bad'}`}>
+          <div className={`t-panel ${view.outcome === 'through' ? 't-panel--live' : 't-panel--bad'}`}>
             <h2 className="t-panel__title">
-              {state.outcome === 'through' ? 'The party is through' : 'The run is closed'}
+              {view.outcome === 'through' ? 'The party is through' : 'The run is closed'}
             </h2>
             <p className="t-note">
-              {state.outcome === 'through'
-                ? `${state.progress} Clear Paths in ${state.round} rounds. Start the scene on the far side.`
+              {view.outcome === 'through'
+                ? `${view.progress} Clear Paths in ${view.round} rounds. Start the scene on the far side.`
                 : 'Note where they got to, and pick it up from there.'}
             </p>
             <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>

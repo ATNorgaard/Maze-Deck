@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { DeckCard } from '@maze-deck/ui';
-import type { CardCategory, Choice, ChoicePayload, GameState } from '@maze-deck/rules';
+import type { CardCategory, Choice, ChoicePayload, GameView } from '@maze-deck/rules';
 
 interface Props {
-  state: GameState;
+  view: GameView;
   choice: Choice;
   onResolve: (payload: ChoicePayload) => void;
 }
@@ -38,7 +38,7 @@ function CardButton({
  * which is exactly why the prototype had quietly rewritten them
  * into one-shot effects.
  */
-export function ChoicePanel({ state, choice, onResolve }: Props) {
+export function ChoicePanel({ view, choice, onResolve }: Props) {
   const [slot, setSlot] = React.useState<number | null>(null);
 
   switch (choice.kind) {
@@ -64,9 +64,9 @@ export function ChoicePanel({ state, choice, onResolve }: Props) {
       );
 
     case 'swap-river': {
-      const occupied = state.river
+      const occupied = view.river
         .map((s, i) => ({ s, i }))
-        .filter(({ s }) => s.category !== null);
+        .filter(({ s }) => s.filled);
       return (
         <div className="t-panel t-panel--live">
           <h2 className="t-panel__title">Swap one into the river</h2>
@@ -115,7 +115,7 @@ export function ChoicePanel({ state, choice, onResolve }: Props) {
           </p>
           <div className="t-cards" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
             {choice.slots.map((i) => {
-              const card = state.river[i]?.category;
+              const card = view.river[i]?.category;
               if (!card) return null;
               return (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 'calc(2 * var(--md-u))', alignItems: 'center' }}>
@@ -142,7 +142,7 @@ export function ChoicePanel({ state, choice, onResolve }: Props) {
             They roll two dice and keep the better on their next check or save.
           </p>
           <div className="t-row" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
-            {state.config.seats.map((s) => (
+            {view.seats.map((s) => (
               <button
                 key={s.id}
                 type="button"

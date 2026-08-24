@@ -1,15 +1,15 @@
 import * as React from 'react';
-import type { GameState, PendingCheck } from '@maze-deck/rules';
+import type { PendingCheck, Seat } from '@maze-deck/rules';
 
 interface Props {
-  state: GameState;
+  seats: Seat[];
   check: PendingCheck;
   onEnterRoll: (d20: number, d20b?: number) => void;
   onConfirm: (success?: boolean) => void;
 }
 
-function seatName(state: GameState, id: string): string {
-  return state.config.seats.find((s) => s.id === id)?.name ?? 'Someone';
+function seatName(seats: Seat[], id: string): string {
+  return seats.find((s) => s.id === id)?.name ?? 'Someone';
 }
 
 /**
@@ -17,7 +17,7 @@ function seatName(state: GameState, id: string): string {
  * overturn it before it does — that is the one piece of the original
  * prototype worth keeping exactly as designed.
  */
-export function CheckPanel({ state, check, onEnterRoll, onConfirm }: Props) {
+export function CheckPanel({ seats, check, onEnterRoll, onConfirm }: Props) {
   const [manual, setManual] = React.useState('');
   const [manualB, setManualB] = React.useState('');
   const advantage = check.d20b !== null;
@@ -37,7 +37,7 @@ export function CheckPanel({ state, check, onEnterRoll, onConfirm }: Props) {
     return (
       <div className="t-panel t-panel--live">
         <h2 className="t-panel__title">
-          {seatName(state, check.seatId)} rolls {check.score}
+          {seatName(seats, check.seatId)} rolls {check.score}
         </h2>
         <p className="t-note">
           Against DC {check.dc}, with {sign} from their sheet
@@ -80,7 +80,7 @@ export function CheckPanel({ state, check, onEnterRoll, onConfirm }: Props) {
 
   return (
     <div className="t-panel t-panel--live">
-      <h2 className="t-panel__title">{seatName(state, check.seatId)}</h2>
+      <h2 className="t-panel__title">{seatName(seats, check.seatId)}</h2>
       <div className={`t-roll ${success ? 't-roll--good' : 't-roll--bad'}`}>
         <span className="t-roll__total">{total}</span>
         <span className="t-roll__vs">vs DC {check.dc}</span>
