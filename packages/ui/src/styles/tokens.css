@@ -130,16 +130,23 @@
 
   /* ---------- 6. DECK COMPOSITION ------------------------- */
 
-  --md-deck-total:     28;
-  --md-count-path:      6;
-  --md-count-dead:      4;
-  --md-count-obstacle:  4;
-  --md-count-trap:      3;
-  --md-count-wanderer:  4;
-  --md-count-item:      4;
+  /* Standard deck: 23 cards, five categories. Must agree with
+     src/types.ts and design-system/tokens.css — three copies of
+     the same numbers and nothing enforces it yet. */
+
+  --md-deck-total:     23;
+  --md-count-path:      5;
+  --md-count-obstacle:  5;
+  --md-count-wanderer:  5;
+  --md-count-item:      5;
   --md-count-monster:   3;
+
+  /* Expansion, ours, outside the standard deck. */
+  --md-count-dead:      4;
+  --md-count-trap:      3;
+
   --md-river-width:     3;
-  --md-maze-dc:        13;
+  --md-maze-dc:        15;
 }
 
 /* Size steps. Each just re-scales --md-u, so every dimension,

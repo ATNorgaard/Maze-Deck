@@ -155,26 +155,31 @@
      the reference sheet cannot drift apart. deck.html reads
      these at runtime -- this is the only place to edit them.
 
-     Densities at 28 cards:
-       progress  Clear Path      6   21%
-       blockers  Dead End 4 + Trap 3 + Obstacle 4   = 11   39%
-       neutral   Wanderer 4 + Item 4                =  8   29%
-       threat    Monster         3   11%
+     Densities in the standard 23-card deck:
+       progress  Clear Path   5   22%
+       blocking  Obstacle     5   22%
+       neutral   Wanderer 5 + Item 5   = 10   43%
+       threat    Monster      3   13%
 
-     Threat sits below the 13.3% of the original 15-card deck.
-     Set --count-monster: 4 (a 29-card deck, 13.8%) to restore
-     that pacing exactly.                                       */
+     Raise --count-path to make a run easier, --count-monster to
+     make it harder; those are the two intended difficulty dials.
 
-  --deck-total:      28;
-  --count-path:       6;   /* 5 collected = escape            */
-  --count-dead:       4;
-  --count-trap:       3;
-  --count-obstacle:   4;
-  --count-wanderer:   4;
-  --count-item:       4;
-  --count-monster:    3;   /* 2 revealed = confrontation      */
+     Dead End and Trap are ours, not part of the standard deck.
+     Their counts are kept for the expansion and are deliberately
+     excluded from --deck-total.                                */
+
+  --deck-total:      23;
+  --count-path:       5;   /* 5 collected = through           */
+  --count-obstacle:   5;   /* 3 in the river at once = jam    */
+  --count-wanderer:   5;
+  --count-item:       5;
+  --count-monster:    3;   /* 2 strikes = encounter           */
+
+  --count-dead:       4;   /* expansion                       */
+  --count-trap:       3;   /* expansion                       */
+
   --river-width:      3;   /* cards face-down in the river    */
-  --maze-dc:         13;
+  --maze-dc:         15;
 }
 
 /* Category scoping: set one class, get the whole palette.

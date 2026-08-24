@@ -1,5 +1,8 @@
 import * as React from 'react';
-import { CATEGORIES, DECK_TOTAL, MAZE_DC, RIVER_WIDTH } from './types';
+import {
+  CANONICAL_CATEGORIES, DECK_TOTAL, ENCOUNTER_AT, ESCAPE_TARGET,
+  MAZE_DC, OBSTACLE_JAM, RIVER_WIDTH,
+} from './types';
 import type { CardSize } from './types';
 
 export interface ReferenceCardProps {
@@ -24,11 +27,11 @@ export interface ReferenceCardProps {
 
 const LOOP_ENTRIES: React.ReactNode[] = [
   <><strong>River.</strong> {RIVER_WIDTH} cards, face-down. Refill on every pick.</>,
-  <><strong>Turn.</strong> Act first, reveal second — never the reverse.</>,
-  <><strong>Three blockers</strong> in the river: clear all, add a Monster.</>,
-  <><strong>Reshuffle.</strong> New cards enter the discard first.</>,
-  <><strong>Lockout.</strong> End of round, roll d6: that action is off next round.</>,
-  <><strong>Scaling.</strong> Under 5 players, cut actions to party size.</>,
+  <><strong>Turn.</strong> Act first, commit to a path second — never the reverse.</>,
+  <><strong>Goal.</strong> {ESCAPE_TARGET} Clear Paths and the party is through.</>,
+  <><strong>Obstacles stay.</strong> {OBSTACLE_JAM} at once: discard them all, a Monster follows.</>,
+  <><strong>Monsters.</strong> One strike each. At {ENCOUNTER_AT} the party is found.</>,
+  <><strong>The card is never named.</strong> Describe the scene instead.</>,
 ];
 
 /**
@@ -48,7 +51,7 @@ export function ReferenceCard({
   const lines: React.ReactNode[] = entries
     ?? (isLoop
       ? LOOP_ENTRIES
-      : CATEGORIES.map((c) => (
+      : CANONICAL_CATEGORIES.map((c) => (
           <><strong>{c.title}</strong> ×{c.copies} — {c.rule}</>
         )));
 

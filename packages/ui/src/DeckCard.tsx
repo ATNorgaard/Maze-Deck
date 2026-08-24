@@ -93,7 +93,7 @@ export function DeckCard({
         </div>
         {showCount ? (
           <p className="md-card__count">
-            {def.copies} of {DECK_TOTAL} in deck
+            {def.expansion ? 'expansion card' : `${def.copies} of ${DECK_TOTAL} in deck`}
           </p>
         ) : null}
       </div>

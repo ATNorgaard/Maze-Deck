@@ -192,6 +192,20 @@ function interior(state: ArchState): React.ReactNode {
         </g>
       );
 
+    case 'steel-yourself':
+      return (
+        <>
+          <path
+            d="M60,52 L87,62 L87,91 C87,111 75,126 60,133 C45,126 33,111 33,91 L33,62 Z"
+            fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round"
+          />
+          <g fill="currentColor">
+            <path d="M60,68 L74,78 L60,88 L46,78 Z" />
+            <rect x="43" y="95" width="34" height="5.5" rx="1" />
+          </g>
+        </>
+      );
+
     case 'seal':
       return null;
   }

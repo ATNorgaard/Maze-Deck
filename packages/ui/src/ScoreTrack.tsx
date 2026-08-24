@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CONFRONTATION_AT, ESCAPE_TARGET } from './types';
+import { ENCOUNTER_AT, ESCAPE_TARGET } from './types';
 
 export interface ScoreTrackProps {
   /** How many pips are filled. */
@@ -34,7 +34,7 @@ export function ScoreTrack({
   className,
   style,
 }: ScoreTrackProps) {
-  const count = total ?? (variant === 'progress' ? ESCAPE_TARGET : CONFRONTATION_AT);
+  const count = total ?? (variant === 'progress' ? ESCAPE_TARGET : ENCOUNTER_AT);
   const caption = label ?? (variant === 'progress' ? 'Escape' : 'Threat');
 
   return (

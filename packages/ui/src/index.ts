@@ -41,18 +41,22 @@ export type { PlayerSeatProps } from './PlayerSeat';
 
 export {
   CATEGORIES,
+  CANONICAL_CATEGORIES,
   ABILITIES,
   CATEGORY_CLASS,
   DECK_TOTAL,
   MAZE_DC,
   RIVER_WIDTH,
   ESCAPE_TARGET,
-  CONFRONTATION_AT,
+  ENCOUNTER_AT,
+  OBSTACLE_JAM,
   getCategory,
   getAbility,
 } from './types';
 export type {
   CardCategory,
+  CanonicalCategory,
+  ExpansionCategory,
   AbilityKey,
   ArchState,
   AbilityScore,
