@@ -16,7 +16,7 @@ import { view } from '../../../packages/rules/src/view';
 import type { GameState } from '../../../packages/rules/src/types';
 import type { Viewer } from '../../../packages/rules/src/view';
 import type {
-  ClientMessage, Presence, RunSetup, ServerMessage,
+  ClientMessage, Presence, RunSetup, SeatOffer, ServerMessage,
 } from '../../../packages/rules/src/protocol';
 
 /** What each open socket is, remembered across hibernation. */
@@ -147,7 +147,9 @@ export class SessionRoom {
       const claimed = seatId ?? remembered;
       const seat = room.state?.config.seats.find((s) => s.id === claimed);
       if (!seat) {
-        return this.sendTo(ws, { t: 'error', message: 'Pick a seat at the table.' });
+        // Not an error: a player cannot know the roster until they
+        // arrive, so arriving without a seat is how you ask for it.
+        return this.sendTo(ws, { t: 'seats', seats: this.seatOffers(playerId) });
       }
       const takenBy = Object.entries(room.seats)
         .find(([id, sid]) => sid === seat.id && id !== playerId);
@@ -233,6 +235,23 @@ export class SessionRoom {
     } catch {
       return null;
     }
+  }
+
+  /** The roster, marked with what is already claimed by somebody else. */
+  private seatOffers(asking: string): SeatOffer[] {
+    const room = this.loaded;
+    const seats = room?.state?.config.seats ?? [];
+    return seats.map((s) => {
+      const holder = Object.entries(room?.seats ?? {})
+        .find(([, sid]) => sid === s.id)?.[0];
+      const offer: SeatOffer = {
+        id: s.id,
+        name: s.name,
+        taken: holder !== undefined && holder !== asking,
+      };
+      if (s.cls !== undefined) offer.cls = s.cls;
+      return offer;
+    });
   }
 
   private presence(): Presence[] {

@@ -27,6 +27,8 @@ interface Props {
   /** Previewing what a player's own screen would carry. */
   asPlayer: boolean;
   onTogglePlayerView: () => void;
+  /** Set when the run is hosted in a room players can join. */
+  hostCode?: string;
   error: string | null;
 }
 
@@ -54,7 +56,8 @@ const PHASE_NOTE: Record<Phase, string> = {
 };
 
 export function SessionScreen({
-  view, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView, error,
+  view, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
+  hostCode, error,
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
   const [dcNudge, setDcNudge] = React.useState(0);
@@ -144,6 +147,11 @@ export function SessionScreen({
             {runName} <span className="t-panel__aside">DC {view.rules.mazeDc}</span>
           </h2>
           <p className="t-note">Round {view.round} · {view.deckCount} cards left</p>
+          {hostCode ? (
+            <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
+              Players join with <span className="t-code-inline">{hostCode}</span>
+            </p>
+          ) : null}
         </div>
 
         <div className="t-panel">

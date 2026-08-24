@@ -9,6 +9,8 @@ interface Props {
   hasRun: boolean;
   onResume: () => void;
   onEditTables: () => void;
+  onHost: () => void;
+  onJoin: () => void;
 }
 
 function Stepper({
@@ -36,7 +38,7 @@ function Stepper({
 }
 
 export function CampaignScreen({
-  campaign, onChange, onStart, hasRun, onResume, onEditTables,
+  campaign, onChange, onStart, hasRun, onResume, onEditTables, onHost, onJoin,
 }: Props) {
   const set = <K extends keyof Campaign>(key: K, value: Campaign[K]) =>
     onChange({ ...campaign, [key]: value });
@@ -55,8 +57,17 @@ export function CampaignScreen({
           Maze Deck
         </span>
         <span className="t-spacer" />
+        <button type="button" className="t-btn" onClick={onJoin}>
+          Join a maze
+        </button>
         <button type="button" className="t-btn" onClick={onEditTables}>
           Scenario tables
+        </button>
+        <button
+          type="button" className="t-btn" disabled={!ready} onClick={onHost}
+          title="Open a room your players can join from their own devices"
+        >
+          Host online
         </button>
         {hasRun ? (
           <button type="button" className="t-btn" onClick={onResume}>

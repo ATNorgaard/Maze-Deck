@@ -1,71 +1,86 @@
 import * as React from 'react';
 import { MazeDeckProvider } from '@maze-deck/ui';
-import { createGame } from '@maze-deck/rules';
-import type { CardCategory, GameAction, GameState, Viewer } from '@maze-deck/rules';
-import { load, newId, runConfigFor, save } from './campaign';
+import { createGame, isJoinCode, makeJoinCode, normaliseJoinCode } from '@maze-deck/rules';
+import type {
+  CardCategory, GameAction, GameState, SeatOffer, Viewer,
+} from '@maze-deck/rules';
+import { load, newId, runConfigFor, runSetupFor, save } from './campaign';
 import type { Campaign } from './campaign';
+import { loadIdentity, rememberSeat, SESSION_ENDPOINT } from './player';
 import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
-import type { Snapshot } from './transport/types';
+import { SocketSession } from './transport/socket';
+import type { SessionTransport, Snapshot } from './transport/types';
 import { CampaignScreen } from './screens/CampaignScreen';
+import { JoinScreen } from './screens/JoinScreen';
+import { PlayerScreen } from './screens/PlayerScreen';
 import { SessionScreen } from './screens/SessionScreen';
 import { TablesScreen } from './screens/TablesScreen';
 
-type Screen = 'campaign' | 'tables' | 'session';
+type Screen = 'campaign' | 'tables' | 'session' | 'join' | 'play';
+
+/** `#/join/ABC234` so a GM can paste a link instead of reading letters out. */
+function codeFromHash(): string | null {
+  const m = /^#\/join\/([A-Za-z0-9]+)$/.exec(window.location.hash);
+  const code = m ? normaliseJoinCode(m[1] ?? '') : '';
+  return isJoinCode(code) ? code : null;
+}
 
 export function App() {
   const [campaign, setCampaign] = React.useState<Campaign>(() => load());
-  const [screen, setScreen] = React.useState<Screen>(
-    () => (campaign.run !== null ? 'session' : 'campaign'),
-  );
+  const identity = React.useRef(loadIdentity());
+  const deepLink = React.useRef(codeFromHash());
+
+  const [screen, setScreen] = React.useState<Screen>(() => {
+    if (deepLink.current) return 'join';
+    return campaign.run !== null ? 'session' : 'campaign';
+  });
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [asPlayer, setAsPlayer] = React.useState(false);
+  const [joinCode, setJoinCode] = React.useState(deepLink.current ?? '');
+  const [seatOffers, setSeatOffers] = React.useState<SeatOffer[] | null>(null);
 
-  const session = React.useRef<LocalSession | null>(null);
+  const session = React.useRef<SessionTransport | null>(null);
   const unsubscribe = React.useRef<(() => void) | null>(null);
 
-  /**
-   * The run belongs to the session, not to React. The transport holds
-   * the authoritative state and hands back redacted views — exactly
-   * what the server will do — so this component never sees GameState
-   * except to hand it over and to persist it.
-   *
-   * Created once and then `reset`, deliberately: tying its lifetime to
-   * `campaign.run` would tear the session down on its own updates.
-   */
-  const ensureSession = React.useCallback((state: GameState) => {
-    if (session.current) {
-      session.current.reset(state);
-      return;
-    }
-    const s = new LocalSession({
-      state,
-      onState: (next) => setCampaign((prev) => ({ ...prev, run: next })),
-    });
-    session.current = s;
-    unsubscribe.current = s.subscribe(setSnapshot);
+  const detach = React.useCallback(() => {
+    unsubscribe.current?.();
+    unsubscribe.current = null;
+    session.current?.close();
+    session.current = null;
+    setSnapshot(null);
   }, []);
 
+  const attach = React.useCallback((next: SessionTransport) => {
+    detach();
+    session.current = next;
+    unsubscribe.current = next.subscribe(setSnapshot);
+  }, [detach]);
+
+  /* ---------------- the GM, on one screen ---------------- */
+
+  const ensureLocal = React.useCallback((state: GameState) => {
+    const current = session.current;
+    if (current instanceof LocalSession) {
+      current.reset(state);
+      return;
+    }
+    attach(new LocalSession({
+      state,
+      onState: (next) => setCampaign((prev) => ({ ...prev, run: next })),
+    }));
+  }, [attach]);
+
   React.useEffect(() => {
-    if (campaign.run) ensureSession(campaign.run);
-    return () => {
-      unsubscribe.current?.();
-      unsubscribe.current = null;
-      session.current?.close();
-      session.current = null;
-    };
-    // Mount only. Later runs come through startRun.
+    if (!deepLink.current && campaign.run) ensureLocal(campaign.run);
+    return detach;
+    // Mount only; later sessions are started explicitly.
   }, []);
 
   React.useEffect(() => { save(campaign); }, [campaign]);
 
-  /**
-   * Draw the GM a line when a card turns over.
-   *
-   * Watching the VIEW for a reveal rather than the action means this
-   * keeps working when the reveal arrives from a server instead of
-   * from a click in this tab.
-   */
+  /* ---------------- the scenario prompt ---------------- */
+
   const revealed = snapshot?.view?.revealed ?? null;
   const revealKey = revealed ? `${revealed.slot}:${revealed.category}` : '';
   React.useEffect(() => {
@@ -82,6 +97,55 @@ export function App() {
     });
   }, [revealKey]);
 
+  /* ---------------- a player, joining ---------------- */
+
+  // The server answers a seatless join with the roster, which is how a
+  // player learns who is at the table.
+  React.useEffect(() => {
+    const view = snapshot?.view;
+    if (view && screen === 'join') setScreen('play');
+  }, [snapshot?.view, screen]);
+
+  const connectAsPlayer = React.useCallback((seatId?: string) => {
+    const code = normaliseJoinCode(joinCode);
+    if (!isJoinCode(code)) return;
+    const remembered = identity.current.seats[code];
+    const claim = seatId ?? remembered;
+    attach(new SocketSession({
+      endpoint: SESSION_ENDPOINT,
+      code,
+      playerId: identity.current.playerId,
+      role: 'player',
+      ...(claim ? { seatId: claim } : {}),
+    }));
+    if (seatId) rememberSeat(code, seatId);
+  }, [attach, joinCode]);
+
+  // A seat offer means "you are in the room but not seated yet".
+  React.useEffect(() => {
+    const s = session.current;
+    if (!(s instanceof SocketSession)) return;
+    setSeatOffers(s.seatOffers);
+  }, [snapshot]);
+
+  /* ---------------- the GM, hosting ---------------- */
+
+  const host = React.useCallback(() => {
+    const code = campaign.hostCode || makeJoinCode();
+    setCampaign((prev) => ({ ...prev, hostCode: code, prompt: null, lastPrompt: {} }));
+    attach(new SocketSession({
+      endpoint: SESSION_ENDPOINT,
+      code,
+      playerId: identity.current.playerId,
+      role: 'gm',
+      create: runSetupFor(campaign),
+    }));
+    setAsPlayer(false);
+    setScreen('session');
+  }, [attach, campaign]);
+
+  /* ---------------- shared ---------------- */
+
   const dispatch = React.useCallback((action: GameAction) => {
     session.current?.send(action);
   }, []);
@@ -93,7 +157,7 @@ export function App() {
       const viewer: Viewer = next && seatId
         ? { role: 'player', seatId }
         : { role: 'gm' };
-      session.current?.setViewer(viewer);
+      session.current?.setViewer?.(viewer);
       return next;
     });
   }, [campaign.roster]);
@@ -101,28 +165,47 @@ export function App() {
   const startRun = React.useCallback(() => {
     setCampaign((prev) => {
       const state = createGame(runConfigFor(prev, newId()));
-      ensureSession(state);
+      ensureLocal(state);
       return { ...prev, run: state, prompt: null, lastPrompt: {} };
     });
     setAsPlayer(false);
     setScreen('session');
-  }, [ensureSession]);
+  }, [ensureLocal]);
 
   const view = snapshot?.view ?? null;
+  const hosted = session.current instanceof SocketSession;
 
   return (
     <MazeDeckProvider size="md" className="t-app">
-      {screen === 'session' && view ? (
+      {screen === 'play' && view ? (
+        <PlayerScreen
+          view={view}
+          dispatch={dispatch}
+          connected={snapshot?.connected ?? false}
+          error={snapshot?.error ?? null}
+          onLeave={() => { detach(); setSeatOffers(null); setScreen('join'); }}
+        />
+      ) : screen === 'join' ? (
+        <JoinScreen
+          code={joinCode}
+          onCodeChange={setJoinCode}
+          seats={seatOffers}
+          connected={snapshot?.connected ?? false}
+          error={snapshot?.error ?? null}
+          onConnect={() => connectAsPlayer()}
+          onClaim={(seatId) => connectAsPlayer(seatId)}
+          onBack={() => { detach(); setSeatOffers(null); setScreen('campaign'); }}
+        />
+      ) : screen === 'session' && view ? (
         <SessionScreen
           view={view}
           dispatch={dispatch}
           error={snapshot?.error ?? null}
           runName={campaign.runName}
-          // The scenario prompt is the GM's to read before they narrate
-          // it, so a player's screen never carries it.
           prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
           asPlayer={asPlayer}
           onTogglePlayerView={togglePlayerView}
+          {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
           onExit={() => setScreen('campaign')}
         />
       ) : screen === 'tables' ? (
@@ -136,6 +219,8 @@ export function App() {
           campaign={campaign}
           onChange={setCampaign}
           onStart={startRun}
+          onHost={host}
+          onJoin={() => { detach(); setSeatOffers(null); setScreen('join'); }}
           hasRun={campaign.run !== null}
           onResume={() => setScreen('session')}
           onEditTables={() => setScreen('tables')}

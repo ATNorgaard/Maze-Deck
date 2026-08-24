@@ -47,6 +47,8 @@ export interface Campaign {
   prompt: DrawnPrompt | null;
   /** Last entry used per category, so the same one does not repeat. */
   lastPrompt: Partial<Record<string, string>>;
+  /** The join code of the room this campaign is hosted in, if any. */
+  hostCode: string | null;
   /** The crossing in progress, or null between runs. */
   run: GameState | null;
 }
@@ -89,6 +91,7 @@ export function newCampaign(): Campaign {
     tables: structuredClone(DEFAULT_TABLES),
     prompt: null,
     lastPrompt: {},
+    hostCode: null,
     run: null,
   };
 }
@@ -96,6 +99,18 @@ export function newCampaign(): Campaign {
 /** A character is a seat, verbatim — the GM verifies, the app does not judge. */
 export function toSeat(c: Character): Seat {
   return { id: c.id, name: c.name.trim() || 'Unnamed', cls: c.cls, mods: { ...c.mods } };
+}
+
+/**
+ * A run's settings without the seed.
+ *
+ * This is what a client may send: the server generates the seed, so no
+ * browser is ever in a position to compute the deck. See view.ts.
+ */
+export function runSetupFor(campaign: Campaign): Omit<RunConfig, 'seed'> {
+  const { seed, ...setup } = runConfigFor(campaign, '');
+  void seed;
+  return setup;
 }
 
 export function runConfigFor(campaign: Campaign, seed: string): RunConfig {

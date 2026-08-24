@@ -4,12 +4,13 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M4 part 2b)
+**Last updated:** 2026-08-24 (M4 complete)
 
 ## Where we are
 
-**M0 through M3 complete. A full crossing is playable, and the GM is handed
-a line to narrate from for every card the party turns over.**
+**M0 through M4 complete. A crossing is playable on one screen or across
+devices, with the GM's board and the players' phones talking to a server that
+never tells any of them what is in the deck.**
 
 ```bash
 cd packages/rules && npm test            # 44 tests, ~10s, no browser needed
@@ -173,15 +174,36 @@ Verified against it from a browser with a GM socket and a player socket:
 `apps/table/src/transport/socket.ts` is the matching client adapter, with
 reconnect and backoff. **It is not wired to any UI yet** — that is part 3.
 
-**Part 3 — reaching it, and the player view. Next.**
+**Part 3 — the UI. Done.**
 
-1. Host/join UI: the GM opens a room and shows the code; a player enters the
-   code and claims a seat. `App` picks `LocalSession` or `SocketSession`.
-2. The player view: a different screen with different content — no GM controls,
-   no scenario prompt, no dice override. This is why the board was never tuned
-   for phones.
-3. Decide what happens when the GM's tab closes mid-run. The room survives (it
-   is in Durable Object storage); the question is what players see meanwhile.
+*Host online* on the campaign screen opens a room, shows the join code on the
+board, and the run is created inside the Durable Object. *Join a maze* takes a
+code, or `#/join/CODE` deep-links straight in so a GM can paste a link instead
+of reading letters out.
+
+A player joining without a seat is answered with the roster rather than an
+error — they cannot know who is at the table until they arrive. Claiming a seat
+remembers it against that code, so a reload lands back on the same character.
+
+`PlayerScreen` is a genuinely different screen, not the board with buttons
+removed: one column, phone first, and only the controls that are theirs. It
+shows a pending roll as `17 vs DC 15 — waiting on the GM`, **never a verdict**,
+because the GM can still overturn it.
+
+Verified across two tabs against `wrangler dev`: the GM hosted `5ZNQYE`, a
+second device deep-linked in, was offered the real roster, claimed Wren, and
+then tracked every action live — 8 log lines in step, no GM controls, no
+scenario prompt, and no action bar except on their own turn.
+
+## Running it
+
+```bash
+cd workers/session && npm run dev   # the session server, port 8787
+cd apps/table && npm run dev        # the app, port 5180
+```
+
+Point `VITE_SESSION_ENDPOINT` at a deployed worker to use anything other than
+localhost. Nothing has been deployed — there is no Cloudflare account involved.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -189,14 +211,30 @@ was never tuned for phones.
 
 ## Next single action
 
-Start M4 part 3 at step 1: the host/join UI, so `SocketSession` is reachable.
-It is written and the server is proven, but nothing in the app constructs it yet.
+**M5: deck and print regeneration** — the last planned milestone. Regenerate the
+23-card print sheet, give `steel-yourself` a real glyph, fix the stale
+`dtsPropsFor.ActionBar` in `.design-sync/config.json`, and add the
+deck-composition parity check across the three files that duplicate it.
+
+Worth doing at some point, in rough order of value:
+
+1. **What happens when the GM's tab closes mid-run.** The room survives — it is
+   in Durable Object storage — but players currently just see the board stop.
+2. **Deploying.** `wrangler deploy` needs a Cloudflare account; the app needs a
+   static host and `VITE_SESSION_ENDPOINT` set.
+3. The player view is phone-first but has had no real device testing.
 
 ## Watch out for
 
 - **Prompts are GM-facing and currently rendered on the shared board.** That is
   correct today because the board *is* the GM's screen. When M4 adds a player
   view, `.t-phase__scene` must not be sent to it.
+- **Vite's watcher misses writes on this setup.** Twice now the dev server has
+  served a stale module — once producing a `ReferenceError` pointing at code
+  that no longer existed, once silently dropping a new prop so a button did
+  nothing. If behaviour contradicts the source, check what is actually served
+  (`curl localhost:5180/src/App.tsx | grep …`) before debugging the code.
+  Restarting Vite with `node_modules/.vite` removed fixes it.
 - **CSS regressions from bulk edits.** The `.t-panel` rules were silently lost
   in an earlier rewrite of the layout section, which is why every panel — the
   modals included — painted transparent. Several follow-up patches then no-opped
@@ -244,5 +282,5 @@ faithful to the rules as printed. It may not be what was intended.
 | M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | **done** |
-| M4 | Multiplayer | **parts 1, 2a, 2b done** — server proven; UI is part 3 |
-| M5 | Deck and print regeneration | |
+| M4 | Multiplayer | **done** — verified across two devices |
+| M5 | Deck and print regeneration | next |

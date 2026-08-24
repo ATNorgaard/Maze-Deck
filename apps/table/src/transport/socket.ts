@@ -10,7 +10,7 @@
 
 import { normaliseJoinCode } from '@maze-deck/rules';
 import type {
-  GameAction, RunSetup, ServerMessage,
+  GameAction, RunSetup, SeatOffer, ServerMessage,
 } from '@maze-deck/rules';
 import type { SessionTransport, Snapshot } from './types';
 
@@ -43,6 +43,12 @@ export class SocketSession implements SessionTransport {
   private closed = false;
 
   private timer: number | null = null;
+
+  /**
+   * Set when the server says "you are here but not seated". Null once
+   * a seat is held — a view arriving means the claim went through.
+   */
+  seatOffers: SeatOffer[] | null = null;
 
   constructor(options: SocketOptions) {
     this.options = { ...options, code: normaliseJoinCode(options.code) };
@@ -136,7 +142,12 @@ export class SocketSession implements SessionTransport {
         });
         return;
       case 'view':
+        this.seatOffers = null;
         this.update({ view: msg.view, presence: msg.presence, error: null });
+        return;
+      case 'seats':
+        this.seatOffers = msg.seats;
+        this.update({ error: null });
         return;
       case 'waiting':
         this.update({ view: null, presence: msg.presence });

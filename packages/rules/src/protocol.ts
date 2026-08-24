@@ -41,6 +41,15 @@ export type ClientMessage =
   | { t: 'action'; action: GameAction }
   | { t: 'ping' };
 
+/** A seat a joining player may claim. */
+export interface SeatOffer {
+  id: string;
+  name: string;
+  cls?: string;
+  /** Already claimed by another device. */
+  taken: boolean;
+}
+
 export interface Presence {
   seatId: string | null;
   role: 'gm' | 'player';
@@ -54,6 +63,12 @@ export type ServerMessage =
   | { t: 'view'; view: GameView; presence: Presence[] }
   /** Refused, or something went wrong. Never fatal on its own. */
   | { t: 'error'; message: string }
+  /**
+   * You are in the room but not yet seated. Carries the roster so a
+   * joining player can choose — they cannot know it before they
+   * arrive, which is why joining without a seat is not an error.
+   */
+  | { t: 'seats'; seats: SeatOffer[] }
   /** Connected, but nobody has started a run here yet. */
   | { t: 'waiting'; presence: Presence[] }
   | { t: 'pong' };
