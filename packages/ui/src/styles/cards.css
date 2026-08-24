@@ -314,7 +314,11 @@
 .md-card--ref { --md-frame-inset-b: var(--md-frame-inset); }
 .md-card--ref .md-card__safe {
   align-items: stretch;
-  padding: calc(1.5 * var(--md-u)) calc(0.5 * var(--md-u)) calc(5 * var(--md-u));
+  /* The safe box is inset 4u and the frame rule 4.5u, so the safe box
+     sits HALF A UNIT OUTSIDE the frame. Any horizontal padding under
+     that puts text on top of the line — which is what 0.5u did. 3u
+     leaves a real gutter inside the frame instead. */
+  padding: calc(1.5 * var(--md-u)) calc(3 * var(--md-u)) calc(2.5 * var(--md-u));
 }
 .md-ref__title {
   margin: 0;
@@ -333,10 +337,22 @@
   color: var(--md-cat-path-300); letter-spacing: 0.08em;
   text-align: center;
 }
-.md-ref__list { margin: 0; padding: 0; list-style: none; }
+/* The list fills the card. Left to itself it clumps under the badge
+   and leaves the bottom third empty, which reads as a mistake rather
+   than as space. */
+.md-ref__list {
+  margin: 0; padding: 0; list-style: none;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  /* Spread the entries down the card. NOT `flex: 1` on the items —
+     that makes each <strong> and the sentence after it separate flex
+     items, and the label stops sharing a line with its own text. */
+  justify-content: space-between;
+}
 .md-ref__list li {
-  font-size: calc(2.2 * var(--md-u)); line-height: 1.3;
-  padding: calc(0.95 * var(--md-u)) 0;
+  font-size: calc(2.3 * var(--md-u)); line-height: 1.32;
+  padding: calc(1.1 * var(--md-u)) 0;
   border-bottom: var(--md-frame-hair) solid var(--md-ink-600);
   color: var(--md-parchment-300);
 }
