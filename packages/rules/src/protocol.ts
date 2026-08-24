@@ -6,7 +6,7 @@
    GameView, which is already the redacted form.
    ============================================================ */
 
-import type { GameAction } from './types';
+import type { GameAction, RunConfig } from './types';
 import type { GameView, Viewer } from './view';
 
 /** How a client asks to be let in. */
@@ -25,7 +25,18 @@ export interface JoinRequest {
   playerId: string;
 }
 
+/**
+ * Everything a run needs except the seed.
+ *
+ * The seed stays out of the client's hands entirely: the server
+ * generates it, and it is the one value that would let a browser
+ * compute the whole deck. See view.ts.
+ */
+export type RunSetup = Omit<RunConfig, 'seed'>;
+
 export type ClientMessage =
+  /** Open a session here. Whoever does this is its GM. */
+  | { t: 'create'; playerId: string; setup: RunSetup }
   | ({ t: 'join' } & JoinRequest)
   | { t: 'action'; action: GameAction }
   | { t: 'ping' };
@@ -43,7 +54,7 @@ export type ServerMessage =
   | { t: 'view'; view: GameView; presence: Presence[] }
   /** Refused, or something went wrong. Never fatal on its own. */
   | { t: 'error'; message: string }
-  /** The run has not started yet. */
+  /** Connected, but nobody has started a run here yet. */
   | { t: 'waiting'; presence: Presence[] }
   | { t: 'pong' };
 

@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M4 part 2a)
+**Last updated:** 2026-08-24 (M4 part 2b)
 
 ## Where we are
 
@@ -135,15 +135,53 @@ Verified in the browser: previewing as a player and pressing "Let it land" is
 refused with *"Only the GM can do that."*, the check stays pending, and the
 phase does not move.
 
-**Part 2b — the server. Next.**
+**Part 2b — the server. Done, and proven with two live sockets.**
 
-1. Cloudflare Worker plus one Durable Object per session. The DO owns
-   `GameState`, runs `mayAct` on every inbound action, and broadcasts a
-   per-client `GameView`.
-2. `SocketTransport` implementing the same interface. `REVEAL_MS` is already
-   shared, so the DO's alarm and the board's animation agree.
-3. Session lifecycle: create with a join code, reconnect by `playerId`, and
-   decide what happens when the GM's tab closes mid-run.
+`workers/session/` is a Worker that does nothing but route a join code to its
+Durable Object — the code IS the object's name, so two people typing the same
+code land in the same room with no lookup table anywhere.
+
+`SessionRoom` is the authority, and deliberately the same shape as
+`LocalSession`: owns `GameState`, refuses what `mayAct` rejects, owns the reveal
+alarm, and emits only views. **Each socket gets its own view, built for whoever
+it belongs to** — there is no shared payload that then gets filtered.
+
+**The seed is generated inside the Durable Object** and never travels. A client
+sends a `RunSetup` (the config minus the seed); the room supplies the rest.
+
+Uses the WebSocket **hibernation** API, so an idle room can be evicted between
+turns and woken by a message or the alarm without dropping anybody. Socket
+identity survives that via `serializeAttachment`.
+
+Run it locally — no Cloudflare account, nothing deployed:
+
+```bash
+cd workers/session && npm run dev      # wrangler dev, port 8787
+```
+
+Verified against it from a browser with a GM socket and a player socket:
+
+- Neither `"seed"`, `"deck":[` nor `"rng"` appears anywhere on the wire.
+- The player sees `deckCount: 20` and three `filled` but unnamed river slots.
+- A player sending `CONFIRM_CHECK` gets *"Only the GM can do that."*; acting out
+  of turn gets *"It is not your turn."* — and **the GM receives nothing**,
+  because the state never moved.
+- The full loop `check → pick → reveal → act` reached both clients, and the
+  `reveal → act` step happened **with no client sending anything**: that was the
+  Durable Object's alarm.
+
+`apps/table/src/transport/socket.ts` is the matching client adapter, with
+reconnect and backoff. **It is not wired to any UI yet** — that is part 3.
+
+**Part 3 — reaching it, and the player view. Next.**
+
+1. Host/join UI: the GM opens a room and shows the code; a player enters the
+   code and claims a seat. `App` picks `LocalSession` or `SocketSession`.
+2. The player view: a different screen with different content — no GM controls,
+   no scenario prompt, no dice override. This is why the board was never tuned
+   for phones.
+3. Decide what happens when the GM's tab closes mid-run. The room survives (it
+   is in Durable Object storage); the question is what players see meanwhile.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -151,9 +189,8 @@ was never tuned for phones.
 
 ## Next single action
 
-Start M4 part 2b: the Durable Object. `wrangler` is not yet a dependency —
-adding it is the first step, and `wrangler dev` runs the DO locally so this is
-verifiable without deploying anything.
+Start M4 part 3 at step 1: the host/join UI, so `SocketSession` is reachable.
+It is written and the server is proven, but nothing in the app constructs it yet.
 
 ## Watch out for
 
@@ -207,5 +244,5 @@ faithful to the rules as printed. It may not be what was intended.
 | M1 | Rules engine | **done** — 44 tests |
 | M2 | Single-screen GM app | **done** — playable end to end |
 | M3 | Scenario tables | **done** |
-| M4 | Multiplayer | **parts 1 + 2a done** — redaction, authority, transport |
+| M4 | Multiplayer | **parts 1, 2a, 2b done** — server proven; UI is part 3 |
 | M5 | Deck and print regeneration | |

@@ -30,3 +30,7 @@ MV5BYzAwZWQxY2YtOTk2NS00MTMzLThkYjgtZjhkOTUzNTNjZjY1XkEyXkFqcGc@._V1_FMjpg_UX100
 .env.local
 .DS_Store
 Thumbs.db
+
+# --- cloudflare local state ---
+.wrangler/
+workers/*/.wrangler/
