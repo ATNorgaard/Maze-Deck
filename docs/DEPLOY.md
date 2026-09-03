@@ -6,12 +6,35 @@ CORS, and nothing to configure — the app talks to whatever origin served it.
 
 ## What you need
 
-A Cloudflare account. That is the entire list, and it is the one step nobody can
-do on your behalf.
+A Cloudflare account, and one click in its dashboard the first time — see the
+next section. Both are steps nobody can do on your behalf.
 
 The session rooms are SQLite-backed Durable Objects (`new_sqlite_classes` in
 `wrangler.toml`) — the variant Cloudflare made available on the free plan. If
 the deploy asks you to upgrade, that is the thing to check first.
+
+## First deploy on a new account: do this once, first
+
+**Open [dash.cloudflare.com](https://dash.cloudflare.com) and click into
+"Workers & Pages" once**, before deploying. Just loading that page creates the
+`*.workers.dev` subdomain your Worker will live on.
+
+Skip it and the deploy gets most of the way — login fine, build fine, assets
+uploaded fine — and then dies on the last step with:
+
+```
+You need a workers.dev subdomain in order to proceed. [code: 10063]
+```
+
+Wrangler normally offers to create the subdomain for you mid-deploy, but that
+prompt does not fire for a Worker with Durable Objects, so it errors instead.
+It is a [known Cloudflare
+issue](https://github.com/cloudflare/workers-sdk/issues/2908), not a problem
+with this project. There is no CLI command for it — the dashboard is the only
+way.
+
+Nothing is left half-broken when it happens. Re-running the deploy after the
+subdomain exists is safe.
 
 ## Deploying
 
