@@ -202,8 +202,13 @@ cd workers/session && npm run dev   # the session server, port 8787
 cd apps/table && npm run dev        # the app, port 5180
 ```
 
-Point `VITE_SESSION_ENDPOINT` at a deployed worker to use anything other than
-localhost. Nothing has been deployed — there is no Cloudflare account involved.
+In a production build the app uses **its own origin**, because the Worker
+serves it: one deploy, one URL, no CORS and nothing to configure.
+`VITE_SESSION_ENDPOINT` still overrides either, for pointing a local app at a
+deployed server. See [DEPLOY.md](DEPLOY.md).
+
+**Still not deployed** — that needs a Cloudflare account, which is the only
+remaining step and the one nobody else can do.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -256,8 +261,13 @@ order of value:
    currently be lost.
 2. **What happens when the GM's tab closes mid-run.** The room survives — it is
    in Durable Object storage — but players currently just see the board stop.
-3. **Deploying.** `wrangler deploy` needs a Cloudflare account; the app needs a
-   static host and `VITE_SESSION_ENDPOINT` set.
+3. **Deploying.** Fully prepared and verified locally — see [DEPLOY.md](DEPLOY.md).
+   The Worker now serves the built app as a static-assets binding, so it is one
+   deploy rather than two hosts plus CORS. Verified against `wrangler dev`:
+   `/` serves the app, `/session/<code>` still reaches the Worker and upgraded
+   to a live socket (101), and hosting a room from that single origin produced
+   a join code and a running crossing. **All that is left is `wrangler login`
+   and `npm run deploy`.**
 4. The player view is phone-first but has had no real device testing.
 5. Re-enabling Dead End and Trap as a playable expansion — the engine, the
    tokens, the art and the print page all already support them.

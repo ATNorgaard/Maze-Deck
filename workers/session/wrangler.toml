@@ -14,5 +14,17 @@ class_name = "SessionRoom"
 tag = "v1"
 new_sqlite_classes = ["SessionRoom"]
 
+# In production this same Worker also serves the built app, so the
+# whole thing is one deploy on one origin: no CORS, no endpoint to
+# configure, and the join link is just the site's own URL.
+#
+# `not_found_handling` is deliberately left at its default of "none".
+# The single-page-application setting would answer /session/<code>
+# with index.html and the Worker would never run — which is the
+# WebSocket route, so the game would silently stop working. Routing
+# is hash-based (#/join/CODE), so no fallback is needed anyway.
+[assets]
+directory = "../../apps/table/dist"
+
 [dev]
 port = 8787

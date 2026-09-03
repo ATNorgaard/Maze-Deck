@@ -45,6 +45,14 @@ export function rememberSeat(code: string, seatId: string): void {
   } catch { /* storage blocked; the server remembers anyway */ }
 }
 
-/** Where the session server lives. Overridable at build time. */
+/**
+ * Where the session server lives.
+ *
+ * In production the Worker serves this app as well, so the server is
+ * wherever the page came from and there is nothing to configure. In
+ * dev the two run on separate ports. `VITE_SESSION_ENDPOINT` overrides
+ * both, for pointing a local app at a deployed server.
+ */
 export const SESSION_ENDPOINT: string =
-  import.meta.env.VITE_SESSION_ENDPOINT ?? 'http://localhost:8787';
+  import.meta.env.VITE_SESSION_ENDPOINT
+  ?? (import.meta.env.DEV ? 'http://localhost:8787' : window.location.origin);
