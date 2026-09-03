@@ -11,6 +11,7 @@ import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
 import { SocketSession } from './transport/socket';
 import type { SessionTransport, Snapshot } from './transport/types';
+import { PortalHost } from './components/PortalHost';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { LandingScreen } from './screens/LandingScreen';
 import { JoinScreen } from './screens/JoinScreen';
@@ -181,6 +182,7 @@ export function App() {
 
   return (
     <MazeDeckProvider size="md" className="t-app">
+      <PortalHost>
       {screen === 'play' && view ? (
         <PlayerScreen
           view={view}
@@ -237,6 +239,7 @@ export function App() {
           onHome={() => setScreen('landing')}
         />
       )}
+      </PortalHost>
     </MazeDeckProvider>
   );
 }

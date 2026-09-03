@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Tabs from '@radix-ui/react-tabs';
 import { CANONICAL_CATEGORIES, CATEGORIES, DeckCard, getCategory } from '@maze-deck/ui';
 import type { CardCategory } from '@maze-deck/rules';
 import { SCORES } from '../campaign';
@@ -49,7 +50,12 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
         </button>
       </div>
 
-      <div className="t-tables">
+      <Tabs.Root
+        className="t-tables"
+        value={category}
+        onValueChange={(next) => setActive(next as CardCategory)}
+        orientation="vertical"
+      >
         <div className="t-col">
           <div className="t-panel">
             <h2 className="t-panel__title">Category</h2>
@@ -58,26 +64,23 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
               from its list and hands it to you to describe — never the same one
               twice running.
             </p>
-            <div className="t-tabs">
+            {/* Real tabs: arrow keys move between them and only the
+                selected one is a tab stop, which aria-pressed buttons
+                could never offer. */}
+            <Tabs.List className="t-tabs" aria-label="Card category">
               {enabled.map((key) => {
                 const d = getCategory(key);
                 const count = campaign.tables[key]?.length ?? 0;
                 return (
-                  <button
-                    key={key}
-                    type="button"
-                    className="t-tab"
-                    aria-pressed={key === category}
-                    onClick={() => setActive(key)}
-                  >
+                  <Tabs.Trigger key={key} value={key} className="t-tab">
                     <span>{d.title}</span>
                     <span className="t-tab__count" data-empty={count === 0 || undefined}>
                       {count}
                     </span>
-                  </button>
+                  </Tabs.Trigger>
                 );
               })}
-            </div>
+            </Tabs.List>
           </div>
 
           <div className="t-centre">
@@ -85,7 +88,9 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
           </div>
         </div>
 
-        <div className="t-col">
+        {/* One panel, showing whichever category is selected. Wrapped so
+            the tabs have something real to point aria-controls at. */}
+        <Tabs.Content className="t-col" value={category}>
           <div className="t-panel">
             <h2 className="t-panel__title">{def.title}</h2>
             <p className="t-note">{def.rule}</p>
@@ -164,8 +169,8 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+        </Tabs.Content>
+      </Tabs.Root>
     </>
   );
 }

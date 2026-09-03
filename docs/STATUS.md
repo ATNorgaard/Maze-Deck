@@ -274,6 +274,37 @@ order of value:
 5. Re-enabling Dead End and Trap as a playable expansion — the engine, the
    tokens, the art and the print page all already support them.
 
+## The front page, and Radix
+
+A cold visitor used to land on the campaign editor. `LandingScreen` now answers
+what the thing is first, using the real card components so the page is the
+product rather than a description of it. Numbers on it are read from the deck
+definition. Routing: cold visit to landing, a browser mid-crossing straight to
+its run, `#/join/CODE` untouched. The wordmark goes home.
+
+**Radix primitives, no Tailwind and no shadcn.** The `.t-*` CSS keeps doing all
+the styling; Radix supplies only behaviour.
+
+The thing that made shadcn the wrong fit is worth remembering: **Radix portals
+to `document.body`, and every token lives on `.md-root`.** Anything portalled
+out of that scope paints unstyled. `components/PortalHost.tsx` mounts a host
+*inside* the provider and every `Radix.Portal` is given it as `container`.
+Verified: the open dialog's `.closest('.md-root')` is non-null.
+
+`Modal` is now a Radix Dialog — focus trap, focus restore, the rest of the page
+marked inert, background scroll locked. Non-dismissible modals block Escape and
+outside clicks via `onEscapeKeyDown` / `onInteractOutside`, which is load-bearing:
+a dismissed pending check leaves the board with no way forward. Radix renders
+overlay and content as siblings, so `.t-scrim` no longer centres the modal —
+`.t-modalLayer` does, and is `pointer-events: none` so a backdrop click still
+counts as outside.
+
+`TablesScreen` uses Radix Tabs. Note the tablist itself carries `tabIndex=0` and
+every trigger is `-1` until interaction — that is the roving-focus pattern
+working, not a bug, and it is better than the five separate tab stops it
+replaced. Radix Tabs activates on **mousedown**, so a synthetic `.click()` in a
+test will do nothing; drive it with a real click.
+
 ## Watch out for
 
 - **Prompts are GM-facing and currently rendered on the shared board.** That is

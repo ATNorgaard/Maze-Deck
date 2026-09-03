@@ -616,9 +616,6 @@ html, body, #root {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: calc(6 * var(--md-u));
   /* Frosted rather than merely dim: the board stays legible behind but
      stops competing with the thing being asked. */
   background: rgba(4, 7, 9, .62);
@@ -627,7 +624,22 @@ html, body, #root {
   animation: tFade 140ms ease-out;
 }
 
+/* Radix renders the overlay and the content as siblings, so the scrim
+   can no longer centre the modal as its child. This layer does it
+   instead. It is transparent to the pointer, which lets a click on the
+   backdrop reach the scrim and still register as "outside". */
+.t-modalLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 51;
+  display: grid;
+  place-items: center;
+  padding: calc(6 * var(--md-u));
+  pointer-events: none;
+}
+
 .t-modal {
+  pointer-events: auto;
   max-width: min(920px, 100%);
   max-height: 100%;
   overflow-y: auto;
@@ -1085,4 +1097,41 @@ html, body, #root {
   outline: 2px solid var(--md-cat-path-500);
   outline-offset: 3px;
   border-radius: 2px;
+}
+
+/* Reachable by a screen reader, invisible to everyone else. Used for
+   the dialog titles Radix needs for an accessible name. */
+.t-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Radix Tabs marks the selected trigger with data-state, where the old
+   buttons used aria-pressed. Same look, driven by the new attribute. */
+.t-tab[data-state='active'] {
+  border-color: var(--md-cat-path-700);
+  background: var(--md-ink-700);
+  color: var(--md-cat-path-300);
+}
+
+/* Radix makes the tablist itself the single tab stop and moves focus
+   inward with the arrow keys, so the list needs its own ring — without
+   it, tabbing to the group lands somewhere invisible. */
+.t-tabs:focus-visible {
+  outline: 2px solid var(--md-cat-path-500);
+  outline-offset: 3px;
+  border-radius: calc(1.5 * var(--md-u));
+}
+
+.t-tab:focus-visible {
+  outline: 2px solid var(--md-cat-path-500);
+  outline-offset: 2px;
 }

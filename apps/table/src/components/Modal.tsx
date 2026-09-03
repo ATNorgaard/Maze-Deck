@@ -1,4 +1,6 @@
 import * as React from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { usePortalContainer } from './PortalHost';
 
 interface Props {
   label: string;
@@ -13,39 +15,42 @@ interface Props {
 }
 
 /**
- * Deliberately not portalled. Every token lives on `.md-root`, which the
- * provider emits at the top of the app; rendering into document.body
- * would drop out of that scope and paint unstyled. `position: fixed`
- * does the job from inside the tree.
+ * Built on Radix Dialog for the things a hand-rolled modal gets wrong:
+ * it traps focus, restores it to whatever opened the dialog on close,
+ * marks the rest of the page inert for screen readers, and locks the
+ * background from scrolling.
+ *
+ * Portalled into `.md-root` rather than the body — see PortalHost. The
+ * look is unchanged: `.t-scrim` and `.t-modal` still do all the styling.
  */
 export function Modal({ label, dismissible = false, onDismiss, children }: Props) {
-  const ref = React.useRef<HTMLDivElement>(null);
+  const container = usePortalContainer();
 
-  React.useEffect(() => {
-    ref.current?.focus();
-    if (!dismissible || !onDismiss) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onDismiss(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [dismissible, onDismiss]);
+  // Radix closes on Escape and on an outside click. A modal the game is
+  // waiting on has to refuse both, or the board is left with no way on.
+  const block = (e: Event) => { if (!dismissible) e.preventDefault(); };
 
   return (
-    <div
-      className="t-scrim"
-      role="presentation"
-      onClick={dismissible && onDismiss ? onDismiss : undefined}
+    <Dialog.Root
+      open
+      onOpenChange={(next) => { if (!next && dismissible) onDismiss?.(); }}
     >
-      <div
-        ref={ref}
-        className="t-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
+      <Dialog.Portal container={container}>
+        <Dialog.Overlay className="t-scrim" />
+        <div className="t-modalLayer">
+          <Dialog.Content
+            className="t-modal"
+            onEscapeKeyDown={block}
+            onPointerDownOutside={block}
+            onInteractOutside={block}
+          >
+            {/* Radix requires a title for the accessible name. It is the
+                same string the old aria-label carried, just reachable. */}
+            <Dialog.Title className="t-sr">{label}</Dialog.Title>
+            {children}
+          </Dialog.Content>
+        </div>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
