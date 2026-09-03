@@ -1,5 +1,14 @@
 # Putting it on the internet
 
+**It is live: <https://maze-deck-session.andreastorp123.workers.dev>**
+
+Deployed 2026-09-03 and verified on the real edge, not just locally: the app
+loads, a room opened over `wss://`, a second client joined by code from a
+phone-sized window and tracked the run live, and the GM's roll reached that
+client **without its verdict** — because the GM can still overturn it — with no
+GM controls anywhere on their screen. The free plan accepted the SQLite-backed
+Durable Objects with no upgrade prompt.
+
 The whole thing is **one deploy to one place**: a single Cloudflare Worker that
 serves the app *and* runs the sessions. There is no database, no second host, no
 CORS, and nothing to configure — the app talks to whatever origin served it.

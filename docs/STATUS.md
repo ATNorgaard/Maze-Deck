@@ -207,8 +207,10 @@ serves it: one deploy, one URL, no CORS and nothing to configure.
 `VITE_SESSION_ENDPOINT` still overrides either, for pointing a local app at a
 deployed server. See [DEPLOY.md](DEPLOY.md).
 
-**Still not deployed** — that needs a Cloudflare account, which is the only
-remaining step and the one nobody else can do.
+**Deployed and live: <https://maze-deck-session.andreastorp123.workers.dev>**
+(2026-09-03). Redeploy with `cd workers/session && npm run deploy`. See
+[DEPLOY.md](DEPLOY.md) — including the one-time Cloudflare dashboard click a
+fresh account needs before its first deploy will succeed.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
