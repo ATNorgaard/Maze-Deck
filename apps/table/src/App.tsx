@@ -12,12 +12,13 @@ import { LocalSession } from './transport/local';
 import { SocketSession } from './transport/socket';
 import type { SessionTransport, Snapshot } from './transport/types';
 import { CampaignScreen } from './screens/CampaignScreen';
+import { LandingScreen } from './screens/LandingScreen';
 import { JoinScreen } from './screens/JoinScreen';
 import { PlayerScreen } from './screens/PlayerScreen';
 import { SessionScreen } from './screens/SessionScreen';
 import { TablesScreen } from './screens/TablesScreen';
 
-type Screen = 'campaign' | 'tables' | 'session' | 'join' | 'play';
+type Screen = 'landing' | 'campaign' | 'tables' | 'session' | 'join' | 'play';
 
 /** `#/join/ABC234` so a GM can paste a link instead of reading letters out. */
 function codeFromHash(): string | null {
@@ -33,7 +34,10 @@ export function App() {
 
   const [screen, setScreen] = React.useState<Screen>(() => {
     if (deepLink.current) return 'join';
-    return campaign.run !== null ? 'session' : 'campaign';
+    // A stranger with the bare URL gets told what this is first. Anyone
+    // mid-crossing goes straight back to it.
+    if (campaign.run !== null) return 'session';
+    return 'landing';
   });
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [asPlayer, setAsPlayer] = React.useState(false);
@@ -194,7 +198,7 @@ export function App() {
           error={snapshot?.error ?? null}
           onConnect={() => connectAsPlayer()}
           onClaim={(seatId) => connectAsPlayer(seatId)}
-          onBack={() => { detach(); setSeatOffers(null); setScreen('campaign'); }}
+          onBack={() => { detach(); setSeatOffers(null); setScreen('landing'); }}
         />
       ) : screen === 'session' && view ? (
         <SessionScreen
@@ -207,6 +211,12 @@ export function App() {
           onTogglePlayerView={togglePlayerView}
           {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
           onExit={() => setScreen('campaign')}
+        />
+      ) : screen === 'landing' ? (
+        <LandingScreen
+          onStart={() => setScreen('campaign')}
+          onJoin={() => { detach(); setSeatOffers(null); setScreen('join'); }}
+          onResume={campaign.run !== null ? () => setScreen('session') : undefined}
         />
       ) : screen === 'tables' ? (
         <TablesScreen
@@ -224,6 +234,7 @@ export function App() {
           hasRun={campaign.run !== null}
           onResume={() => setScreen('session')}
           onEditTables={() => setScreen('tables')}
+          onHome={() => setScreen('landing')}
         />
       )}
     </MazeDeckProvider>

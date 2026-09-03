@@ -11,6 +11,7 @@ interface Props {
   onEditTables: () => void;
   onHost: () => void;
   onJoin: () => void;
+  onHome: () => void;
 }
 
 function Stepper({
@@ -39,6 +40,7 @@ function Stepper({
 
 export function CampaignScreen({
   campaign, onChange, onStart, hasRun, onResume, onEditTables, onHost, onJoin,
+  onHome,
 }: Props) {
   const set = <K extends keyof Campaign>(key: K, value: Campaign[K]) =>
     onChange({ ...campaign, [key]: value });
@@ -52,10 +54,13 @@ export function CampaignScreen({
   return (
     <>
       <div className="t-bar">
-        <span className="t-brand">
+        <button
+          type="button" className="t-brand t-brand--link" onClick={onHome}
+          title="What this is"
+        >
           <span className="t-brand__glyph"><ArchGlyph state="seal" /></span>
           Maze Deck
-        </span>
+        </button>
         <span className="t-spacer" />
         <span className="t-bar__group">
           <button type="button" className="t-btn" onClick={onJoin}>

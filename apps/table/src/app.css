@@ -867,3 +867,222 @@ html, body, #root {
 }
 
 .t-seats { display: flex; flex-direction: column; gap: calc(2 * var(--md-u)); }
+
+/* ============================================================
+   THE LANDING PAGE
+
+   The first thing a stranger sees. Appended rather than woven
+   into the sections above: everything here is namespaced .t-land
+   so it cannot reach any other screen, and nothing above had to
+   be touched to add it.
+   ============================================================ */
+
+.t-land {
+  width: 100%;
+  /* Wide enough for three steps in a row and all five cards in one —
+     both of those breaking to 2+1 and 3+2 reads as an accident. A px
+     value on purpose: this is screen chrome, not print geometry, and
+     .t-main sets its own width the same way. */
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 calc(6 * var(--md-u)) calc(16 * var(--md-u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(18 * var(--md-u));
+}
+
+.t-land__hero {
+  padding: calc(18 * var(--md-u)) 0 calc(4 * var(--md-u));
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4 * var(--md-u));
+}
+
+.t-land__title {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-weight: 700;
+  /* Big on a laptop, still one or two lines on a phone. */
+  font-size: clamp(30px, 5.4vw, 58px);
+  line-height: 1.06;
+  letter-spacing: var(--md-track-title);
+  color: var(--md-parchment-100);
+  max-width: 18ch;
+}
+
+.t-land__lede {
+  margin: 0;
+  max-width: 62ch;
+  font-family: var(--md-font-body);
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: var(--md-leading-body);
+  color: var(--md-parchment-300);
+}
+
+.t-land__lede em { color: var(--md-parchment-100); font-style: italic; }
+
+.t-land__doors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(3 * var(--md-u));
+  margin-top: calc(2 * var(--md-u));
+}
+
+.t-land__fine {
+  margin: 0;
+  font-family: var(--md-font-ui);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--md-parchment-400);
+}
+
+.t-land__band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4 * var(--md-u));
+  text-align: center;
+}
+
+.t-land__h2 {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-weight: 600;
+  font-size: clamp(20px, 2.4vw, 28px);
+  letter-spacing: var(--md-track-title);
+  color: var(--md-cat-path-300);
+}
+
+.t-land__h3 {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: var(--md-track-title);
+  color: var(--md-parchment-100);
+}
+
+.t-land__prose {
+  margin: 0 auto;
+  max-width: 58ch;
+  font-family: var(--md-font-body);
+  font-size: 15px;
+  line-height: var(--md-leading-body);
+  color: var(--md-parchment-300);
+  /* The block centres under its heading, but the text itself is ragged
+     right. Centred paragraphs give every line a different starting edge,
+     which is exactly the thing that makes prose slow to read. */
+  text-align: left;
+}
+
+.t-land__prose em { color: var(--md-parchment-100); font-style: italic; }
+
+/* Single-line asides and the closing coda are short enough to centre. */
+.t-land__prose--wide { max-width: 66ch; text-align: center; }
+
+/* ---- the three steps ---- */
+
+.t-land__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: calc(5 * var(--md-u));
+  width: 100%;
+  text-align: left;
+}
+
+.t-land__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2.5 * var(--md-u));
+  padding: calc(6 * var(--md-u));
+  background: var(--md-ink-800);
+  border: 1px solid var(--md-ink-600);
+  border-radius: calc(2 * var(--md-u));
+}
+
+.t-land__stepGlyph {
+  width: calc(11 * var(--md-u));
+  height: calc(13 * var(--md-u));
+  color: var(--md-cat-path-700);
+}
+
+/* The number sits with the glyph rather than above it, so the eye
+   reads "step one" as one object instead of two. */
+.t-land__stepNum {
+  position: absolute;
+  top: calc(5 * var(--md-u));
+  right: calc(6 * var(--md-u));
+  font-family: var(--md-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--md-ink-600);
+}
+
+/* ---- the deck ---- */
+
+.t-land__deck {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(3 * var(--md-u));
+}
+
+/* ---- what to expect ---- */
+
+.t-land__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: calc(5 * var(--md-u));
+  width: 100%;
+  text-align: left;
+}
+
+.t-land__cell {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.5 * var(--md-u));
+  padding-left: calc(3 * var(--md-u));
+  border-left: 2px solid var(--md-cat-path-700);
+}
+
+.t-land__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4 * var(--md-u));
+  text-align: center;
+  padding-top: calc(10 * var(--md-u));
+  border-top: 1px solid var(--md-ink-700);
+}
+
+@media (max-width: 640px) {
+  .t-land { gap: calc(12 * var(--md-u)); }
+  .t-land__hero { padding-top: calc(10 * var(--md-u)); }
+}
+
+/* The wordmark doubles as the way back to the landing page. Reset the
+   button chrome; .t-brand supplies the look. */
+.t-brand--link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.t-brand--link:hover { color: var(--md-cat-path-300); }
+.t-brand--link:hover .t-brand__glyph { color: var(--md-cat-path-500); }
+
+.t-brand--link:focus-visible {
+  outline: 2px solid var(--md-cat-path-500);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
