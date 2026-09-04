@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-09-04 (biomes: the setting is a campaign dial)
+**Last updated:** 2026-09-04 (game feel: eight phases, see plandoc.md)
 
 ## Where we are
 
@@ -255,8 +255,13 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-Nothing is queued. Every planned milestone is done. Worth doing next, in rough
-order of value:
+**Look at the motion in a real browser.** Every beat in plandoc.md was
+verified by DOM state in a hidden pane that renders no frames, so nobody has
+yet *seen* a card dealt, a die tumble or the river fan open. `cd apps/table
+&& npm run dev`, start a crossing, take an action, pick a path, and tune the
+tokens in `apps/table/src/stage/motion.ts` by eye. Then deploy.
+
+Beyond that, worth doing in rough order of value:
 
 1. **Play a real crossing at a real table.** Everything below is a guess until
    that happens; see the balance findings, which say the card game cannot
@@ -498,6 +503,28 @@ the same deck.
 
 Adding a setting is a file in `biomes/`, a line in `BIOMES`, and a palette
 block in `biomes.css`. Nothing else needs to know it exists.
+
+## Game feel — the table has beats now
+
+Eight phases, each one commit tagged `feel/N`, planned and logged in
+[plandoc.md](plandoc.md): a choreographer that plays the difference between
+two views one beat at a time (`apps/table/src/stage/`), cards dealt from the
+deck pile, impact on the reveal, the d20 as an object in a tray instead of a
+modal, a baton that slides between seats, synthesised sound (off by
+default), ambient light, and an ending. The play did not change; the rules
+tests are the same 66.
+
+Two things learned there are worth carrying:
+
+- **Verify what Vite serves, not what is on disk.** A script that wrote one
+  file twice got a hybrid served — the first write's imports, the second
+  write's markup missing. `curl` the module and grep for the *last* thing
+  written; if it is absent, stop the server, delete `node_modules/.vite`,
+  start it again.
+- **A hidden browser pane renders no frames.** CSS transitions and
+  animations freeze mid-way and timers throttle to a second. Motion logic
+  is verifiable through DOM state and a `MutationObserver`; the look of
+  motion needs the pane displayed or a real browser.
 
 ## Watch out for
 
