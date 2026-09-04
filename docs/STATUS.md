@@ -305,6 +305,66 @@ working, not a bug, and it is better than the five separate tab stops it
 replaced. Radix Tabs activates on **mousedown**, so a synthetic `.click()` in a
 test will do nothing; drive it with a real click.
 
+## The player's screen fits the device now
+
+Sized from what the viewport can actually do — width, plus `hover` and
+`pointer` — and deliberately **not** from the user agent. A phone in landscape,
+a tablet, a desktop window dragged narrow and a phone asking for the desktop
+site all want the layout that fits, and only one of those is visible in a UA
+string.
+
+**The bug this started from:** the player river was hardcoded `size="sm"`, and
+three `sm` cards need ~534px inside a column that is 337px on a phone. With
+`justify-content: center` the outer cards were simply clipped — measured at
+`x = -69`, so a player could not see or tap the left path. On the primary
+device for this screen.
+
+`components/ScaleToFit.tsx` is the backstop: `useFittingSize` takes the largest
+of the three discrete steps that fits, and below the smallest step ScaleToFit
+scales the block proportionally. A transform is right *here* because a phone is
+a display surface — the rule against scaling cards protects the print geometry,
+and nothing is printed from a player's phone. The alternatives, two cards or a
+sideways scroll, both break the one thing the rules are built on: three paths
+compared at a glance.
+
+Three things in it are load-bearing and each cost a debugging pass:
+
+- **`transform-origin: top left`, not `center`.** Content wider than the column
+  cannot be centred by auto margins — they collapse to zero — so it sits at
+  x=0, and scaling about its own centre throws it right by half the overflow.
+- **Measure with `offsetWidth`, never `getBoundingClientRect`.** Layout values
+  are unaffected by the transform we apply; a rect would feed the scale into
+  itself.
+- **Hysteresis is not tidiness.** Writing the height back changes the page
+  height, which can toggle the window scrollbar, which changes the width by
+  ~15px, which changes the scale. That loop hits React's "maximum update depth
+  exceeded"; ignoring sub-pixel churn is what breaks it.
+
+The river and the piles scale as **one block**, so a deck pile is never drawn
+larger than the paths being chosen between.
+
+At =900px the screen becomes two columns with a sticky aside. `max-width` is
+1240 rather than 1200 for the same reason the board's is 1960: 1200 left the
+board column at 812, nineteen pixels short of the 831 an `md` river needs, and
+it silently stayed at `sm`.
+
+Touch is handled by `@media (hover: none), (pointer: coarse)`: the pickable glow
+is always on rather than waiting for a hover that never comes, the lift is
+disabled so a tap does not leave a stuck hover state, and buttons get a 44px
+minimum.
+
+**Known, pre-existing, not fixed:** `useFittingSize`'s NEEDS table says `md`
+needs 831px; the real natural width is 873. On the player screen ScaleToFit
+absorbs the difference (a 0.98 scale, invisible). **On the GM board there is no
+such backstop**, so a centre column between 831 and 873 clips the river
+slightly. Fixing the table means re-tuning the board's 1960 max-width, so it
+was left alone rather than changed untested.
+
+Note for anyone testing this in the Claude Code browser pane: **ResizeObserver
+does not deliver there**, fronted or not. Mount-time measurement and the window
+`resize` listener do. Verify by reloading at the width you care about rather
+than by dragging.
+
 ## Watch out for
 
 - **Prompts are GM-facing and currently rendered on the shared board.** That is

@@ -1135,3 +1135,76 @@ html, body, #root {
   outline: 2px solid var(--md-cat-path-500);
   outline-offset: 2px;
 }
+
+/* ============================================================
+   THE PLAYER'S OWN DEVICE
+
+   Sized by what the viewport can actually do, not by sniffing a
+   user agent: a phone in landscape, a tablet, a desktop window
+   dragged narrow and a phone asking for the desktop site all
+   want the layout that fits, and only one of those four is
+   detectable from the UA string.
+   ============================================================ */
+
+.t-play {
+  display: flex;
+  flex-direction: column;
+  gap: calc(5 * var(--md-u));
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(5 * var(--md-u));
+}
+
+.t-play__board,
+.t-play__aside {
+  display: flex;
+  flex-direction: column;
+  gap: calc(5 * var(--md-u));
+  min-width: 0;
+}
+
+/* ScaleToFit needs a plain block to measure: as a flex container the
+   inner row would be sized by the flex algorithm instead of by its own
+   content, and offsetWidth would report the column, not the river. */
+.t-play__fit { display: block; }
+
+.t-play__fit .t-piles { margin-top: calc(5 * var(--md-u)); }
+
+/* Two columns once there is room for them. Below this the phone layout
+   is the right one and stays. */
+@media (min-width: 900px) {
+  .t-play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: calc(6 * var(--md-u));
+    /* 1240, not 1200. The aside takes 320, the gap and padding another
+       68, so 1200 left the board at 812 — nineteen pixels short of the
+       831 an `md` river needs, and it silently stayed at `sm`. The board
+       has the same note about 1960 for the same reason. */
+    max-width: 1240px;
+    padding: calc(6 * var(--md-u));
+  }
+
+  .t-play__aside {
+    position: sticky;
+    top: calc(6 * var(--md-u));
+  }
+}
+
+/* ---- touch ----
+   A coarse pointer means fingers. Hover affordances never fire, and
+   worse, a tap leaves the hover state stuck on until you tap elsewhere. */
+
+@media (hover: none), (pointer: coarse) {
+  .t-play .t-river[data-pickable] .md-river__slot::before { opacity: .55; }
+
+  .t-play .t-river[data-pickable] .md-river__slot:hover article,
+  .t-play .t-river[data-pickable] .md-river__slot:focus-within article {
+    transform: none;
+  }
+
+  /* 44px is the smallest target most people can hit reliably. */
+  .t-play .t-btn { min-height: 44px; }
+}

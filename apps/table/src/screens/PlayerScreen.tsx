@@ -1,9 +1,12 @@
 import { ActionBar, DeckPile, DiscardPile, PlayerSeat, River, ScoreTrack } from '@maze-deck/ui';
 import { activeSeatOf, availableFor, mayAct } from '@maze-deck/rules';
 import type { ChoicePayload, GameAction, GameView } from '@maze-deck/rules';
+import * as React from 'react';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
+import { ScaleToFit } from '../components/ScaleToFit';
+import { useFittingSize } from '../useFittingSize';
 
 interface Props {
   view: GameView;
@@ -34,6 +37,12 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
   const pending = view.pending;
   const check = pending?.kind === 'check' ? pending : null;
 
+  // Same mechanism the GM board uses: take the largest size step the
+  // column can hold. On a laptop that is md or lg; on a phone it bottoms
+  // out at sm and ScaleToFit takes it the rest of the way down.
+  const boardRef = React.useRef<HTMLDivElement>(null);
+  const riverSize = useFittingSize(boardRef);
+
   // The same check the server will run. Here it only decides whether a
   // control is worth offering; the server's answer is the one that counts.
   const mayPick = (index: number) =>
@@ -48,7 +57,8 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
     }).ok;
 
   return (
-    <div className="t-narrow">
+    <div className="t-play">
+      <div className="t-play__board" ref={boardRef}>
       <div className="t-panel">
         <h2 className="t-panel__title">
           {seat?.name ?? 'Watching'}
@@ -72,9 +82,12 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
         <ScoreTrack value={view.strikes} total={view.rules.encounterAt} variant="threat" />
       </div>
 
+      {/* River and piles scale as one block, so a deck pile never ends up
+          drawn larger than the paths the player is choosing between. */}
+      <ScaleToFit className="t-play__fit">
       <div className="t-river" data-pickable={a.pickSlots.length && myTurn ? true : undefined}>
         <River
-          size="sm"
+          size={riverSize}
           slots={view.river.map((s) => (
             s.filled
               ? { category: s.category ?? 'clear-path', faceDown: !s.faceUp }
@@ -94,6 +107,7 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
           {...(view.discardTop ? { top: view.discardTop } : {})}
         />
       </div>
+      </ScaleToFit>
 
       {check ? (
         <div className="t-panel t-panel--live">
@@ -143,6 +157,9 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
         </div>
       ) : null}
 
+      </div>
+
+      <div className="t-play__aside">
       <div className="t-panel">
         <h2 className="t-panel__title">Order</h2>
         <div className="t-seats">
@@ -169,6 +186,7 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
 
       <div className="t-row t-row--centre">
         <button type="button" className="t-btn" onClick={onLeave}>Leave</button>
+      </div>
       </div>
 
       {myChoice && pending?.kind === 'choice' ? (
