@@ -190,11 +190,13 @@ export function App() {
 
   return (
     <div className="t-biome" data-biome={biome.id}>
+    {/* The setting's light is painted by `.t-app::before` (see app.css),
+        a fixed layer that drifts very slowly; the provider itself is
+        plain ink underneath it. */}
     <MazeDeckProvider
       size="md"
       className="t-app"
       skin={skinOf(biome)}
-      background="var(--t-biome-ground)"
     >
       <PortalHost>
       {screen === 'play' && view ? (

@@ -51,7 +51,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
 | 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
-| 6 | Ambient life — torch flicker, haze drift, log lines slide in | planned |
+| 6 | Ambient life — torch flicker, haze drift, log lines slide in | **done** — `feel/6` |
 | 8 | The ending — a flourish for through, the light going out for lost | planned |
 
 ### 1. The choreographer
@@ -359,3 +359,31 @@ now 7); a failed verdict created 1 more oscillator (the buzz); toggling off
 wrote `off`. No console errors of this session's making.
 
 **Commit:** `git log --grep feel/7`.
+
+### feel/6 — ambient life
+
+**Changed.** The setting's light moved off the provider's `background` and
+onto `.t-app::before`: a fixed layer 12% larger than the viewport, painted
+with `--t-biome-ground`, drifting ±2.5% over 48 seconds (transform only;
+`.t-app` is `isolation: isolate` so the layer sits behind everything and
+can never paint over it). `biomes.css` is untouched. Every card face's
+light (`.md-card__light`) breathes on a 3.8s cycle, with the second and
+third river slots offset so no two pulse in step; the keyframes carry the
+library's own centring transform so they do not undo it. A hovered path's
+light swells instead (`tBreathe`, 2.2s). Log lines slide in, and the newest
+— first, since the log is newest-first — arrives on a bar of gold and cools
+over 1.8s.
+
+**Design notes.** All of it is opacity and transform on small elements,
+except the drift, which moves one large fixed layer — the cheapest kind of
+large motion there is. Nothing here has a duration under two seconds
+except the log's entrance; ambient means felt, not noticed.
+
+**Broke / retried.** Nothing.
+
+**Verified** (computed styles): `.t-app::before` fixed, `tDrift 48s`,
+carrying the frozen pass's radial; the provider's inline background is
+plain ink; the river's face-up card light animates `tFlicker`; the first
+log line computes `tSlideIn, tCool` and the second `tSlideIn` alone.
+
+**Commit:** `git log --grep feel/6`.

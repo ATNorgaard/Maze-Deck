@@ -25,6 +25,59 @@ html, body, #root {
   background: var(--md-ink-900);
   color: var(--md-parchment-100);
   font-family: var(--md-font-body);
+  /* The haze layer below sits behind the content but inside this
+     stacking context, so it can never paint over anything. */
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------------- ambient life ----------------
+   The setting's light, drifting. `--t-biome-ground` is the biome's ink
+   plus one faint pool of its light (biomes.css); painting it on a fixed
+   layer larger than the viewport and moving that layer by a few percent
+   over most of a minute is what makes the room feel lit rather than
+   filled. Transform only. */
+.t-app::before {
+  content: '';
+  position: fixed;
+  inset: -12%;
+  z-index: -1;
+  background: var(--t-biome-ground);
+  pointer-events: none;
+  animation: tDrift 48s ease-in-out infinite alternate;
+}
+
+@keyframes tDrift {
+  from { transform: translate(-2.5%, -1.5%); }
+  to   { transform: translate(2.5%, 1.5%); }
+}
+
+/* Torchlight. Every card face's light breathes on a slow cycle, each
+   river slot offset from the next so three cards never pulse in step.
+   The library sets the light's centring transform; the keyframes carry
+   it so the animation does not undo it. */
+.t-app .md-card__light { animation: tFlicker 3.8s ease-in-out infinite alternate; }
+.md-river__slot:nth-child(2) .md-card__light { animation-delay: -1.3s; }
+.md-river__slot:nth-child(3) .md-card__light { animation-delay: -2.6s; }
+
+@keyframes tFlicker {
+  0%   { opacity: .84; transform: translate(-50%, -50%) scale(.97); }
+  40%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.03); }
+  70%  { opacity: .9;  transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: .96; transform: translate(-50%, -50%) scale(1.02); }
+}
+
+/* A path under the cursor breathes: its light swells and eases. Takes
+   over from the flicker while hovered, since both animate the light. */
+.t-river[data-pickable] .md-river__slot:hover .md-card__light,
+.t-river[data-pickable] .md-river__slot:focus-within .md-card__light {
+  animation: tBreathe 2.2s ease-in-out infinite;
+}
+
+@keyframes tBreathe {
+  0%   { opacity: .9; transform: translate(-50%, -50%) scale(1); }
+  50%  { opacity: 1;  transform: translate(-50%, -50%) scale(1.14); }
+  100% { opacity: .9; transform: translate(-50%, -50%) scale(1); }
 }
 
 /* ---------------- chrome ---------------- */
@@ -884,6 +937,7 @@ html, body, #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .t-app::before, .t-app .md-card__light, .t-log__line { animation: none; }
   .t-baton { transition: none; }
   .t-rise, .t-play .t-panel[data-yours] { animation: none; }
   .t-tray, .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
@@ -1179,6 +1233,29 @@ html, body, #root {
   gap: calc(2.4 * var(--md-u));
   font-size: 14px;
   line-height: var(--md-leading-body);
+  /* Room for the newest line's bar of light. */
+  padding-left: 6px;
+  margin-left: -6px;
+  border-radius: 3px;
+  animation: tSlideIn 220ms cubic-bezier(.2, .7, .3, 1) both;
+}
+
+/* The log is newest-first, so the first line is the one that just
+   happened. It arrives lit and cools. */
+.t-log__line:first-child {
+  animation: tSlideIn 220ms cubic-bezier(.2, .7, .3, 1) both,
+             tCool 1.8s ease-out both;
+}
+
+@keyframes tCool {
+  from {
+    background: color-mix(in srgb, var(--md-cat-path-glow) 55%, transparent);
+    box-shadow: inset 3px 0 0 var(--md-cat-path-500);
+  }
+  to {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
 }
 
 .t-log__n {
