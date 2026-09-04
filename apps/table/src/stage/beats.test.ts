@@ -75,8 +75,8 @@ describe('plan', () => {
     });
     const steps = plan(prev, next);
     expect(steps.map((s) => s.beat.kind)).toEqual(['depart', 'progress', 'deal', 'turn']);
-    // The slot is masked, not emptied, until the deal lands.
-    expect(steps[0]?.after.river[1]).toEqual(up('clear-path'));
+    // The slot empties as the card leaves, and the deal fills it.
+    expect(steps[0]?.after.river[1]).toEqual(empty());
     expect(steps[0]?.after.discardTop).toBe('clear-path');
     expect(steps[1]?.after.progress).toBe(1);
     expect(steps[2]?.after.river[1]).toEqual(down());

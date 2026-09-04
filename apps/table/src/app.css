@@ -337,10 +337,15 @@ html, body, #root {
    whole board: short, low, and over before it is annoying. */
 .t-track { border-radius: calc(2 * var(--md-u)); --t-pulse: var(--md-cat-path-glow); }
 .t-track:has(.md-score--threat) { --t-pulse: var(--md-cat-mons-glow); }
-.t-track[data-pulse] { animation: tPulse 700ms ease-out; }
 
-.t-track[data-pulse] .md-score__pip[data-filled]:has(+ .md-score__pip:not([data-filled])),
-.t-track[data-pulse] .md-score__pip[data-filled]:last-child {
+/* Both play on MOUNT. The screens key the track on its value, so a pip
+   filling remounts it; the glow and the pop then run to the end on their
+   own clock while the stage moves on to the deal. (They also play once
+   when the board first appears, which is a small enough greeting.) */
+.t-track { animation: tPulse 700ms ease-out; }
+
+.t-track .md-score__pip[data-filled]:has(+ .md-score__pip:not([data-filled])),
+.t-track .md-score__pip[data-filled]:last-child {
   animation: tPop 360ms cubic-bezier(.34, 1.45, .64, 1);
 }
 
@@ -398,8 +403,12 @@ html, body, #root {
    the library's own markup — read-only, and the one place the app knows
    anything about River's DOM. */
 .t-river .md-river__slot article {
-  transition: opacity 120ms ease, transform 200ms cubic-bezier(.2,.7,.3,1),
-              box-shadow 200ms ease;
+  /* Opacity is NOT transitioned. The overlay standing in for the slot
+     is removed in the same frame the mask lifts, and the two are the
+     same card in the same place — any fade here shows the river's
+     ground through the gap and reads as a black blink on every
+     landing. Swap, don't fade. */
+  transition: transform 200ms cubic-bezier(.2,.7,.3,1), box-shadow 200ms ease;
 }
 .t-river[data-covered~='0'] .md-river__slot:nth-child(1) article,
 .t-river[data-covered~='1'] .md-river__slot:nth-child(2) article,
@@ -948,7 +957,7 @@ html, body, #root {
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
   .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
-  .t-scrim, .t-modal, .t-track[data-pulse], .t-track[data-pulse] .md-score__pip,
+  .t-scrim, .t-modal, .t-track, .t-track .md-score__pip,
   .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
   .t-fly, .t-flip { transition: none !important; }

@@ -174,9 +174,13 @@ export function useStage(view: GameView, refs: Refs): Stage {
         return MOTION.fly;
       }
 
+      // The pip pops and the board shakes on the beat; the track's glow
+      // runs to completion on its own (it is keyed on the value in the
+      // screens), so the queue only waits for the impact.
       case 'progress':
+        return MOTION.pop;
       case 'strike':
-        return MOTION.pulse;
+        return MOTION.shake;
 
       case 'discard':
         return MOTION.drop;
@@ -204,6 +208,16 @@ export function useStage(view: GameView, refs: Refs): Stage {
           });
         });
         if (flights.length === 0) return 0;
+        // The slots being dealt into show as empty outlines under the
+        // cards in flight — a card turned back down, or one replaced
+        // under the redaction, must not sit there face up meanwhile.
+        const emptied = {
+          ...presentedRef.current,
+          river: presentedRef.current.river.map((s, i) => (
+            beat.slots.includes(i) ? { category: null, faceUp: false, filled: false } : s
+          )),
+        };
+        present(emptied);
         setDeals(flights);
         return MOTION.deal + MOTION.dealStagger * (flights.length - 1);
       }
@@ -278,17 +292,10 @@ export function useStage(view: GameView, refs: Refs): Stage {
 
   React.useEffect(() => () => clearTimers(), []);
 
-  const covered = React.useMemo(() => {
-    const set = new Set<number>();
-    if (ov.current) set.add(ov.current.slot);
-    if (active?.kind === 'deal') for (const s of active.slots) set.add(s);
-    for (const step of queue.current) {
-      if (step.beat.kind === 'deal') for (const s of step.beat.slots) set.add(s);
-    }
-    return [...set].sort();
-    // The queue is a ref; `tick` re-renders when it changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlay, active, presented]);
+  // Only the slot an overlay stands in front of is masked. A slot owed a
+  // deal is presented EMPTY instead — the dashed outline under the card
+  // arriving — so there is never a dark hole in the river.
+  const covered = React.useMemo(() => (overlay ? [overlay.slot] : []), [overlay]);
 
   return { presented, active, overlay, deals, covered, flush };
 }

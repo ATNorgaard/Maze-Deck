@@ -74,9 +74,11 @@ export function plan(prev: GameView, next: GameView): Step[] {
   }
 
   /* 2. Face-up cards that left the river: the reveal resolving, a
-        Wanderer moving on, an Obstacle cleared. The slot is left as it
-        was — the deal beat replaces it — unless nothing is coming, in
-        which case it empties here.
+        Wanderer moving on, an Obstacle cleared. The slot empties as the
+        card leaves — the river shows its dashed outline, "a path is
+        gone" — and the deal beat fills it. Masking the slot instead
+        left a dark hole in the river for the length of whatever played
+        in between, which read as the board blinking.
 
         Not every card that stops being face up has left. Careful
         Consideration turns two over, discards one and turns the other
@@ -101,10 +103,8 @@ export function plan(prev: GameView, next: GameView): Step[] {
   const turnedBack = gone.filter((i) => !departed.includes(i));
   for (const i of departed) {
     const was = slot(cur, i);
-    const is = slot(next, i);
     if (was.category === null) continue;
-    const stillThere = is.filled;
-    const river = cur.river.map((s, j) => (j === i && !stillThere ? EMPTY : s));
+    const river = cur.river.map((s, j) => (j === i ? EMPTY : s));
     // The card lands on the discard as this beat ends.
     push(
       { kind: 'depart', slot: i, category: was.category },

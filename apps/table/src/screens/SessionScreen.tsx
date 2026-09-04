@@ -104,8 +104,7 @@ export function SessionScreen({
 
   const obstacleDc = view.rules.mazeDc + dcNudge;
 
-  const pulse = stage.active?.kind === 'progress' ? 'escape'
-    : stage.active?.kind === 'strike' ? 'threat' : null;
+  const pulse = stage.active?.kind === 'strike' ? 'threat' : null;
   const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
   const endingShown = useEnding(view);
 
@@ -190,10 +189,13 @@ export function SessionScreen({
 
       <div className="t-col t-col--board">
         <div className="t-tracks">
-          <div className="t-track" data-pulse={pulse === 'escape' || undefined}>
+          {/* Keyed on the value: a change remounts the track, and the
+              glow and the pip's pop play on mount, running to the end on
+              their own rather than for as long as the beat holds. */}
+          <div className="t-track" key={`e${shown.progress}`}>
             <ScoreTrack value={shown.progress} total={shown.rules.escapeTarget} />
           </div>
-          <div className="t-track" data-pulse={pulse === 'threat' || undefined}>
+          <div className="t-track" key={`t${shown.strikes}`}>
             <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
           </div>
         </div>

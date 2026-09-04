@@ -19,10 +19,10 @@ export const MOTION = {
   /** A revealed card is held face up at least this long before it may leave. */
   hold: 620,
   fly: 640,
-  deal: 420,
+  deal: 480,
   dealStagger: 110,
   /** How high a dealt card lifts off the table mid-flight, in px. */
-  dealLift: 18,
+  dealLift: 28,
   drop: 260,
   /** A revealed card's light flaring out from it as it turns. */
   flare: 700,

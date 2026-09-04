@@ -117,10 +117,10 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       </div>
 
       <div className="t-tracks">
-        <div className="t-track" data-pulse={stage.active?.kind === 'progress' || undefined}>
+        <div className="t-track" key={`e${shown.progress}`}>
           <ScoreTrack value={shown.progress} total={shown.rules.escapeTarget} />
         </div>
-        <div className="t-track" data-pulse={stage.active?.kind === 'strike' || undefined}>
+        <div className="t-track" key={`t${shown.strikes}`}>
           <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
         </div>
       </div>

@@ -46,7 +46,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | # | Phase | Status |
 |---|---|---|
 | 1 | The choreographer — view diff → beat queue, motion tokens, reduced motion | **done** — `feel/1` |
-| 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2` |
+| 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2`, retuned in `feel/2b` |
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
@@ -416,6 +416,45 @@ block and were checked as parsed. A fresh crossing was started afterwards
 so the board is left playable.
 
 **Commit:** `git log --grep feel/8`.
+
+### feel/2b — the black blink, after the author's first look
+
+**Reported.** "A draw animation needs to play when a new card is added to
+the river from the deck; the UI flickers black for a millisecond and goes
+back to normal."
+
+**Found**, by driving a real headless Chromium and capturing frames
+(`scripts/capture-frames.cjs`, new — the pane here renders no frames):
+
+- The deal *was* playing: a card lifted off the pile, arced to the slot and
+  landed, 450ms. But it was preceded by a **dark hole**. When the picked
+  card flew off, its slot was masked (opacity 0 over the river's near-black
+  ground) for the whole track pulse — 700ms of nothing where a card had
+  been — and only then dealt into.
+- On landing, the dealt overlay was removed in the same frame the mask
+  lifted, and the slot's own card **faded in from that ground over 120ms**.
+  Same on an Obstacle settling. That fade is the blink.
+
+**Changed.**
+- The slot's card no longer transitions opacity. The overlay and the real
+  card are the same card in the same place; swap, don't fade.
+- A departed slot is presented **empty** — the river's own dashed outline,
+  "a path is gone" — instead of masked. The deal beat presents the slots it
+  is dealing into as empty too (a card turned back down must not sit there
+  face up meanwhile). Deal slots are never masked now; `covered` is only
+  ever the slot an overlay stands in front of.
+- Track beats hold the queue for the **impact only** (pop 360ms, shake
+  380ms). The glow runs to completion on its own: the `.t-track` wrappers
+  are keyed on their value, so a pip filling remounts the track and the
+  glow and pop play on mount. (They also play once when the board first
+  appears.) `data-pulse` is gone.
+- The deal itself got more air: 480ms, 28px of lift.
+
+**Verified** (frames + DOM log): after the flight the left slot showed the
+"Empty" outline with no mask; the deal started 370ms later (the pop), flew
+for ~500ms, and the slot showed its card the frame the overlay left.
+
+**Commit:** `git log --grep feel/2b`.
 
 ## Returning to any of this
 
