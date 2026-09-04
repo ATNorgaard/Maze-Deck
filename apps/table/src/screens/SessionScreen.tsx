@@ -103,9 +103,10 @@ export function SessionScreen({
 
   const pulse = stage.active?.kind === 'progress' ? 'escape'
     : stage.active?.kind === 'strike' ? 'threat' : null;
+  const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
 
   return (
-    <div className="t-board">
+    <div className="t-board" data-shake={pulse === 'threat' || undefined}>
       <div className="t-col t-col--side">
         <div className="t-panel">
           <h2 className="t-panel__title">
@@ -205,6 +206,7 @@ export function SessionScreen({
           className="t-river"
           ref={riverRef}
           data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
+          data-settled={settling === null ? undefined : String(settling)}
           data-pickable={a.pickSlots.length ? true : undefined}
         >
           <River

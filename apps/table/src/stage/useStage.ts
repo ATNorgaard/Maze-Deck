@@ -208,8 +208,9 @@ export function useStage(view: GameView, refs: Refs): Stage {
       }
 
       case 'settle':
+        // The overlay goes and the slot's own card takes the thud.
         setOverlay(null);
-        return 0;
+        return MOTION.thud;
 
       case 'sync':
       case 'turn':

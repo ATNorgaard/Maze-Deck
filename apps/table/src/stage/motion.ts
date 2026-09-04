@@ -24,9 +24,14 @@ export const MOTION = {
   /** How high a dealt card lifts off the table mid-flight, in px. */
   dealLift: 18,
   drop: 260,
-  pulse: 900,
+  /** A revealed card's light flaring out from it as it turns. */
+  flare: 700,
+  /** A track beat: the pip pops on the first frame, the glow follows. */
+  pulse: 700,
   pop: 360,
   shake: 380,
+  /** A revealed blocker landing where it is. */
+  thud: 320,
   baton: 320,
 
   /* easings */

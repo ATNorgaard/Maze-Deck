@@ -276,14 +276,43 @@ html, body, #root {
   flex-wrap: wrap;
 }
 
-/* A Clear Path or a Monster just landed on this track. */
-.t-track { border-radius: calc(2 * var(--md-u)); }
-.t-track[data-pulse] { animation: tPulse 900ms ease-out; }
+/* ---------------- impact on the tracks ----------------
+   A Clear Path or a Monster just landed on this track. The track glows,
+   and the pip that just filled pops — the newest filled pip is the one
+   followed by an empty one, or the last one when the track is full.
+   The threat track's glow is its own red, and a strike also shakes the
+   whole board: short, low, and over before it is annoying. */
+.t-track { border-radius: calc(2 * var(--md-u)); --t-pulse: var(--md-cat-path-glow); }
+.t-track:has(.md-score--threat) { --t-pulse: var(--md-cat-mons-glow); }
+.t-track[data-pulse] { animation: tPulse 700ms ease-out; }
+
+.t-track[data-pulse] .md-score__pip[data-filled]:has(+ .md-score__pip:not([data-filled])),
+.t-track[data-pulse] .md-score__pip[data-filled]:last-child {
+  animation: tPop 360ms cubic-bezier(.34, 1.45, .64, 1);
+}
 
 @keyframes tPulse {
-  0%   { box-shadow: 0 0 0 0 var(--md-cat-path-glow); }
-  35%  { box-shadow: 0 0 26px 6px var(--md-cat-path-glow); }
-  100% { box-shadow: 0 0 0 0 var(--md-cat-path-glow); }
+  0%   { box-shadow: 0 0 0 0 var(--t-pulse); }
+  35%  { box-shadow: 0 0 26px 6px var(--t-pulse); }
+  100% { box-shadow: 0 0 0 0 var(--t-pulse); }
+}
+
+@keyframes tPop {
+  0%   { transform: scale(.6); filter: brightness(2); }
+  55%  { transform: scale(1.55); filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+
+.t-board[data-shake], .t-play[data-shake] { animation: tShake 380ms ease-out; }
+
+@keyframes tShake {
+  0%   { transform: translate(0, 0); }
+  15%  { transform: translate(-3px, 1px); }
+  30%  { transform: translate(3px, -1px); }
+  45%  { transform: translate(-2px, 1px); }
+  60%  { transform: translate(2px, 0); }
+  75%  { transform: translate(-1px, 0); }
+  100% { transform: translate(0, 0); }
 }
 
 .t-phase {
@@ -402,6 +431,44 @@ html, body, #root {
 }
 
 .t-flip__face--front { transform: rotateY(180deg); }
+
+/* The revealed card's light, thrown outward as its face comes round.
+   Reads the category ramp from the class on `.t-fly`, so a Monster
+   flares red and a Clear Path gold. Sits behind the card. */
+.t-flare {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180%;
+  height: 130%;
+  transform: translate(-50%, -50%) scale(.5);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, var(--md-cat-glow) 0%, transparent 62%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  animation: tFlare 700ms ease-out both;
+}
+
+@keyframes tFlare {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.5); }
+  25%  { opacity: .95; transform: translate(-50%, -50%) scale(1.1); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.7); }
+}
+
+/* A revealed blocker landing where it is: a touch large, pressed down,
+   and still. `data-settled` names the slot for the length of the beat. */
+.t-river[data-settled='0'] .md-river__slot:nth-child(1) article,
+.t-river[data-settled='1'] .md-river__slot:nth-child(2) article,
+.t-river[data-settled='2'] .md-river__slot:nth-child(3) article {
+  animation: tThud 320ms cubic-bezier(.2, .7, .3, 1);
+}
+
+@keyframes tThud {
+  0%   { transform: scale(1.06); }
+  60%  { transform: scale(.985); }
+  100% { transform: none; }
+}
 
 /* ---------------- the deal ----------------
    A card on its way from the deck pile to a slot. Fixed at the pile's
@@ -817,7 +884,9 @@ html, body, #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-scrim, .t-modal, .t-track[data-pulse], .t-deal, .t-deal__lift, .t-drop { animation: none; }
+  .t-scrim, .t-modal, .t-track[data-pulse], .t-track[data-pulse] .md-score__pip,
+  .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake],
+  .t-river[data-settled] .md-river__slot article { animation: none; }
   .t-fly, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }
 }

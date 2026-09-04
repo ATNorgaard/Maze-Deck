@@ -27,7 +27,12 @@ const no = (reason: string): Verdict => ({ ok: false, reason });
  * the board's flip-hold-fly runs slightly under, and the state changes
  * once the card has landed.
  */
-export const REVEAL_MS = 2000;
+/**
+ * How long a picked card is held face up before it resolves. Long enough
+ * for the turn (520ms), the flare of its light (700ms, overlapping) and a
+ * beat of stillness after — the table's own choreography, not a rule.
+ */
+export const REVEAL_MS = 1800;
 
 /** Actions no client may ever send, whatever their role. */
 function serverOwned(action: GameAction): boolean {

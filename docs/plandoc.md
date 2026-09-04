@@ -47,7 +47,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 |---|---|---|
 | 1 | The choreographer — view diff → beat queue, motion tokens, reduced motion | **done** — `feel/1` |
 | 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2` |
-| 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | planned |
+| 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | planned |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | planned |
 | 7 | Sound — synthesised, one toggle, off by default | planned |
@@ -219,3 +219,37 @@ delay=0ms anims=tDealTravel` carrying a card back; 433ms later `deal-` and
 the mask cleared. Counts ticked 12→11 and 14→15.
 
 **Commit:** `git log --grep feel/2`.
+
+### feel/4 — impact on the reveal
+
+**Changed.** The held card's wrapper now carries its category class, and a
+`.t-flare` mounts behind it as it turns: the card's own light thrown outward
+(radial of `--md-cat-glow`, scale .5→1.7, 700ms), delayed half a flip so it
+starts when the face is first visible. Track beats: the newest filled pip
+pops (`tPop`, 360ms, overshoot) — selected as "the filled pip followed by an
+empty one, or the last pip when full" via `:has()` — and the track glows in
+its own colour (the threat track's `--t-pulse` is the Monster red, not the
+gold it borrowed before). A strike also shakes the board or the phone
+(`data-shake`, ±3px, 380ms). A revealed blocker gets a `settle` beat with a
+body: the river carries `data-settled=<slot>` for 320ms and the slot's own
+card plays `tThud` (1.06 → .985 → 1). The track pulse is 700ms, down from
+900. **`REVEAL_MS` is 1800, down from 2000** — flip 520 + flare 700 + a beat
+of stillness. It lives in `packages/rules/src/authority.ts` but is
+choreography, not a rule; the rules tests do not depend on its value (66
+pass unchanged).
+
+**Broke / retried.**
+- `MOTION.settle` was already the name of an easing. A duration of the same
+  name made the object literal invalid. The duration is `thud`.
+- Nothing else. Vite served the last write this time (checked with `curl`
+  before trusting the browser).
+
+**Verified** (observer log, two cycles): an Obstacle — `fly+ md-cat-obst`,
+`flare+ tFlare delay=260 dur=700`, then `settled+ slot 0 anim=tThud` as the
+overlay left. A Clear Path — `fly+ md-cat-path`, the flare, then
+`pulse+ Escape pipAnims=.,.,tPop,.,. filled=3 trackAnim=tPulse`: the third
+pip, the one that just filled, is the one that popped. The shake was not
+drawn in these cycles (no Monster) and rides the same attribute path as the
+pulse.
+
+**Commit:** `git log --grep feel/4`.

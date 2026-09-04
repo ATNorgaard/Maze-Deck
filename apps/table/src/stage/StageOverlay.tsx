@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { CardBack, DeckCard } from '@maze-deck/ui';
+import { CardBack, CATEGORY_CLASS, DeckCard } from '@maze-deck/ui';
 import type { CardSize } from '@maze-deck/ui';
 import { MOTION } from './motion';
 import type { Deal, Overlay } from './useStage';
@@ -67,7 +67,7 @@ function HeldCard({ overlay, size }: { overlay: Overlay; size: CardSize }) {
 
   return (
     <div
-      className="t-fly"
+      className={`t-fly ${CATEGORY_CLASS[overlay.category]}`}
       aria-hidden="true"
       style={{
         left: rect.left,
@@ -79,6 +79,15 @@ function HeldCard({ overlay, size }: { overlay: Overlay; size: CardSize }) {
         opacity: flying ? 0.08 : 1,
       }}
     >
+      {/* The card's own light, thrown outward as the face comes round.
+          Mounted on the turn so the animation starts with it; delayed
+          half a flip, which is when the face is first visible. */}
+      {turned && !flying ? (
+        <div
+          className="t-flare"
+          style={{ animationDuration: `${MOTION.flare}ms`, animationDelay: `${MOTION.flip / 2}ms` }}
+        />
+      ) : null}
       <div
         style={{
           width: box.w,

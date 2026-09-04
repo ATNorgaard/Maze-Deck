@@ -57,6 +57,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   const shown = stage.presented;
   const deckCount = useTicking(shown.deckCount);
   const discardCount = useTicking(shown.discardCount);
+  const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
 
   // The same check the server will run. Here it only decides whether a
@@ -73,7 +74,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
     }).ok;
 
   return (
-    <div className="t-play">
+    <div className="t-play" data-shake={stage.active?.kind === 'strike' || undefined}>
       <div className="t-play__board" ref={boardRef}>
       <div className="t-panel">
         <h2 className="t-panel__title">
@@ -109,6 +110,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
         className="t-river"
         ref={riverRef}
         data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
+        data-settled={settling === null ? undefined : String(settling)}
         data-pickable={a.pickSlots.length && myTurn ? true : undefined}
       >
         <River
