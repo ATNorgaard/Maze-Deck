@@ -409,10 +409,17 @@ Two things follow from it:
   urgent thing on the screen in the middle of the most urgent. It now sits under
   the log, at the bottom of the page. It is tagged `.t-board__controls` for
   exactly this; `:last-child` would have matched the log column's last panel too.
-- **Initiative condenses to a row of numbered circles.** Four stacked seats cost
-  most of a short screen to repeat something the phase line already says — it
-  names whoever is active directly under the board. The names stay in the DOM,
-  visually hidden, so a screen reader still gets them.
+- **Initiative condenses to a row of numbered circles, each with its name
+  underneath.** Four stacked seats cost most of a short screen; a circle over a
+  name costs a fraction of it. What gets dropped is the detail line — the class
+  and the advantage tag — and it is visually hidden rather than removed, so a
+  screen reader still reads the whole seat.
+
+  That detail line was the board's **only** sign of who is holding a Boost
+  Morale, which is real state: it changes how the next check is rolled. So the
+  seat now takes a `t-seat--boosted` class and the circle wears a gold dot on
+  its rim. Condensed-only — at full width the text already says "advantage",
+  and the dot's `::after` resolves to `none` there.
 
 The seat rules reach into the library's own `.md-seat` markup, which makes this
 the **second** place the app knows a component's DOM (the first is `.t-river`'s

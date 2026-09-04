@@ -166,6 +166,9 @@ export function SessionScreen({
                   name={s.name}
                   order={i + 1}
                   active={i === activeIdx && view.phase !== 'over'}
+                  // Condensed, the seat's detail line is hidden and this is
+                  // the only trace left of a Boost Morale. The circle wears it.
+                  {...(view.advantage.includes(id) ? { className: 't-seat--boosted' } : {})}
                   detail={[s.cls, view.advantage.includes(id) ? 'advantage' : null]
                     .filter(Boolean).join(' · ')}
                 />

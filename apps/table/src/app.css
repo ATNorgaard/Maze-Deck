@@ -201,17 +201,34 @@ html, body, #root {
     gap: calc(3 * var(--md-u));
   }
 
+  /* Circle on top, name underneath. */
   .t-board .t-seats .md-seat {
-    gap: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(1.2 * var(--md-u));
     padding: 0;
     border: 0;
     background: none;
-    border-radius: 50%;
+    max-width: calc(24 * var(--md-u));
   }
 
-  /* Hidden from the eye, kept for a screen reader — the names are the
-     only thing that says who these numbers are. */
-  .t-board .t-seats .md-seat__body {
+  .t-board .t-seats .md-seat__body { align-items: center; }
+
+  .t-board .t-seats .md-seat__name {
+    font-size: calc(2.7 * var(--md-u));
+    text-align: center;
+    max-width: 100%;
+    /* A long name must not stretch the row and push a seat onto a
+       second line. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The class and the advantage tag are what get dropped, not the name.
+     Visually hidden rather than removed, so a screen reader still reads
+     the whole seat. */
+  .t-board .t-seats .md-seat__meta {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -223,9 +240,25 @@ html, body, #root {
   }
 
   .t-board .t-seats .md-seat__order {
+    position: relative;
     width: calc(9 * var(--md-u));
     height: calc(9 * var(--md-u));
     font-size: calc(3.8 * var(--md-u));
+  }
+
+  /* Boost Morale is real state — it changes how the next check is rolled
+     — and the hidden detail line was the board's only sign of it. A dot
+     on the rim carries it instead. */
+  .t-board .t-seats .t-seat--boosted .md-seat__order::after {
+    content: '';
+    position: absolute;
+    top: calc(-0.4 * var(--md-u));
+    right: calc(-0.4 * var(--md-u));
+    width: calc(2.6 * var(--md-u));
+    height: calc(2.6 * var(--md-u));
+    border-radius: 50%;
+    background: var(--md-cat-path-300);
+    border: calc(0.4 * var(--md-u)) solid var(--md-ink-900);
   }
 
   /* The seat's own active treatment was a left border on a box that no
