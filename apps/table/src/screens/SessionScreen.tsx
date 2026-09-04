@@ -220,11 +220,10 @@ export function SessionScreen({
           ) : null}
         </div>
 
-        {/* The roll is a tray under the signpost, not a modal: the river
-            stays in view while it is on the table, and the GM's eye does
-            not have to leave the board to let it land. */}
+        {/* The roll is a centred modal — the author's call, reversing the
+            tray tried in feel/3. The die still tumbles inside it. */}
         {view.phase === 'check' && pending?.kind === 'check' ? (
-          <div className="t-tray" role="region" aria-label="A roll is on the table">
+          <Modal label="A roll is on the table">
             <CheckPanel
               seats={view.seats}
               check={pending}
@@ -239,7 +238,7 @@ export function SessionScreen({
                   : { type: 'CONFIRM_CHECK', success },
               )}
             />
-          </div>
+          </Modal>
         ) : null}
 
         <div

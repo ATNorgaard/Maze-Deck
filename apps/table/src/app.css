@@ -953,7 +953,7 @@ html, body, #root {
   .t-play[data-outcome='through']::after { animation: none; }
   .t-baton { transition: none; }
   .t-rise, .t-play .t-panel[data-yours] { animation: none; }
-  .t-tray, .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
+  .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
   .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
@@ -1165,15 +1165,14 @@ html, body, #root {
    only then do the modifier, the total and the DC arrive, in that order.
    The verdict colour comes last and only where a verdict is allowed. */
 
-.t-tray { animation: tRise 220ms cubic-bezier(.2, .7, .3, 1) both; }
-.t-tray .t-panel { text-align: center; transition: border-color .4s ease .5s, box-shadow .4s ease .5s; }
-.t-tray .t-row, .t-tray .t-roll { justify-content: center; }
-.t-tray .t-note { margin-left: auto; margin-right: auto; max-width: 56ch; }
-.t-tray:has([data-verdict='good']) .t-panel {
+/* The roll sits in the centred modal (the tray of feel/3 was reversed by
+   the author). The panel washes in the verdict's colour once it lands. */
+.t-modal .t-panel { transition: border-color .4s ease .5s, box-shadow .4s ease .5s; }
+.t-modal:has([data-verdict='good']) .t-panel {
   border-color: var(--md-cat-obst-700);
   box-shadow: 0 0 40px 2px var(--md-cat-obst-glow);
 }
-.t-tray:has([data-verdict='bad']) .t-panel {
+.t-modal:has([data-verdict='bad']) .t-panel {
   border-color: var(--md-cat-mons-700);
   box-shadow: 0 0 40px 2px var(--md-cat-mons-glow);
 }

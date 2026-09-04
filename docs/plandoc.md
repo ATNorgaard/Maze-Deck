@@ -21,8 +21,10 @@ silently, the run ended in a dialog.
 
 ## Assumptions, where the author had not decided
 
-- The check **leaves the modal for a tray** docked under the phase signpost, so
-  the river stays visible while a roll is on the table.
+- ~~The check **leaves the modal for a tray** docked under the phase signpost, so
+  the river stays visible while a roll is on the table.~~ **Reversed by the
+  author after seeing it: the roll is a centred modal** (`feel/3b`). The die,
+  its beats and the verdict wash are unchanged inside it.
 - **Sound is in scope**, synthesised in the browser, off by default.
 - The reveal beat **may lengthen the server's reveal timer**.
 
@@ -48,7 +50,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 1 | The choreographer — view diff → beat queue, motion tokens, reduced motion | **done** — `feel/1` |
 | 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2`, retuned in `feel/2b` |
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
-| 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
+| 3 | The roll — the d20 as an object; ~~in a tray~~ back in the centred modal | **done** — `feel/3`, reversed to a modal in `feel/3b` |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
 | 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | **done** — `feel/6` |
@@ -455,6 +457,19 @@ back to normal."
 for ~500ms, and the slot showed its card the frame the overlay left.
 
 **Commit:** `git log --grep feel/2b`.
+
+### feel/3b — the roll back in the modal
+
+**Reported.** "The dice roll div needs to be a modal, centred."
+
+**Changed.** `SessionScreen` wraps `CheckPanel` in `Modal` again; `.t-tray`
+is gone. The verdict wash moved from `.t-tray:has([data-verdict])` to
+`.t-modal:has([data-verdict])`, so the panel still takes the colour once
+the die lands. The focus trap, the inert board and the blocked Escape come
+back with the modal, which is the right trade for a thing that has to be
+answered. Nothing in `DieRoll` changed.
+
+**Commit:** `git log --grep feel/3b`.
 
 ## Returning to any of this
 
