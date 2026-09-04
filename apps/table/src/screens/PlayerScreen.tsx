@@ -6,6 +6,7 @@ import type { Biome } from '../biomes';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { DieRoll } from '../components/DieRoll';
 import { SeatBaton } from '../components/SeatBaton';
+import { SoundToggle } from '../components/SoundToggle';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
@@ -227,6 +228,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       <EventLog log={view.log} />
 
       <div className="t-row t-row--centre">
+        <SoundToggle />
         <button type="button" className="t-btn" onClick={onLeave}>Leave</button>
       </div>
       </div>

@@ -11,6 +11,7 @@ import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { SeatBaton } from '../components/SeatBaton';
+import { SoundToggle } from '../components/SoundToggle';
 import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
 import { StageOverlay } from '../stage/StageOverlay';
@@ -165,6 +166,7 @@ export function SessionScreen({
             >
               {asPlayer ? 'Seeing a player’s screen' : 'Preview a player’s screen'}
             </button>
+            <SoundToggle />
             {view.phase !== 'over' ? (
               <button
                 type="button" className="t-btn t-btn--danger"

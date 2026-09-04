@@ -27,6 +27,7 @@ import type { CardSize } from '@maze-deck/ui';
 import { plan } from './beats';
 import type { Beat, Step } from './beats';
 import { MOTION, reducedMotion } from './motion';
+import { cue } from './sound';
 
 export interface Overlay {
   slot: number;
@@ -235,6 +236,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
     while (!busy.current) {
       const step = queue.current.shift();
       if (!step) { tick(); return; }
+      cue(step.beat);
       const ms = start(step);
       if (ms <= 0) { end(step); present(step.after); continue; }
       busy.current = true;

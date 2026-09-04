@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { MOTION, reducedMotion } from '../stage/motion';
+import { play } from '../stage/sound';
 
 interface Props {
   d20: number;
@@ -63,6 +64,13 @@ export function DieRoll({ d20, d20b, mod, dc, verdict }: Props) {
   const total = kept + mod;
   const sign = mod >= 0 ? `+${mod}` : `${mod}`;
   const verdictName = landed && verdict !== null ? (verdict ? 'good' : 'bad') : undefined;
+
+  // One tumble per roll, however many dice; the verdict once it lands.
+  React.useEffect(() => { play('tumble'); }, [d20, d20b]);
+  React.useEffect(() => {
+    if (verdictName === 'good') play('chime', 160);
+    if (verdictName === 'bad') play('buzz', 160);
+  }, [verdictName]);
 
   const die = (face: number, tumbling: boolean, index: number) => (
     <span

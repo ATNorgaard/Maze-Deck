@@ -50,7 +50,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
-| 7 | Sound — synthesised, one toggle, off by default | planned |
+| 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | planned |
 | 8 | The ending — a flourish for through, the light going out for lost | planned |
 
@@ -328,3 +328,34 @@ still held the highlight — then `seat-active idx=0 name=Odalis` as the
 beat ended.
 
 **Commit:** `git log --grep feel/5`.
+
+### feel/7 — sound
+
+**Changed.** `stage/sound.ts` is new: ten voices synthesised with WebAudio
+from oscillators and a filtered noise buffer — slide, flip, tick, tumble
+(seven clicks that slow), chime, buzz, growl, thud, drop, baton. Every one
+is short and quiet; the growl is felt more than heard. `cue(beat)` maps
+beats to voices and is called by the stage as each beat starts, delaying
+voices that belong to a beat's end (the drop at the end of a flight, the
+staggered slides of a deal). `DieRoll` plays the tumble once per roll and
+the chime or buzz when a verdict lands. `components/SoundToggle.tsx` is one
+button, on the board's controls panel and beside "Leave" on the phone; the
+state is remembered per device in `localStorage` and is **off by default**,
+so a player's phone is silent unless its owner turns it on. The click that
+turns it on is the user gesture that unlocks the audio context, and it
+answers with the baton's note.
+
+**Broke / retried.**
+- The tumble played four times: once per die hook (two dice share the
+  component) and doubled by StrictMode's development-only double effects.
+  Moved to one effect per roll, and `play()` now deduplicates the same
+  voice within 40ms — nothing on the table legitimately makes the same
+  sound twice that fast.
+
+**Verified** (counting WebAudio node creation, since the pane cannot be
+heard): toggling on wrote `on` to storage and created 1 oscillator (the
+answer); an action created 28 noise sources for the tumble (the bug above,
+now 7); a failed verdict created 1 more oscillator (the buzz); toggling off
+wrote `off`. No console errors of this session's making.
+
+**Commit:** `git log --grep feel/7`.
