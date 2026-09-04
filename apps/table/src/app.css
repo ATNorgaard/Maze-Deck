@@ -172,7 +172,68 @@ html, body, #root {
    that narrow wants the player's screen, which scales. */
 @media (max-width: 1246px) {
   .t-board { grid-template-columns: minmax(0, 1fr); }
-  .t-col--side { position: static; max-height: none; }
+
+  /* The side columns stop being columns and hand their panels straight
+     to the grid, so each one becomes a row that `order` can move. */
+  .t-col--side { display: contents; }
+
+  /* Campaign / preview / end-the-run is the least urgent thing on the
+     screen and was landing between the initiative order and the score
+     tracks. Ordered last, it sits under the log where it belongs. */
+  .t-board__controls { order: 1; }
+
+  /* Initiative condenses to a row of numbered circles. Stacked seats
+     cost most of a phone-height screen to say something the phase line
+     already repeats — it names whoever is active underneath the board.
+     Only the order is left, and which one is lit.
+
+     This reaches into the library's own markup, like the .t-river rules
+     above. It is the second place the app knows a component's DOM, and
+     it is read-only.
+
+     Scoped under .t-board on purpose: the player's screen uses .t-seats
+     too, and its Order list keeps its names — that screen is narrow at
+     every size, so condensing it buys nothing. */
+  .t-board .t-seats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(3 * var(--md-u));
+  }
+
+  .t-board .t-seats .md-seat {
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    border-radius: 50%;
+  }
+
+  /* Hidden from the eye, kept for a screen reader — the names are the
+     only thing that says who these numbers are. */
+  .t-board .t-seats .md-seat__body {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .t-board .t-seats .md-seat__order {
+    width: calc(9 * var(--md-u));
+    height: calc(9 * var(--md-u));
+    font-size: calc(3.8 * var(--md-u));
+  }
+
+  /* The seat's own active treatment was a left border on a box that no
+     longer exists, so the circle carries it instead. */
+  .t-board .t-seats .md-seat[data-active='true'] .md-seat__order {
+    background: var(--md-ink-700);
+    box-shadow: 0 0 0 calc(0.6 * var(--md-u)) var(--md-cat-path-700);
+  }
 }
 
 .t-tracks {

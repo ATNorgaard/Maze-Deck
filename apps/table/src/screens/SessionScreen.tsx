@@ -174,7 +174,7 @@ export function SessionScreen({
           </div>
         </div>
 
-        <div className="t-panel">
+        <div className="t-panel t-board__controls">
           <div className="t-row">
             <button type="button" className="t-btn" onClick={onExit}>Campaign</button>
             <button

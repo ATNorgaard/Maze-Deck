@@ -395,6 +395,38 @@ does not deliver there**, fronted or not. Mount-time measurement and the window
 `resize` listener do. Verify by reloading at the width you care about rather
 than by dragging.
 
+## The board's one-column layout
+
+Below 1246px the side columns get `display: contents`, which dissolves their
+boxes and hands each panel straight to the grid as its own row. That is what
+makes them individually orderable — otherwise the whole left column moves as a
+lump.
+
+Two things follow from it:
+
+- **The controls panel is `order: 1`.** Campaign / preview / end-the-run was
+  landing between the initiative order and the score tracks, which put the least
+  urgent thing on the screen in the middle of the most urgent. It now sits under
+  the log, at the bottom of the page. It is tagged `.t-board__controls` for
+  exactly this; `:last-child` would have matched the log column's last panel too.
+- **Initiative condenses to a row of numbered circles.** Four stacked seats cost
+  most of a short screen to repeat something the phase line already says — it
+  names whoever is active directly under the board. The names stay in the DOM,
+  visually hidden, so a screen reader still gets them.
+
+The seat rules reach into the library's own `.md-seat` markup, which makes this
+the **second** place the app knows a component's DOM (the first is `.t-river`'s
+reveal masking). Both are read-only.
+
+They are scoped under `.t-board` deliberately: the player's screen uses
+`.t-seats` as well, and its Order list keeps its names — that screen is narrow
+at every width, so condensing it buys nothing and loses who is who. Checked
+against the built CSS rather than the source: all five rules ship as
+`.t-board .t-seats …` and no unscoped `.t-seats` rule exists.
+
+Verified at 1000px and 700px: circles on one row, vertical order run-info →
+initiative → board → log → controls, river unclipped.
+
 ## Watch out for
 
 - **Prompts are GM-facing and currently rendered on the shared board.** That is
