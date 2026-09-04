@@ -122,9 +122,13 @@ html, body, #root {
 
 /* ---------------- board ----------------
    Three columns: initiative, the board, the log. The side columns
-   stick; the board is the only thing that scrolls the page. Below
-   1180px it becomes one column, deliberately without any further
-   tuning — the player view in M4 is a different screen. */
+   stick; the board is the only thing that scrolls the page.
+
+   The centre column is what the river has to fit in:
+     centre = width - 620 (sides) - 45 (two gaps) - 38 (padding)
+            = width - 703
+   That model is exact — at a 2085px window it predicts 1257 and the
+   board measures 1257. Every number below comes out of it. */
 
 .t-board {
   display: grid;
@@ -132,10 +136,11 @@ html, body, #root {
   gap: calc(6 * var(--md-u));
   align-items: start;
   padding: calc(5 * var(--md-u));
-  /* 1960, not 1800: the side columns take 620px plus gaps, and the
-     river needs ~1104px of centre column before it can step up to lg.
-     At 1800 the board capped the centre at 1096 and lg was
-     unreachable by eight pixels. */
+  /* An `lg` river needs 1181px of centre column, so the board must be
+     at least 1884 wide before it can reach the largest step. 1960 clears
+     that with room to spare and is kept as it was — the old note here
+     claimed lg needed ~1104, which was wrong, but wrong in the safe
+     direction. */
   max-width: 1960px;
   margin: 0 auto;
 }
@@ -155,7 +160,17 @@ html, body, #root {
 
 .t-col--board { align-items: stretch; }
 
-@media (max-width: 1180px) {
+/* 1246, not 1180. Three `sm` cards need 543px, so three columns need
+   543 + 703 = 1246 before the centre can hold a river at all. The old
+   breakpoint left a live band between 1180 and 1246 where the board
+   stayed in three columns with a centre of only ~478px and clipped the
+   outer cards off both edges. Collapsing to one column earlier gives the
+   river the whole width instead.
+
+   The hard floor is about 580px of window: below that even one column
+   cannot hold three `sm` cards, and there is no smaller step. A device
+   that narrow wants the player's screen, which scales. */
+@media (max-width: 1246px) {
   .t-board { grid-template-columns: minmax(0, 1fr); }
   .t-col--side { position: static; max-height: none; }
 }
@@ -1179,11 +1194,13 @@ html, body, #root {
     grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
     gap: calc(6 * var(--md-u));
-    /* 1240, not 1200. The aside takes 320, the gap and padding another
-       68, so 1200 left the board at 812 — nineteen pixels short of the
-       831 an `md` river needs, and it silently stayed at `sm`. The board
-       has the same note about 1960 for the same reason. */
-    max-width: 1240px;
+    /* The aside takes 320 and the gap and padding another 68, so the
+       board column is max-width - 388. An `md` river needs 875, so the
+       screen must be at least 1263 wide to reach it; 1290 clears that.
+       (This was 1240 while the size table still claimed md needed 831 —
+       when that was corrected to its measured 875, 1240 left the column
+       at 852 and quietly dropped back to `sm`.) */
+    max-width: 1290px;
     padding: calc(6 * var(--md-u));
   }
 

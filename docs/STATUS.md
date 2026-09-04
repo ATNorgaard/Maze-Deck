@@ -343,22 +343,52 @@ Three things in it are load-bearing and each cost a debugging pass:
 The river and the piles scale as **one block**, so a deck pile is never drawn
 larger than the paths being chosen between.
 
-At =900px the screen becomes two columns with a sticky aside. `max-width` is
-1240 rather than 1200 for the same reason the board's is 1960: 1200 left the
-board column at 812, nineteen pixels short of the 831 an `md` river needs, and
-it silently stayed at `sm`.
+At 900px the screen becomes two columns with a sticky aside. `max-width` is
+1290: the board column is `max-width - 388`, and an `md` river needs 875, so
+anything under 1263 quietly drops back to `sm`. Measured at 1400px wide the
+column is 902 and the river sits at `md`, scale 1.
 
 Touch is handled by `@media (hover: none), (pointer: coarse)`: the pickable glow
 is always on rather than waiting for a hover that never comes, the lift is
 disabled so a tap does not leave a stuck hover state, and buttons get a 44px
 minimum.
 
-**Known, pre-existing, not fixed:** `useFittingSize`'s NEEDS table says `md`
-needs 831px; the real natural width is 873. On the player screen ScaleToFit
-absorbs the difference (a 0.98 scale, invisible). **On the GM board there is no
-such backstop**, so a centre column between 831 and 873 clips the river
-slightly. Fixing the table means re-tuning the board's 1960 max-width, so it
-was left alone rather than changed untested.
+## The size table is measured now, and the board is retuned
+
+`useFittingSize`'s thresholds were estimates and **all three were low** — `md`
+was listed at 831 when a three-slot river measures 873 — so the hook would pick
+a step too large for the column and the centred row was clipped at both edges.
+They are now measured: **1181 / 875 / 543**, including two pixels of slack for
+subpixel rounding. The row scales linearly with `--md-u`, and the three measured
+values confirm it: 541 x 1.6129 = 873, 541 x 2.1774 = 1179.
+
+Re-measure after any geometry change with a run open:
+`document.querySelector('.md-river').offsetWidth`.
+
+The board's own model turns out to be exact:
+
+```
+centre column = width - 620 (sides) - 45 (gaps) - 38 (padding) = width - 703
+```
+
+At a 2085px window it predicts 1257 and the board measures 1257.
+
+**The retune was the breakpoint, not the max-width.** 1960 was already generous
+— `lg` needs 1181 of centre, so 1884 of board, and 1960 clears it. What was
+wrong was the one-column breakpoint at 1180: between 1180 and 1246 the board
+stayed in **three** columns with a centre of only ~478px and clipped the river.
+It now collapses at 1246, which is exactly `543 + 703`.
+
+Swept and clean at every boundary: 620 one-column `sm`; 1185 one-column `md`;
+1250 three-column `sm` with 6px of headroom; 1305 three-column `sm`; 2085
+three-column `lg`.
+
+**The hard floor is ~580px of window.** Below that even one column cannot hold
+three `sm` cards and there is no smaller step. The GM board has no ScaleToFit
+backstop — deliberately, because `CardFlight` measures the river with
+`getBoundingClientRect` for its reveal animation and a transform would move
+those coordinates under it. A device that narrow wants the player's screen,
+which does scale.
 
 Note for anyone testing this in the Claude Code browser pane: **ResizeObserver
 does not deliver there**, fronted or not. Mount-time measurement and the window
