@@ -4,6 +4,7 @@ import type { ChoicePayload, GameAction, GameView } from '@maze-deck/rules';
 import * as React from 'react';
 import type { Biome } from '../biomes';
 import { ChoicePanel } from '../components/ChoicePanel';
+import { DieRoll } from '../components/DieRoll';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
@@ -150,14 +151,9 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
             <p className="t-note">Roll your d20 and tell the GM.</p>
           ) : (
             <>
-              <div className={`t-roll ${check.success ? 't-roll--good' : 't-roll--bad'}`}>
-                <span className="t-roll__total">
-                  {(check.d20b === null ? check.d20 : Math.max(check.d20, check.d20b)) + check.mod}
-                </span>
-                <span className="t-roll__vs">vs DC {check.dc}</span>
-              </div>
-              {/* The verdict is the GM's to give. Showing it as decided
-                  here would be a lie they can still overturn. */}
+              {/* No verdict: it is the GM's to give, and showing it as
+                  decided here would be a lie they can still overturn. */}
+              <DieRoll d20={check.d20} d20b={check.d20b} mod={check.mod} dc={check.dc} verdict={null} />
               <p className="t-note">Waiting on the GM.</p>
             </>
           )}

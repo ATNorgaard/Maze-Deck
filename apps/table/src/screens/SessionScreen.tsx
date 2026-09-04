@@ -202,6 +202,28 @@ export function SessionScreen({
           ) : null}
         </div>
 
+        {/* The roll is a tray under the signpost, not a modal: the river
+            stays in view while it is on the table, and the GM's eye does
+            not have to leave the board to let it land. */}
+        {view.phase === 'check' && pending?.kind === 'check' ? (
+          <div className="t-tray" role="region" aria-label="A roll is on the table">
+            <CheckPanel
+              seats={view.seats}
+              check={pending}
+              onEnterRoll={(d20, d20b) => act(
+                d20b === undefined
+                  ? { type: 'ENTER_ROLL', d20 }
+                  : { type: 'ENTER_ROLL', d20, d20b },
+              )}
+              onConfirm={(success) => act(
+                success === undefined
+                  ? { type: 'CONFIRM_CHECK' }
+                  : { type: 'CONFIRM_CHECK', success },
+              )}
+            />
+          </div>
+        ) : null}
+
         <div
           className="t-river"
           ref={riverRef}
@@ -295,25 +317,6 @@ export function SessionScreen({
       </div>
 
       <StageOverlay overlay={stage.overlay} deals={stage.deals} size={riverSize} />
-
-      {view.phase === 'check' && pending?.kind === 'check' ? (
-        <Modal label="A roll is on the table">
-          <CheckPanel
-            seats={view.seats}
-            check={pending}
-            onEnterRoll={(d20, d20b) => dispatch(
-              d20b === undefined
-                ? { type: 'ENTER_ROLL', d20 }
-                : { type: 'ENTER_ROLL', d20, d20b },
-            )}
-            onConfirm={(success) => dispatch(
-              success === undefined
-                ? { type: 'CONFIRM_CHECK' }
-                : { type: 'CONFIRM_CHECK', success },
-            )}
-          />
-        </Modal>
-      ) : null}
 
       {view.phase === 'choice' && pending?.kind === 'choice' ? (
         <Modal label="A decision is owed">

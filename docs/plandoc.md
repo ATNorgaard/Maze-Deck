@@ -48,7 +48,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 1 | The choreographer — view diff → beat queue, motion tokens, reduced motion | **done** — `feel/1` |
 | 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2` |
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
-| 3 | The roll — the d20 as an object; the check in a tray, not a modal | planned |
+| 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | planned |
 | 7 | Sound — synthesised, one toggle, off by default | planned |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | planned |
@@ -253,3 +253,43 @@ drawn in these cycles (no Monster) and rides the same attribute path as the
 pulse.
 
 **Commit:** `git log --grep feel/4`.
+
+### feel/3 — the roll
+
+**Changed.** `components/DieRoll.tsx` is new: a die (two under advantage)
+that tumbles — `useTumble` cycles random faces with a cadence that slows as
+it settles, 650ms, and stops on the real roll, which was decided before it
+rendered — then the modifier slides in, the total lands with a bump 160ms
+later, and the DC fades in after that. Where a verdict is allowed the total
+and the verdict line take their colour last and the panel washes in it
+(`.t-tray:has([data-verdict])`, on a half-second delay). The GM's check is
+no longer a modal: it is a `.t-tray` under the phase signpost, so the river
+stays in view while a roll is on the table. `CheckPanel` and the player's
+check panel both use `DieRoll`; the player's passes `verdict={null}`, which
+also removes a small lie the old panel told — it coloured the total good or
+bad before the GM had ruled.
+
+**Design notes.**
+- The tumble is local to the component, not a stage beat. A roll is one
+  thing in one place and needs no ordering against the river.
+- The buttons are there from the first frame. A fast GM can "let it land"
+  before the die has stopped; the animation is never a gate.
+- Leaving the modal loses the focus trap. Nothing else on the board is
+  actionable during a check (the phase is `check`), so nothing is lost, and
+  the manual-roll input keeps its `autoFocus`.
+
+**Broke / retried.**
+- `MOTION.settle` collision from feel/4 recurred in spirit: nothing this
+  time, but the CSS anchor missed a blank line and the patch had to be
+  re-run for the stylesheet alone. Vite served the last write.
+- `CheckPanel` kept a `total` it no longer printed; the strict compiler
+  refused it.
+
+**Verified** (DOM, hidden pane): on an action the tray mounted with
+`tRise`, no modal, river cards visible; the die was `tumbling` showing a
+random face (10) with `tTumble`; after landing it read 13 — the real roll
+(`Rolled 13, +3, total 16 against DC 15`) — with `tSlideIn` on the
+modifier, `tLand@160` on the total, `data-verdict=good` and "Success";
+"Let it land" cleared the tray.
+
+**Commit:** `git log --grep feel/3`.

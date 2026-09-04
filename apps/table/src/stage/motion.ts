@@ -32,6 +32,8 @@ export const MOTION = {
   shake: 380,
   /** A revealed blocker landing where it is. */
   thud: 320,
+  /** A die in the air before it stops. */
+  tumble: 650,
   baton: 320,
 
   /* easings */

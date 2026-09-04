@@ -884,6 +884,10 @@ html, body, #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .t-tray, .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
+  .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
+  .t-verdict[data-verdict] { animation: none; }
+  .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
   .t-scrim, .t-modal, .t-track[data-pulse], .t-track[data-pulse] .md-score__pip,
   .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
@@ -1024,11 +1028,84 @@ html, body, #root {
   gap: calc(2 * var(--md-u));
   font-family: var(--md-font-display);
 }
-
 .t-roll__total { font-size: calc(12 * var(--md-u)); font-weight: 700; line-height: 1; }
 .t-roll__vs { font-size: calc(4 * var(--md-u)); color: var(--md-parchment-400); }
 .t-roll--good { color: var(--md-cat-obst-300); }
 .t-roll--bad { color: var(--md-cat-mons-300); }
+
+/* ---------------- the roll, as an object ----------------
+   The die tumbles (DieRoll cycles its face; this turns it), stops, and
+   only then do the modifier, the total and the DC arrive, in that order.
+   The verdict colour comes last and only where a verdict is allowed. */
+
+.t-tray { animation: tRise 220ms cubic-bezier(.2, .7, .3, 1) both; }
+.t-tray .t-panel { text-align: center; transition: border-color .4s ease .5s, box-shadow .4s ease .5s; }
+.t-tray .t-row, .t-tray .t-roll { justify-content: center; }
+.t-tray .t-note { margin-left: auto; margin-right: auto; max-width: 56ch; }
+.t-tray:has([data-verdict='good']) .t-panel {
+  border-color: var(--md-cat-obst-700);
+  box-shadow: 0 0 40px 2px var(--md-cat-obst-glow);
+}
+.t-tray:has([data-verdict='bad']) .t-panel {
+  border-color: var(--md-cat-mons-700);
+  box-shadow: 0 0 40px 2px var(--md-cat-mons-glow);
+}
+
+.t-roll--staged { align-items: center; gap: calc(3 * var(--md-u)); }
+
+.t-dice { display: inline-flex; gap: calc(2.5 * var(--md-u)); }
+
+.t-die {
+  display: inline-grid;
+  place-items: center;
+  width: calc(14 * var(--md-u));
+  height: calc(14 * var(--md-u));
+  border: 2px solid var(--md-cat-path-700);
+  border-radius: calc(1.2 * var(--md-u));
+  background: var(--md-ink-900);
+  box-shadow: 0 0 0 1px var(--md-ink-700), 0 8px 18px rgba(0, 0, 0, .45);
+  transform: rotate(45deg);
+  transition: opacity .25s ease, border-color .25s ease;
+}
+.t-die__face {
+  transform: rotate(-45deg);
+  font-family: var(--md-font-display);
+  font-size: calc(6 * var(--md-u));
+  font-weight: 700;
+  color: var(--md-parchment-100);
+  font-variant-numeric: tabular-nums;
+}
+.t-die[data-tumbling] { animation: tTumble 650ms cubic-bezier(.2, .7, .3, 1); }
+.t-die[data-dim] { opacity: .35; }
+
+@keyframes tTumble {
+  0%   { transform: rotate(45deg) translateY(-22px) scale(1.18); }
+  30%  { transform: rotate(225deg) translateY(4px) scale(1.06); }
+  60%  { transform: rotate(390deg) translateY(-7px) scale(1.03); }
+  80%  { transform: rotate(420deg) translateY(2px); }
+  100% { transform: rotate(405deg); }
+}
+
+.t-roll--staged .t-roll__mod,
+.t-roll--staged .t-roll__total,
+.t-roll--staged .t-roll__vs { opacity: 0; }
+.t-roll__mod { font-size: calc(5 * var(--md-u)); color: var(--md-parchment-300); }
+.t-roll--staged[data-landed] .t-roll__mod { animation: tSlideIn 200ms cubic-bezier(.2, .7, .3, 1) both; }
+.t-roll--staged[data-landed] .t-roll__total { animation: tLand 360ms cubic-bezier(.34, 1.45, .64, 1) both 160ms; }
+.t-roll--staged[data-landed] .t-roll__vs { animation: tFade 200ms ease-out both 440ms; }
+.t-roll--staged[data-verdict='good'] .t-roll__total { color: var(--md-cat-obst-300); }
+.t-roll--staged[data-verdict='bad'] .t-roll__total { color: var(--md-cat-mons-300); }
+
+@keyframes tSlideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes tLand {
+  0%   { opacity: 0; transform: scale(1.8); }
+  60%  { opacity: 1; transform: scale(.94); }
+  100% { opacity: 1; transform: none; }
+}
+
+.t-verdict[data-verdict] { animation: tFade 240ms ease-out both 560ms; }
+.t-verdict[data-verdict='good'] { color: var(--md-cat-obst-300); }
+.t-verdict[data-verdict='bad'] { color: var(--md-cat-mons-300); }
 
 .t-verdict {
   margin: calc(1 * var(--md-u)) 0 0;

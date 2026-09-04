@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { PendingCheck, Seat } from '@maze-deck/rules';
+import { DieRoll } from './DieRoll';
 
 interface Props {
   seats: Seat[];
@@ -24,7 +25,6 @@ export function CheckPanel({ seats, check, onEnterRoll, onConfirm }: Props) {
   const needsRoll = check.d20 === null;
 
   const die = advantage ? Math.max(check.d20 ?? 0, check.d20b ?? 0) : check.d20 ?? 0;
-  const total = die + check.mod;
   const success = check.success === true;
   const sign = check.mod >= 0 ? `+${check.mod}` : `${check.mod}`;
 
@@ -81,13 +81,13 @@ export function CheckPanel({ seats, check, onEnterRoll, onConfirm }: Props) {
   return (
     <div className="t-panel t-panel--live">
       <h2 className="t-panel__title">{seatName(seats, check.seatId)}</h2>
-      <div className={`t-roll ${success ? 't-roll--good' : 't-roll--bad'}`}>
-        <span className="t-roll__total">{total}</span>
-        <span className="t-roll__vs">vs DC {check.dc}</span>
-      </div>
-      <p className={`t-verdict ${success ? 't-roll--good' : 't-roll--bad'}`}>
-        {success ? 'Success' : 'Failure'}
-      </p>
+      <DieRoll
+        d20={check.d20 ?? 0}
+        d20b={check.d20b}
+        mod={check.mod}
+        dc={check.dc}
+        verdict={success}
+      />
       <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
         {advantage
           ? `Rolled ${check.d20} and ${check.d20b}, keeping ${die}, ${sign} ${check.score}.`
