@@ -12,6 +12,7 @@ import { CheckPanel } from '../components/CheckPanel';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
+import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
 import type { DrawnPrompt } from '../tables';
 import { useFittingSize } from '../useFittingSize';
@@ -19,6 +20,8 @@ import { useFittingSize } from '../useFittingSize';
 interface Props {
   /** The redacted view. This screen never sees GameState. */
   view: GameView;
+  /** The setting the run was created in, resolved from the view. */
+  biome: Biome;
   dispatch: (action: GameAction) => void;
   onExit: () => void;
   runName: string;
@@ -56,7 +59,7 @@ const PHASE_NOTE: Record<Phase, string> = {
 };
 
 export function SessionScreen({
-  view, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
+  view, biome, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
   hostCode, error,
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
@@ -146,7 +149,9 @@ export function SessionScreen({
           <h2 className="t-panel__title">
             {runName} <span className="t-panel__aside">DC {view.rules.mazeDc}</span>
           </h2>
-          <p className="t-note">Round {view.round} · {view.deckCount} cards left</p>
+          <p className="t-note">
+            {biome.name} · Round {view.round} · {view.deckCount} cards left
+          </p>
           {hostCode ? (
             <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
               Players join with <span className="t-code-inline">{hostCode}</span>
@@ -267,7 +272,10 @@ export function SessionScreen({
         <div className="t-actions">
           {view.phase === 'act' ? (
             <>
-              <MazeDeckProvider size="lg" className="t-actions__bar">
+              {/* Transparent: the page behind it carries the setting's
+                  light, and a solid ink-900 block would sit on it as a
+                  visible rectangle. */}
+              <MazeDeckProvider size="lg" className="t-actions__bar" background="transparent">
                 <ActionBar
                   abilities={view.rules.abilities}
                   showDc={false}

@@ -39,6 +39,8 @@ export interface ViewSlot {
 
 /** The run's settings. No seed. */
 export interface ViewRules {
+  /** The setting, as the run was created. A client reskins from it. */
+  biome: string;
   mazeDc: number;
   escapeTarget: number;
   riverWidth: number;
@@ -84,6 +86,7 @@ export function view(state: GameState, viewer: Viewer): GameView {
   return {
     viewer,
     rules: {
+      biome: state.config.biome,
       mazeDc: state.config.mazeDc,
       escapeTarget: state.config.escapeTarget,
       riverWidth: state.config.riverWidth,

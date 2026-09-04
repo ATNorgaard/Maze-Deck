@@ -42,6 +42,7 @@ function positionName(i: number): string {
 export function defaultConfig(seed: string, seats: Seat[]): RunConfig {
   return {
     seed,
+    biome: 'dungeon',
     mazeDc: MAZE_DC,
     escapeTarget: ESCAPE_TARGET,
     riverWidth: RIVER_WIDTH,

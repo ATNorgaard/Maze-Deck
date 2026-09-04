@@ -1,4 +1,5 @@
-import { ArchGlyph, DECK_TOTAL, ReferenceCard } from '@maze-deck/ui';
+import { ArchGlyph, DECK_TOTAL, DeckCard, ReferenceCard } from '@maze-deck/ui';
+import { BIOMES, biomeOf } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
 import type { Campaign, Character } from '../campaign';
 
@@ -50,6 +51,7 @@ export function CampaignScreen({
 
   const deckSize = DECK_TOTAL + campaign.extraClearPath + campaign.extraMonster;
   const ready = campaign.roster.length > 0;
+  const biome = biomeOf(campaign.biome);
 
   return (
     <>
@@ -111,6 +113,41 @@ export function CampaignScreen({
                 />
               </label>
             </div>
+          </div>
+
+          {/* The whole page is already wearing the chosen setting — the
+              provider above this screen reskins from the campaign — so
+              the three cards below are not a mock-up, they are the real
+              components in the real palette. */}
+          <div className="t-panel">
+            <h2 className="t-panel__title">The setting</h2>
+            <span className="t-kicker t-setting__kicker">
+              Biome — reskins the card copy at the table
+            </span>
+            <div className="t-chips" role="group" aria-label="Biome">
+              {BIOMES.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className="t-btn"
+                  aria-pressed={b.id === campaign.biome}
+                  onClick={() => set('biome', b.id)}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+            <p className="t-note t-setting__flavour">{biome.flavour}</p>
+            <div className="t-setting__preview" aria-label="Three cards in this setting">
+              <DeckCard category="clear-path" size="sm" showCount={false} />
+              <DeckCard category="obstacle" size="sm" showCount={false} />
+              <DeckCard category="monster" size="sm" showCount={false} />
+            </div>
+            <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
+              The rules do not change; the names, the light and the card backs
+              do, and each setting keeps its own scenario tables. The small
+              capitals on every card still say what it is by the book.
+            </p>
           </div>
 
           <div className="t-panel">

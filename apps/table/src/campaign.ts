@@ -2,7 +2,7 @@
    Campaign state and its persistence.
 
    A campaign is the thing a table comes back to: the roster, the
-   dials, and the scenario tables once M3 adds them. A run is one
+   dials, the setting, and the scenario tables. A run is one
    crossing inside it. See docs/DECISIONS.md P4.
    ============================================================ */
 
@@ -10,11 +10,13 @@ import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC, RIVER_WIDTH, OBSTACLE_JAM } from 
 import type {
   AbilityKey, AbilityScore, ExpansionCategory, GameState, RollMode, RunConfig, Seat,
 } from '@maze-deck/rules';
-import { DEFAULT_TABLES, emptyTables } from './tables';
+import { biomeOf, DEFAULT_BIOME, isBiomeId } from './biomes';
+import type { BiomeId } from './biomes';
+import { DEFAULT_TABLES } from './tables';
 import type { DrawnPrompt, Tables } from './tables';
 
 export const STORAGE_KEY = 'mazedeck.campaign.v1';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const SCORES: AbilityScore[] = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
 
@@ -41,8 +43,15 @@ export interface Campaign {
   extraClearPath: number;
   extraMonster: number;
   expansions: ExpansionCategory[];
-  /** Narration tables. Written once, reused every crossing. */
-  tables: Tables;
+  /** Where the maze is. Reskins the cards, the palette and the tables. */
+  biome: BiomeId;
+  /**
+   * Narration tables, one editable set per setting. A setting the
+   * GM has never edited has no entry here and reads its biome's
+   * defaults — see `tablesFor`. Keyed so switching biome and back
+   * never loses what was written for either.
+   */
+  tablesByBiome: Partial<Record<BiomeId, Tables>>;
   /** The prompt drawn for the card currently in front of the table. */
   prompt: DrawnPrompt | null;
   /** Last entry used per category, so the same one does not repeat. */
@@ -86,9 +95,8 @@ export function newCampaign(): Campaign {
     extraClearPath: 0,
     extraMonster: 0,
     expansions: [],
-    // Cloned: DEFAULT_TABLES is a module constant and the editor
-    // writes straight into the campaign.
-    tables: structuredClone(DEFAULT_TABLES),
+    biome: DEFAULT_BIOME,
+    tablesByBiome: {},
     prompt: null,
     lastPrompt: {},
     hostCode: null,
@@ -99,6 +107,24 @@ export function newCampaign(): Campaign {
 /** A character is a seat, verbatim — the GM verifies, the app does not judge. */
 export function toSeat(c: Character): Seat {
   return { id: c.id, name: c.name.trim() || 'Unnamed', cls: c.cls, mods: { ...c.mods } };
+}
+
+/**
+ * The active setting's tables: the campaign's own copy if it has
+ * one, otherwise the biome's defaults. The defaults are a module
+ * constant and are never handed out for editing — the first edit
+ * goes through `withTables`, which takes the copy.
+ */
+export function tablesFor(campaign: Campaign): Tables {
+  return campaign.tablesByBiome[campaign.biome] ?? biomeOf(campaign.biome).tables;
+}
+
+/** Write the active setting's tables back. */
+export function withTables(campaign: Campaign, tables: Tables): Campaign {
+  return {
+    ...campaign,
+    tablesByBiome: { ...campaign.tablesByBiome, [campaign.biome]: tables },
+  };
 }
 
 /**
@@ -116,6 +142,7 @@ export function runSetupFor(campaign: Campaign): Omit<RunConfig, 'seed'> {
 export function runConfigFor(campaign: Campaign, seed: string): RunConfig {
   return {
     seed,
+    biome: campaign.biome,
     mazeDc: campaign.mazeDc,
     escapeTarget: campaign.escapeTarget,
     riverWidth: RIVER_WIDTH,
@@ -136,14 +163,24 @@ export function load(): Campaign {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return newCampaign();
-    const parsed = JSON.parse(raw) as Partial<Campaign> & { version?: number };
+    const parsed = JSON.parse(raw) as Legacy;
     const migrated = migrate(parsed);
     if (!migrated) return newCampaign();
-    return { ...newCampaign(), ...migrated } as Campaign;
+    const campaign = { ...newCampaign(), ...migrated } as Campaign;
+    // A biome that no longer exists is not worth losing a campaign over.
+    if (!isBiomeId(campaign.biome)) campaign.biome = DEFAULT_BIOME;
+    return campaign;
   } catch {
     return newCampaign();
   }
 }
+
+/** Every shape a stored campaign has ever had, loosely. */
+type Legacy = Partial<Campaign> & {
+  version?: number;
+  /** v2: one table set, before settings existed. */
+  tables?: Tables;
+};
 
 /**
  * Bring a stored blob up to the current schema, or give up on it.
@@ -151,10 +188,13 @@ export function load(): Campaign {
  * v1 knew nothing about tables, so it gets the defaults and keeps
  * everything else — a campaign in progress is not worth throwing away
  * over a field that did not exist yet.
+ *
+ * v2 had one table set and no setting. Every v2 campaign was played
+ * in the dungeon (there was nowhere else), so its tables become the
+ * dungeon's copy and nothing the GM wrote is lost. A run in progress
+ * is stamped the same way, since its config predates the field.
  */
-function migrate(
-  blob: Partial<Campaign> & { version?: number },
-): Partial<Campaign> | null {
+function migrate(blob: Legacy): Legacy | null {
   let c = blob;
 
   if (c.version === 1) {
@@ -167,11 +207,20 @@ function migrate(
     };
   }
 
+  if (c.version === 2) {
+    const { tables, run, ...rest } = c;
+    c = {
+      ...rest,
+      version: 3,
+      biome: DEFAULT_BIOME,
+      tablesByBiome: tables ? { [DEFAULT_BIOME]: tables } : {},
+      run: run ? { ...run, config: { ...run.config, biome: DEFAULT_BIOME } } : null,
+    };
+  }
+
   if (c.version !== SCHEMA_VERSION) return null;
 
-  // A campaign saved with an emptied table set is still valid; only a
-  // missing one is a problem.
-  if (!c.tables) c = { ...c, tables: emptyTables() };
+  if (!c.tablesByBiome) c = { ...c, tablesByBiome: {} };
   return c;
 }
 

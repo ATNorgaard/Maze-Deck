@@ -31,6 +31,13 @@ export type RollMode = 'app' | 'manual';
 
 export interface RunConfig {
   seed: string;
+  /**
+   * The setting the table is playing in — 'dungeon', 'frozen-pass'.
+   * Mechanically inert: the engine never reads it. It rides on the
+   * config so it reaches every device through the view, and the app
+   * reskins the cards, the palette and the narration from it.
+   */
+  biome: string;
   mazeDc: number;
   escapeTarget: number;
   riverWidth: number;

@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-08-24 (M5 complete — all planned milestones done)
+**Last updated:** 2026-09-04 (biomes: the setting is a campaign dial)
 
 ## Where we are
 
@@ -434,7 +434,77 @@ against the built CSS rather than the source: all five rules ship as
 Verified at 1000px and 700px: circles on one row, vertical order run-info →
 initiative → board → log → controls, river unclipped.
 
+## Biomes — the setting is a campaign dial
+
+A maze is a way from A to B, and A and B can be anywhere. The campaign
+screen now has a **setting** panel: six chips — Dungeon, Tower, Deep forest,
+Desert, Undercity, Frozen pass — and picking one reskins the whole table.
+What moves, and where each piece lives:
+
+| What | Where | How |
+|---|---|---|
+| The cards' names and rule lines | `apps/table/src/biomes/<id>.ts` | Content. A Clear Path in the forest is a *Game Trail*; the rule is reworded but says exactly the same thing. |
+| The palette and the page's light | `apps/table/src/biomes.css` | One `[data-biome="…"] .md-root` block per setting redeclares the design tokens. |
+| The card back | `packages/ui/src/CardBack.tsx` | Six field motifs (fret, stair, branch, dune, brick, crystal), chosen by the provider's `skin`. |
+| The scenario tables | `apps/table/src/biomes/<id>.ts` | Each setting ships a full original set, 31 lines, obstacle checks included. |
+| Which setting a run is in | `RunConfig.biome` → `ViewRules.biome` | A string the engine never reads. It rides the wire so a player's phone reskins too. |
+
+**The library does not know what a biome is.** `MazeDeckProvider` takes a
+`skin` — per-category copy overrides and a back motif — through a context
+that nested providers inherit, and `DeckCard` / `CardBack` read it. Colour
+was deliberately kept out of that prop: the tokens are custom properties,
+so a palette is one CSS selector, and the selector is `[data-biome] .md-root`
+rather than `.t-app` because the board nests a second provider around its
+action bar and that inner `.md-root` would otherwise reset to the dungeon.
+That inner provider is now `background="transparent"` for the same reason:
+the page carries the setting's light as a gradient, and a solid ink block
+sat on it as a rectangle.
+
+**The eyebrow keeps the canonical name.** A card titled *Switchback* still
+says *Clear Path* above it in small capitals. That is what keeps the log
+(which the engine writes in canonical names), the reference cards and the
+rules text legible against a reskinned river — the mechanic never loses its
+name, it only gains a local one. The printed deck is untouched.
+
+**Palettes move the ground and tune hues within their family; they never
+swap them.** Clear Path stays the only warm gold, Monster the only red,
+Wanderer cool and Item held clear of it. The grouping logic in `tokens.css`
+is what makes seven cards readable at arm's length; a palette that broke it
+would be prettier and worse. The one blocker ramp that moves is Dead End in
+the frozen pass, stone to ice-grey, still achromatic.
+
+**Campaign schema is v3.** `biome`, and `tablesByBiome` keyed by setting so
+switching and switching back loses nothing; a setting the GM has never
+edited reads its biome's defaults through `tablesFor()`, and the first edit
+takes a copy through `withTables()`. A v2 campaign migrates with its one
+table set filed under the dungeon and any run in progress stamped
+`biome: 'dungeon'`. Verified against a real stored v2 campaign.
+
+**Inside a run the setting is the run's own**, read from the view, so the
+GM's board and every player agree even if the campaign's dial is changed
+mid-crossing. Everywhere else it is the campaign's, so a choice on the
+campaign screen lands on the whole page as it is made — the three preview
+cards under the chips are the real components, not a mock-up.
+
+Verified in the browser: the campaign page recolours on click and persists;
+a new crossing shows *Frozen pass · Round 1*, crystal backs, and a
+transparent action bar; the tables editor shows the frozen pass lists and
+restores that setting's defaults; and — the one that matters — a player
+joining over a real socket from the Worker's own origin, with no campaign
+in their storage, received `frozen-pass` from the Durable Object and
+rendered the palette, the header and the backs. 66 rules tests, one new:
+the biome reaches both viewers and two runs differing only in biome deal
+the same deck.
+
+Adding a setting is a file in `biomes/`, a line in `BIOMES`, and a palette
+block in `biomes.css`. Nothing else needs to know it exists.
+
 ## Watch out for
+
+- **A new colour token has to be added to every biome block** in
+  `biomes.css` if a setting should be allowed to move it. A token declared
+  only in `tokens.css` simply keeps the dungeon's value everywhere, which is
+  safe but silent.
 
 - **Prompts are GM-facing and currently rendered on the shared board.** That is
   correct today because the board *is* the GM's screen. When M4 adds a player
@@ -491,3 +561,4 @@ faithful to the rules as printed. It may not be what was intended.
 | M3 | Scenario tables | **done** |
 | M4 | Multiplayer | **done** — verified across two devices |
 | M5 | Deck and print regeneration | **done** |
+| — | Biomes: six settings, reskinning cards, palette, backs and tables | **done** — verified over a socket |

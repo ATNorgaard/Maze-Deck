@@ -151,3 +151,23 @@ describe('what a client still needs', () => {
     expect(v.river[1]?.category).toBeNull();
   });
 });
+
+describe('the setting', () => {
+  /**
+   * The biome is the one piece of run config that is pure presentation.
+   * It has to reach a player's phone all the same — the cards on their
+   * screen are reskinned from it — so it rides on the view, for both
+   * roles, exactly as it was set.
+   */
+  it('carries the biome to every viewer, and only as a name', () => {
+    const g = makeRun('biome', { biome: 'frozen-pass' });
+    for (const viewer of [GM, PLAYER]) {
+      expect(view(g, viewer).rules.biome).toBe('frozen-pass');
+    }
+    // It is a label, never a mechanic: two runs differing only in
+    // biome deal the same deck.
+    const other = makeRun('biome', { biome: 'desert' });
+    expect(other.deck).toEqual(g.deck);
+    expect(other.order).toEqual(g.order);
+  });
+});

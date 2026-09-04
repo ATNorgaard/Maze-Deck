@@ -1319,3 +1319,39 @@ html, body, #root {
   /* 44px is the smallest target most people can hit reliably. */
   .t-play .t-btn { min-height: 44px; }
 }
+
+/* ============================================================
+   THE SETTING
+
+   The biome picker on the campaign screen. The chips are plain
+   `.t-btn`s with `aria-pressed`, so a chosen setting looks exactly
+   like a chosen roll mode. The preview under them is three real
+   cards: the provider above the screen is already wearing the
+   setting, so there is nothing to mock up.
+
+   The palettes themselves are in biomes.css.
+   ============================================================ */
+
+.t-setting__kicker {
+  display: block;
+  margin-bottom: calc(2.5 * var(--md-u));
+}
+
+.t-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--md-u));
+}
+
+.t-setting__flavour {
+  margin-top: calc(3 * var(--md-u));
+  font-size: 15px;
+  color: var(--md-parchment-200);
+}
+
+.t-setting__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(3 * var(--md-u));
+  margin-top: calc(4 * var(--md-u));
+}

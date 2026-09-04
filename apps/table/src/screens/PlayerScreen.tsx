@@ -2,6 +2,7 @@ import { ActionBar, DeckPile, DiscardPile, PlayerSeat, River, ScoreTrack } from 
 import { activeSeatOf, availableFor, mayAct } from '@maze-deck/rules';
 import type { ChoicePayload, GameAction, GameView } from '@maze-deck/rules';
 import * as React from 'react';
+import type { Biome } from '../biomes';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
@@ -10,6 +11,8 @@ import { useFittingSize } from '../useFittingSize';
 
 interface Props {
   view: GameView;
+  /** The setting, as the server told this device. */
+  biome: Biome;
   dispatch: (action: GameAction) => void;
   connected: boolean;
   error: string | null;
@@ -27,7 +30,7 @@ const position = (i: number) => POSITION[i] ?? `slot ${i + 1}`;
  * is *allowed* to show is already decided by the redaction; this
  * decides what is worth showing.
  */
-export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Props) {
+export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave }: Props) {
   const me = view.viewer.role === 'player' ? view.viewer.seatId : null;
   const a = availableFor(view);
   const active = activeSeatOf(view);
@@ -62,7 +65,7 @@ export function PlayerScreen({ view, dispatch, connected, error, onLeave }: Prop
       <div className="t-panel">
         <h2 className="t-panel__title">
           {seat?.name ?? 'Watching'}
-          <span className="t-panel__aside">Round {view.round}</span>
+          <span className="t-panel__aside">{biome.name} · Round {view.round}</span>
         </h2>
         <p className="t-note">
           {view.phase === 'over'

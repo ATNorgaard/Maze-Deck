@@ -1,0 +1,239 @@
+/* ============================================================
+   BIOME PALETTES
+
+   The design system's colours are custom properties on `.md-root`,
+   which is the whole reason this file can exist: a setting is one
+   selector that redeclares them. Nothing in the component library
+   knows a biome exists.
+
+   Every rule is `[data-biome="…"] .md-root`, not `.t-app`, on
+   purpose — the board nests a second provider around its action
+   bar for scale, and that inner `.md-root` would otherwise reset
+   the palette to the dungeon's from tokens.css. The descendant
+   selector catches both.
+
+   What a palette may move, and what it may not:
+
+   - The GROUND (inks) and the PARCHMENT take the setting's cast:
+     blue-black for ice, umber for sand, green-black under trees.
+   - Each CATEGORY hue is tuned within its family, never swapped.
+     Clear Path stays the only warm gold, Monster the only red,
+     Wanderer cool, Item held clear of it. The grouping logic in
+     tokens.css is what makes seven cards readable at arm's length
+     and a palette that broke it would be prettier and worse.
+   - `--t-biome-ground` is the page: the ink plus one faint pool of
+     the setting's light. Torchlight from above in a tower, murk
+     from below in a forest, heat off the horizon in a desert. It
+     is applied by the provider's `background`, so it must resolve
+     on the root itself.
+   ============================================================ */
+
+/* The dungeon is tokens.css as written. Only the ground is declared,
+   so the provider's background always resolves. */
+[data-biome] .md-root {
+  --t-biome-ground: var(--md-ink-900);
+}
+
+/* ---------- TOWER — dry stone, candle brass, dust --------------- */
+[data-biome="tower"] .md-root {
+  --md-ink-900: #0E0D10;
+  --md-ink-800: #161419;
+  --md-ink-700: #201D24;
+  --md-ink-600: #2C2831;
+  --md-ink-500: #403A47;
+
+  --md-parchment-100: #F1E9D6;
+  --md-parchment-200: #E3D8BC;
+  --md-parchment-300: #C8BB99;
+  --md-parchment-400: #9A8E72;
+
+  --md-cat-path-500: #D9A24B;
+  --md-cat-path-300: #EFCB8E;
+  --md-cat-path-700: #86601F;
+  --md-cat-path-glow: rgba(217,162,75,0.40);
+
+  --md-cat-obst-500: #4E8F80;
+  --md-cat-obst-300: #86BDAF;
+  --md-cat-obst-700: #2A5249;
+  --md-cat-obst-glow: rgba(78,143,128,0.38);
+
+  --md-cat-wand-500: #7B87A6;
+  --md-cat-wand-300: #B0B9D2;
+  --md-cat-wand-700: #3C4460;
+  --md-cat-wand-glow: rgba(123,135,166,0.34);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(217,162,75,0.07), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- DEEP FOREST — green-black, canopy sun, lichen ------- */
+[data-biome="deep-forest"] .md-root {
+  --md-ink-900: #080F0B;
+  --md-ink-800: #0E1812;
+  --md-ink-700: #152219;
+  --md-ink-600: #1F3025;
+  --md-ink-500: #2F4638;
+
+  --md-parchment-100: #EEEBD8;
+  --md-parchment-200: #DFDABB;
+  --md-parchment-300: #C2BE98;
+  --md-parchment-400: #92906F;
+
+  --md-cat-path-500: #D5B23E;
+  --md-cat-path-300: #ECD483;
+  --md-cat-path-700: #7E6516;
+  --md-cat-path-glow: rgba(213,178,62,0.40);
+
+  --md-cat-obst-500: #4C9A63;
+  --md-cat-obst-300: #86C79A;
+  --md-cat-obst-700: #25553A;
+  --md-cat-obst-glow: rgba(76,154,99,0.38);
+
+  --md-cat-wand-500: #6F98A8;
+  --md-cat-wand-300: #A9C7D2;
+  --md-cat-wand-700: #34525C;
+  --md-cat-wand-glow: rgba(111,152,168,0.34);
+
+  --md-cat-item-500: #965C9E;
+  --md-cat-item-300: #C89AD0;
+  --md-cat-item-700: #55305C;
+  --md-cat-item-glow: rgba(150,92,158,0.38);
+
+  --md-cat-mons-500: #A83A3A;
+  --md-cat-mons-300: #D77A78;
+  --md-cat-mons-700: #641A1C;
+  --md-cat-mons-glow: rgba(168,58,58,0.42);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(76,154,99,0.08), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- DESERT — umber, sun, oxidised copper ---------------- */
+[data-biome="desert"] .md-root {
+  --md-ink-900: #120F0A;
+  --md-ink-800: #1B1710;
+  --md-ink-700: #262017;
+  --md-ink-600: #352D21;
+  --md-ink-500: #4B4131;
+
+  --md-parchment-100: #F5E8C8;
+  --md-parchment-200: #E9D8AE;
+  --md-parchment-300: #CFBC8E;
+  --md-parchment-400: #A08C68;
+
+  --md-cat-path-500: #E9AE3E;
+  --md-cat-path-300: #F6D287;
+  --md-cat-path-700: #8E651A;
+  --md-cat-path-glow: rgba(233,174,62,0.42);
+
+  --md-cat-obst-500: #4E9285;
+  --md-cat-obst-300: #86C2B4;
+  --md-cat-obst-700: #295349;
+  --md-cat-obst-glow: rgba(78,146,133,0.38);
+
+  --md-cat-wand-500: #7182B0;
+  --md-cat-wand-300: #A9B6D6;
+  --md-cat-wand-700: #364066;
+  --md-cat-wand-glow: rgba(113,130,176,0.34);
+
+  --md-cat-item-500: #9A5390;
+  --md-cat-item-300: #CC96C4;
+  --md-cat-item-700: #572650;
+  --md-cat-item-glow: rgba(154,83,144,0.38);
+
+  --md-cat-mons-500: #B23A34;
+  --md-cat-mons-300: #DE7C74;
+  --md-cat-mons-700: #6C1B18;
+  --md-cat-mons-glow: rgba(178,58,52,0.42);
+
+  --t-biome-ground:
+    linear-gradient(180deg, rgba(233,174,62,0.05), transparent 35%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(233,174,62,0.10), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- UNDERCITY — soot, gaslight, rust -------------------- */
+[data-biome="undercity"] .md-root {
+  --md-ink-900: #0B0F0E;
+  --md-ink-800: #121917;
+  --md-ink-700: #1A2320;
+  --md-ink-600: #24302C;
+  --md-ink-500: #364540;
+
+  --md-parchment-100: #EBE6D8;
+  --md-parchment-200: #DCD5C0;
+  --md-parchment-300: #BDB69E;
+  --md-parchment-400: #8F8A75;
+
+  --md-cat-path-500: #DFB24C;
+  --md-cat-path-300: #F0D38F;
+  --md-cat-path-700: #856622;
+  --md-cat-path-glow: rgba(223,178,76,0.40);
+
+  --md-cat-obst-500: #3F8F79;
+  --md-cat-obst-300: #7CBEAA;
+  --md-cat-obst-700: #215145;
+  --md-cat-obst-glow: rgba(63,143,121,0.38);
+
+  --md-cat-item-500: #8656A3;
+  --md-cat-item-300: #BD97D4;
+  --md-cat-item-700: #4B2A5E;
+  --md-cat-item-glow: rgba(134,86,163,0.38);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 50% 35% at 50% 0%, rgba(223,178,76,0.05), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- FROZEN PASS — ink blue, snow, low winter sun -------- */
+[data-biome="frozen-pass"] .md-root {
+  --md-ink-900: #070C14;
+  --md-ink-800: #0D141E;
+  --md-ink-700: #142030;
+  --md-ink-600: #1E2E42;
+  --md-ink-500: #2F4459;
+
+  --md-parchment-100: #F4F2EC;
+  --md-parchment-200: #E7E5DC;
+  --md-parchment-300: #C9C8BE;
+  --md-parchment-400: #9A9B95;
+
+  --md-cat-path-500: #E6A94F;
+  --md-cat-path-300: #F4CE90;
+  --md-cat-path-700: #8A5F22;
+  --md-cat-path-glow: rgba(230,169,79,0.40);
+
+  --md-cat-obst-500: #4A9C96;
+  --md-cat-obst-300: #86CBC5;
+  --md-cat-obst-700: #255552;
+  --md-cat-obst-glow: rgba(74,156,150,0.38);
+
+  --md-cat-wand-500: #7FA3C6;
+  --md-cat-wand-300: #B3CCE3;
+  --md-cat-wand-700: #3D5670;
+  --md-cat-wand-glow: rgba(127,163,198,0.34);
+
+  --md-cat-item-500: #8C63B8;
+  --md-cat-item-300: #C0A2DE;
+  --md-cat-item-700: #4E3269;
+  --md-cat-item-glow: rgba(140,99,184,0.38);
+
+  --md-cat-mons-500: #B02E3C;
+  --md-cat-mons-300: #DE727C;
+  --md-cat-mons-700: #6B141E;
+  --md-cat-mons-glow: rgba(176,46,60,0.42);
+
+  /* The one place a blocker ramp moves: Dead End goes from stone to
+     ice-grey, so a crevasse reads as cold rather than as masonry. It
+     stays achromatic, which is the property that matters. */
+  --md-cat-dead-500: #8A9096;
+  --md-cat-dead-300: #C0C5CA;
+  --md-cat-dead-700: #4C5259;
+  --md-cat-dead-glow: rgba(138,144,150,0.28);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(179,204,227,0.10), transparent 70%),
+    var(--md-ink-900);
+}

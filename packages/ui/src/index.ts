@@ -3,6 +3,9 @@
 export { MazeDeckProvider } from './MazeDeckProvider';
 export type { MazeDeckProviderProps } from './MazeDeckProvider';
 
+export { useCardCopy, useDeckSkin } from './DeckSkin';
+export type { CardBackMotif, CardCopy, DeckSkin } from './DeckSkin';
+
 export { ArchGlyph } from './ArchGlyph';
 export type { ArchGlyphProps } from './ArchGlyph';
 

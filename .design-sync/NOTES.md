@@ -37,6 +37,17 @@ fine; a named type behind an **array** does not. Both are hand-inlined in
 `cfg.dtsPropsFor`. If either component's props change, update that config —
 the auto-extraction will not.
 
+## The `skin` prop — not yet through the converter
+
+`MazeDeckProvider` gained `skin?: DeckSkin` (per-category copy overrides and
+a card-back motif, read by `DeckCard` and `CardBack` through a context that
+nested providers inherit). `DeckSkin` is a **named object type behind an
+optional prop**, which is the shape that has extracted cleanly before — but
+it has not been run through the converter since it was added. If the emitted
+`.d.ts` names `DeckSkin` without defining it, inline it in `dtsPropsFor` for
+`MazeDeckProvider` the same way `River.slots` is. The two hooks
+(`useDeckSkin`, `useCardCopy`) have no preview and need none.
+
 ## Library bugs the previews caught
 
 Both were invisible until a preview showed two states side by side:

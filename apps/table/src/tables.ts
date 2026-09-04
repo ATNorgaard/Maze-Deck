@@ -10,6 +10,10 @@
    Tables belong to the CAMPAIGN, not the run: written once,
    reused every crossing. See docs/DECISIONS.md A5 and P4.
 
+   Each biome ships its own set — the one below is the dungeon's,
+   and the rest live in `biomes/`. A campaign keeps a separate,
+   editable copy per setting (see `tablesByBiome` in campaign.ts).
+
    Everything here is our own writing.
    ============================================================ */
 
@@ -39,8 +43,10 @@ export interface DrawnPrompt {
   dcOffset?: number;
 }
 
-const e = (id: string, text: string, score?: AbilityScore, dcOffset?: number): TableEntry =>
+/** Build one entry. Exported so each biome's set can use the same shorthand. */
+export const entry = (id: string, text: string, score?: AbilityScore, dcOffset?: number): TableEntry =>
   (score === undefined ? { id, text } : { id, text, score, dcOffset: dcOffset ?? 0 });
+const e = entry;
 
 export const DEFAULT_TABLES: Tables = {
   'clear-path': [

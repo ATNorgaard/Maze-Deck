@@ -2,9 +2,10 @@ import * as React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { CANONICAL_CATEGORIES, CATEGORIES, DeckCard, getCategory } from '@maze-deck/ui';
 import type { CardCategory } from '@maze-deck/rules';
-import { SCORES } from '../campaign';
+import { biomeOf } from '../biomes';
+import { SCORES, tablesFor, withTables } from '../campaign';
 import type { Campaign } from '../campaign';
-import { DEFAULT_TABLES, newEntryId } from '../tables';
+import { newEntryId } from '../tables';
 import type { TableEntry } from '../tables';
 
 interface Props {
@@ -20,12 +21,14 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
   ];
   const [active, setActive] = React.useState<CardCategory>('clear-path');
   const category = enabled.includes(active) ? active : 'clear-path';
-  const entries = campaign.tables[category] ?? [];
+  const biome = biomeOf(campaign.biome);
+  const tables = tablesFor(campaign);
+  const entries = tables[category] ?? [];
   const def = getCategory(category);
   const isObstacle = CATEGORIES.find((c) => c.category === category)?.blocker ?? false;
 
   const setEntries = (next: TableEntry[]) =>
-    onChange({ ...campaign, tables: { ...campaign.tables, [category]: next } });
+    onChange(withTables(campaign, { ...tables, [category]: next }));
 
   const patch = (id: string, change: Partial<TableEntry>) =>
     setEntries(entries.map((x) => (x.id === id ? { ...x, ...change } : x)));
@@ -33,15 +36,17 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
   return (
     <>
       <div className="t-bar">
-        <span className="t-brand">Scenario tables</span>
+        <span className="t-brand">
+          Scenario tables <span className="t-panel__aside">{biome.name}</span>
+        </span>
         <span className="t-spacer" />
         <button
           type="button"
           className="t-btn"
-          onClick={() => onChange({
-            ...campaign,
-            tables: { ...campaign.tables, [category]: structuredClone(DEFAULT_TABLES[category]) },
-          })}
+          onClick={() => onChange(withTables(campaign, {
+            ...tables,
+            [category]: structuredClone(biome.tables[category]),
+          }))}
         >
           Restore the defaults for {def.title}
         </button>
@@ -64,13 +69,17 @@ export function TablesScreen({ campaign, onChange, onBack }: Props) {
               from its list and hands it to you to describe — never the same one
               twice running.
             </p>
+            <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
+              These are the {biome.name} lists. Each setting keeps its own, and
+              the setting is chosen on the campaign screen.
+            </p>
             {/* Real tabs: arrow keys move between them and only the
                 selected one is a tab stop, which aria-pressed buttons
                 could never offer. */}
             <Tabs.List className="t-tabs" aria-label="Card category">
               {enabled.map((key) => {
                 const d = getCategory(key);
-                const count = campaign.tables[key]?.length ?? 0;
+                const count = tables[key]?.length ?? 0;
                 return (
                   <Tabs.Trigger key={key} value={key} className="t-tab">
                     <span>{d.title}</span>

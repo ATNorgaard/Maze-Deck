@@ -42,6 +42,7 @@ something feels wrong in play.
 | A5 | **Scenario tables are a first-class feature** *(delegated)*. Picking a card auto-draws a prompt for the GM. Ships with one original default table set; per-campaign editing. Biome-specific sets are later content. |
 | A6 | **One repo** *(delegated)*: everything moves into `C:\Coding\Maze-Deck`. The hand-written `.design-sync/` config is irreplaceable and currently unversioned. Verify the design-sync build still runs after the move. |
 | A7 | **Never reuse the source's names, effect wording, or art.** No mark of the originating product appears anywhere in the app. |
+| A8 | **A biome is a campaign dial and pure presentation.** `RunConfig.biome` is a string the engine never reads; it rides the wire so every device reskins alike. The library exposes a `skin` (copy + back motif) and leaves colour to CSS; the app owns the biomes as content — copy, palette, motif and a full scenario set per setting. Card eyebrows keep the canonical name so the log and the rules stay legible. The printed deck is not reskinned. |
 
 ## Build order
 
@@ -70,6 +71,7 @@ Sessions get cut. Every one of them ends with:
 
 ## Open — deliberately deferred
 
-Not forgotten, just not now: biome-specific scenario tables; re-enabling Dead
-End and Trap as an expansion; the `+1d4` ally boon from the source's GM
-guidance; spectator links; and anything resembling a persistent account.
+Not forgotten, just not now: re-enabling Dead End and Trap as an expansion;
+the `+1d4` ally boon from the source's GM guidance; spectator links; and
+anything resembling a persistent account. (Biome-specific scenario tables
+shipped with the biomes themselves — see A8.)

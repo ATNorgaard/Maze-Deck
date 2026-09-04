@@ -4,7 +4,8 @@ import { createGame, isJoinCode, makeJoinCode, normaliseJoinCode } from '@maze-d
 import type {
   CardCategory, GameAction, GameState, SeatOffer, Viewer,
 } from '@maze-deck/rules';
-import { load, newId, runConfigFor, runSetupFor, save } from './campaign';
+import { biomeOf, skinOf } from './biomes';
+import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign } from './campaign';
 import { loadIdentity, rememberSeat, SESSION_ENDPOINT } from './player';
 import { drawPrompt } from './tables';
@@ -92,7 +93,7 @@ export function App() {
     if (!revealKey) return;
     const category = revealKey.split(':')[1] as CardCategory;
     setCampaign((prev) => {
-      const drawn = drawPrompt(prev.tables, category, prev.lastPrompt[category]);
+      const drawn = drawPrompt(tablesFor(prev), category, prev.lastPrompt[category]);
       if (!drawn) return prev;
       return {
         ...prev,
@@ -180,12 +181,26 @@ export function App() {
   const view = snapshot?.view ?? null;
   const hosted = session.current instanceof SocketSession;
 
+  // Inside a run the setting is the run's own — it is what every
+  // device was told, and a joined player has no campaign at all.
+  // Everywhere else it is the campaign's, so a choice on the campaign
+  // screen lands on the whole page as it is made.
+  const inRun = (screen === 'session' || screen === 'play') && view !== null;
+  const biome = biomeOf(inRun ? view.rules.biome : campaign.biome);
+
   return (
-    <MazeDeckProvider size="md" className="t-app">
+    <div className="t-biome" data-biome={biome.id}>
+    <MazeDeckProvider
+      size="md"
+      className="t-app"
+      skin={skinOf(biome)}
+      background="var(--t-biome-ground)"
+    >
       <PortalHost>
       {screen === 'play' && view ? (
         <PlayerScreen
           view={view}
+          biome={biome}
           dispatch={dispatch}
           connected={snapshot?.connected ?? false}
           error={snapshot?.error ?? null}
@@ -205,6 +220,7 @@ export function App() {
       ) : screen === 'session' && view ? (
         <SessionScreen
           view={view}
+          biome={biome}
           dispatch={dispatch}
           error={snapshot?.error ?? null}
           runName={campaign.runName}
@@ -241,5 +257,6 @@ export function App() {
       )}
       </PortalHost>
     </MazeDeckProvider>
+    </div>
   );
 }

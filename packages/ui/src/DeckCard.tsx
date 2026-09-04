@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { ArchGlyph } from './ArchGlyph';
+import { useCardCopy } from './DeckSkin';
 import { CATEGORY_CLASS, DECK_TOTAL, getCategory } from './types';
 import type { CardCategory, CardSize } from './types';
 
 /** Splits a rule string so the emphasised phrase can be tinted. */
 function renderRule(rule: string, emphasis: string): React.ReactNode {
-  const at = rule.indexOf(emphasis);
+  const at = emphasis ? rule.indexOf(emphasis) : -1;
   if (at < 0) return rule;
   return (
     <>
@@ -56,6 +57,18 @@ export function DeckCard({
   const def = getCategory(category);
   const interactive = Boolean(onSelect);
 
+  // Three layers: the prop, then the provider's skin, then the canon.
+  // A skinned rule brings its own emphasis (or none) — tinting the
+  // canonical phrase inside a reworded line would find nothing.
+  const skin = useCardCopy(category);
+  const printedTitle = title ?? skin.title ?? def.title;
+  const printedEyebrow = eyebrow ?? skin.eyebrow ?? def.eyebrow;
+  const printedRule = rule
+    ? rule
+    : skin.rule !== undefined
+      ? renderRule(skin.rule, skin.emphasis ?? '')
+      : renderRule(def.rule, def.emphasis);
+
   return (
     <article
       className={['md-card', CATEGORY_CLASS[category], className].filter(Boolean).join(' ')}
@@ -84,12 +97,10 @@ export function DeckCard({
         <span className="md-card__code md-card__code--br" />
         <div className="md-card__safe">
           <ArchGlyph state={category} className="md-card__glyph" />
-          <p className="md-card__eyebrow">{eyebrow ?? def.eyebrow}</p>
-          <h2 className="md-card__title">{title ?? def.title}</h2>
+          <p className="md-card__eyebrow">{printedEyebrow}</p>
+          <h2 className="md-card__title">{printedTitle}</h2>
           <div className="md-card__divider" />
-          <p className="md-card__rule">
-            {rule ? rule : renderRule(def.rule, def.emphasis)}
-          </p>
+          <p className="md-card__rule">{printedRule}</p>
         </div>
         {showCount ? (
           <p className="md-card__count">

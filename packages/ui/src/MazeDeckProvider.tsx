@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { DeckSkinProvider } from './DeckSkin';
+import type { DeckSkin } from './DeckSkin';
 import type { CardSize } from './types';
 
 export interface MazeDeckProviderProps {
@@ -13,6 +15,13 @@ export interface MazeDeckProviderProps {
   guides?: boolean;
   /** Page/table background. Defaults to the deck's own ink ground. */
   background?: string;
+  /**
+   * Reskin every card underneath: per-category copy and the card
+   * back's field pattern. Colour is not here on purpose — scope a
+   * palette in CSS instead, the tokens are custom properties for
+   * exactly that. Nested providers inherit whatever they omit.
+   */
+  skin?: DeckSkin;
   className?: string;
   style?: React.CSSProperties;
   children?: React.ReactNode;
@@ -30,6 +39,7 @@ export function MazeDeckProvider({
   size = 'md',
   guides = false,
   background,
+  skin,
   className,
   style,
   children,
@@ -40,7 +50,7 @@ export function MazeDeckProvider({
       data-size={size}
       style={{ background: background ?? 'var(--md-ink-900)', color: 'var(--md-parchment-200)', ...style }}
     >
-      {children}
+      <DeckSkinProvider skin={skin ?? {}}>{children}</DeckSkinProvider>
     </div>
   );
 }
