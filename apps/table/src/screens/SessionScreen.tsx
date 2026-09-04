@@ -15,6 +15,7 @@ import { SoundToggle } from '../components/SoundToggle';
 import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
 import { StageOverlay } from '../stage/StageOverlay';
+import { useEnding } from '../stage/useEnding';
 import { useStage } from '../stage/useStage';
 import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
@@ -106,6 +107,7 @@ export function SessionScreen({
   const pulse = stage.active?.kind === 'progress' ? 'escape'
     : stage.active?.kind === 'strike' ? 'threat' : null;
   const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
+  const endingShown = useEnding(view);
 
   // Where the baton is going: the seat the turn is passing to while the
   // beat plays, otherwise whoever is acting in the presented view.
@@ -114,7 +116,11 @@ export function SessionScreen({
   const batonIndex = shown.phase === 'over' || batonSeat === null ? -1 : shown.order.indexOf(batonSeat);
 
   return (
-    <div className="t-board" data-shake={pulse === 'threat' || undefined}>
+    <div
+      className="t-board"
+      data-shake={pulse === 'threat' || undefined}
+      data-outcome={shown.outcome ?? undefined}
+    >
       <div className="t-col t-col--side">
         <div className="t-panel">
           <h2 className="t-panel__title">
@@ -373,7 +379,7 @@ export function SessionScreen({
         </Modal>
       ) : null}
 
-      {view.phase === 'over' ? (
+      {view.phase === 'over' && endingShown ? (
         <Modal label="The run is closed">
           <div className={`t-panel ${view.outcome === 'through' ? 't-panel--live' : 't-panel--bad'}`}>
             <h2 className="t-panel__title">

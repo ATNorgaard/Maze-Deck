@@ -11,6 +11,7 @@ import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
 import { StageOverlay } from '../stage/StageOverlay';
+import { useEnding } from '../stage/useEnding';
 import { useStage } from '../stage/useStage';
 import { useTicking } from '../stage/useTicking';
 import { useFittingSize } from '../useFittingSize';
@@ -62,6 +63,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   const discardCount = useTicking(shown.discardCount);
   const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
 
+  useEnding(view);
   const seatsRef = React.useRef<HTMLDivElement>(null);
   const shownActive = shown.order[shown.turn % Math.max(shown.order.length, 1)] ?? null;
   const batonSeat = stage.active?.kind === 'turn' ? stage.active.to : shownActive;
@@ -90,7 +92,11 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
     }).ok;
 
   return (
-    <div className="t-play" data-shake={stage.active?.kind === 'strike' || undefined}>
+    <div
+      className="t-play"
+      data-shake={stage.active?.kind === 'strike' || undefined}
+      data-outcome={shown.outcome ?? undefined}
+    >
       <div className="t-play__board" ref={boardRef}>
       <div className="t-panel" data-yours={yours || undefined}>
         <h2 className="t-panel__title">

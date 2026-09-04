@@ -34,6 +34,8 @@ export const MOTION = {
   thud: 320,
   /** A die in the air before it stops. */
   tumble: 650,
+  /** The board's moment at the end of a run, before the dialog is allowed in. */
+  ending: 1600,
   baton: 320,
 
   /* easings */

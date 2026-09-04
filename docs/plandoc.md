@@ -52,7 +52,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
 | 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | **done** — `feel/6` |
-| 8 | The ending — a flourish for through, the light going out for lost | planned |
+| 8 | The ending — a flourish for through, the light going out for lost | **done** — `feel/8` |
 
 ### 1. The choreographer
 
@@ -387,3 +387,46 @@ plain ink; the river's face-up card light animates `tFlicker`; the first
 log line computes `tSlideIn, tCool` and the second `tSlideIn` alone.
 
 **Commit:** `git log --grep feel/6`.
+
+### feel/8 — the ending
+
+**Changed.** `stage/useEnding.ts` is new: it holds the closing dialog back
+for `ending` (1600ms) after the phase becomes `over` — immediately under
+reduced motion — and sounds the outcome once (two chimes, or the growl).
+Both screens carry `data-outcome` from the presented view. *Through:* the
+three river slots fan open like a hand laid down (rotate ∓7°, the centre
+lifted, 900ms on the overshoot curve), the escape track glows for 1.6s,
+and a gold bloom rises over the whole board on a fixed layer. *Lost:* the
+board's columns dim and desaturate over 1.4s and every card's light goes
+out. Then the dialog.
+
+**Design notes.** The dialog's frosted scrim would have hidden all of it,
+which is why it waits. The wait is the only place in this work where the
+player is made to look before they may act, and it is at the end of the
+run, where there is nothing left to act on.
+
+**Broke / retried.** Nothing.
+
+**Verified** (DOM): "End the run" set `data-outcome=lost` at once; at
+120ms no dialog was mounted, the columns' `transition-property` was
+`filter`, and the river's card light read opacity 0; four seconds later
+the dialog "The run is closed" was up. The *through* path was not reachable
+in the test run (it needs five Clear Paths); its rules are in the same
+block and were checked as parsed. A fresh crossing was started afterwards
+so the board is left playable.
+
+**Commit:** `git log --grep feel/8`.
+
+## Returning to any of this
+
+Every phase is one commit whose subject starts with `feel/N`:
+
+```bash
+git log --oneline --grep "feel/"
+git show <hash>            # what one phase changed
+git revert <hash>          # take one phase back out, alone
+```
+
+Phases 2–8 all sit on the choreographer (feel/1). Reverting that one alone
+brings `CardFlight` back and takes the rest with it; revert the later ones
+first if the aim is to keep the beats and lose only the overlay.

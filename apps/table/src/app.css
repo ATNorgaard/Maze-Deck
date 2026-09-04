@@ -938,6 +938,10 @@ html, body, #root {
 
 @media (prefers-reduced-motion: reduce) {
   .t-app::before, .t-app .md-card__light, .t-log__line { animation: none; }
+  .t-river .md-river__slot, .t-board .t-col, .t-play__board, .t-play__aside,
+  [data-outcome='lost'] .md-card__light { transition: none; }
+  [data-outcome='through'] .t-track:first-child, .t-board[data-outcome='through']::after,
+  .t-play[data-outcome='through']::after { animation: none; }
   .t-baton { transition: none; }
   .t-rise, .t-play .t-panel[data-yours] { animation: none; }
   .t-tray, .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
@@ -1088,6 +1092,39 @@ html, body, #root {
 .t-roll__vs { font-size: calc(4 * var(--md-u)); color: var(--md-parchment-400); }
 .t-roll--good { color: var(--md-cat-obst-300); }
 .t-roll--bad { color: var(--md-cat-mons-300); }
+
+/* ---------------- the ending ----------------
+   Through: the river fans open like a hand laid down, the escape track
+   glows, and gold light blooms over the whole board. Lost: the light
+   goes out — the panels dim and desaturate, the card lights die. The
+   closing dialog is held back for `ending` (useEnding) so this is seen. */
+.t-river .md-river__slot { transition: transform 900ms cubic-bezier(.34, 1.45, .64, 1); }
+[data-outcome='through'] .t-river .md-river__slot:nth-child(1) { transform: rotate(-7deg) translate(-8px, 12px); }
+[data-outcome='through'] .t-river .md-river__slot:nth-child(2) { transform: translateY(-16px); }
+[data-outcome='through'] .t-river .md-river__slot:nth-child(3) { transform: rotate(7deg) translate(8px, 12px); }
+[data-outcome='through'] .t-track:first-child { --t-pulse: var(--md-cat-path-glow); animation: tPulse 1.6s ease-out both; }
+.t-board[data-outcome='through']::after,
+.t-play[data-outcome='through']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 40%, var(--md-cat-path-glow), transparent 70%);
+  animation: tBloom 1.6s ease-out both;
+}
+
+@keyframes tBloom {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: .55; }
+}
+
+.t-board .t-col, .t-play__board, .t-play__aside { transition: filter 1.4s ease; }
+[data-outcome='lost'] .t-col, [data-outcome='lost'] .t-play__board, [data-outcome='lost'] .t-play__aside {
+  filter: brightness(.38) saturate(.45);
+}
+[data-outcome='lost'] .md-card__light { animation: none; opacity: 0; transition: opacity 1.2s ease; }
 
 /* ---------------- the baton ----------------
    The turn, as a thing that moves: a glow ring under the active seat
