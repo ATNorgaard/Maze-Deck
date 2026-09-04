@@ -23,6 +23,7 @@
 
 import * as React from 'react';
 import type { CardCategory, GameView } from '@maze-deck/rules';
+import type { CardSize } from '@maze-deck/ui';
 import { plan } from './beats';
 import type { Beat, Step } from './beats';
 import { MOTION, reducedMotion } from './motion';
@@ -41,6 +42,21 @@ export interface Overlay {
   flight: { dx: number; dy: number; s: number } | null;
 }
 
+/** One card on its way from the deck pile to a slot. */
+export interface Deal {
+  slot: number;
+  /** The deck pile's top card, where the flight starts. */
+  rect: DOMRect;
+  box: { w: number; h: number };
+  scale: number;
+  size: CardSize;
+  /** Travel, top-left to top-left, and the size change on the way. */
+  dx: number;
+  dy: number;
+  s: number;
+  delay: number;
+}
+
 export interface Stage {
   /** What the board draws. Lags the truth by whatever is still playing. */
   presented: GameView;
@@ -48,6 +64,8 @@ export interface Stage {
   active: Beat | null;
   /** The card standing in front of a slot, if any. */
   overlay: Overlay | null;
+  /** Cards in flight from the deck pile. */
+  deals: Deal[];
   /** Slots the river must mask: an overlay is in front, or a deal is owed. */
   covered: number[];
   /** Drop everything queued and show the truth. Call before any dispatch. */
@@ -57,11 +75,18 @@ export interface Stage {
 interface Refs {
   riverRef: React.RefObject<HTMLElement>;
   discardRef: React.RefObject<HTMLElement>;
+  deckRef: React.RefObject<HTMLElement>;
 }
 
 function slotCard(river: HTMLElement | null, slot: number): HTMLElement | null {
   const slots = river?.querySelectorAll('.md-river__slot');
   return slots?.[slot]?.querySelector('article') ?? null;
+}
+
+/** The slot itself. Its box is the card's box, card or no card. */
+function slotBox(river: HTMLElement | null, slot: number): HTMLElement | null {
+  const slots = river?.querySelectorAll<HTMLElement>('.md-river__slot');
+  return slots?.[slot] ?? null;
 }
 
 function measure(el: HTMLElement): Pick<Overlay, 'rect' | 'box' | 'scale'> {
@@ -74,6 +99,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
   const [presented, setPresented] = React.useState(view);
   const [active, setActive] = React.useState<Beat | null>(null);
   const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
+  const [deals, setDeals] = React.useState<Deal[]>([]);
 
   const truth = React.useRef(view);
   const queue = React.useRef<Step[]>([]);
@@ -151,6 +177,36 @@ export function useStage(view: GameView, refs: Refs): Stage {
       case 'strike':
         return MOTION.pulse;
 
+      case 'discard':
+        return MOTION.drop;
+
+      case 'deal': {
+        // Dealt from the deck pile's own top card, so the flight starts
+        // at its size and grows to the slot's on the way.
+        const top = refs.deckRef.current?.querySelector<HTMLElement>('article');
+        if (!top) return 0;
+        const from = measure(top);
+        const size = (top.dataset.size as CardSize | undefined) ?? 'sm';
+        const flights: Deal[] = [];
+        beat.slots.forEach((slot, i) => {
+          const target = slotBox(refs.riverRef.current, slot);
+          if (!target) return;
+          const to = target.getBoundingClientRect();
+          flights.push({
+            slot,
+            ...from,
+            size,
+            dx: to.left - from.rect.left,
+            dy: to.top - from.rect.top,
+            s: from.rect.width > 0 ? to.width / from.rect.width : 1,
+            delay: i * MOTION.dealStagger,
+          });
+        });
+        if (flights.length === 0) return 0;
+        setDeals(flights);
+        return MOTION.deal + MOTION.dealStagger * (flights.length - 1);
+      }
+
       case 'settle':
         setOverlay(null);
         return 0;
@@ -161,14 +217,14 @@ export function useStage(view: GameView, refs: Refs): Stage {
         if (ov.current && !ov.current.flight && step.after.phase !== 'reveal') setOverlay(null);
         return 0;
 
-      case 'discard':
-      case 'deal':
-        return 0;
     }
   };
 
   const end = (step: Step) => {
     if (step.beat.kind === 'depart') setOverlay(null);
+    // The dealt cards vanish as the slots underneath show their own —
+    // same place, same size, so nothing is seen to change.
+    if (step.beat.kind === 'deal') setDeals([]);
   };
 
   const pump = React.useRef<() => void>(() => {});
@@ -181,8 +237,10 @@ export function useStage(view: GameView, refs: Refs): Stage {
       busy.current = true;
       setActive(step.beat);
       // A track beat IS its state change: the pip fills on the impact
-      // and the pulse follows. Everything else lands as the beat ends.
-      if (step.beat.kind === 'progress' || step.beat.kind === 'strike') present(step.after);
+      // and the pulse follows; a drop onto the discard likewise. Cards in
+      // flight land as their beat ends.
+      const k = step.beat.kind;
+      if (k === 'progress' || k === 'strike' || k === 'discard') present(step.after);
       tick();
       later(ms, () => {
         end(step);
@@ -200,6 +258,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
     busy.current = false;
     setActive(null);
     setOverlay(null);
+    setDeals([]);
     present(truth.current);
   }, []);
 
@@ -226,5 +285,5 @@ export function useStage(view: GameView, refs: Refs): Stage {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, active, presented]);
 
-  return { presented, active, overlay, covered, flush };
+  return { presented, active, overlay, deals, covered, flush };
 }

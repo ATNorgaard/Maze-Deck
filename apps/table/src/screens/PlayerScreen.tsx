@@ -9,6 +9,7 @@ import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useStage } from '../stage/useStage';
+import { useTicking } from '../stage/useTicking';
 import { useFittingSize } from '../useFittingSize';
 
 interface Props {
@@ -51,8 +52,11 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   // Same split as the GM's board: `view` decides, `shown` is drawn.
   const riverRef = React.useRef<HTMLDivElement>(null);
   const discardRef = React.useRef<HTMLDivElement>(null);
-  const stage = useStage(view, { riverRef, discardRef });
+  const deckRef = React.useRef<HTMLDivElement>(null);
+  const stage = useStage(view, { riverRef, discardRef, deckRef });
   const shown = stage.presented;
+  const deckCount = useTicking(shown.deckCount);
+  const discardCount = useTicking(shown.discardCount);
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
 
   // The same check the server will run. Here it only decides whether a
@@ -121,10 +125,12 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       </div>
 
       <div className="t-piles">
-        <DeckPile count={shown.deckCount} size="sm" />
-        <div ref={discardRef}>
+        <div ref={deckRef}>
+          <DeckPile count={deckCount} size="sm" />
+        </div>
+        <div ref={discardRef} className="t-drop" key={shown.discardCount}>
           <DiscardPile
-            count={shown.discardCount}
+            count={discardCount}
             size="sm"
             {...(shown.discardTop ? { top: shown.discardTop } : {})}
           />
@@ -215,7 +221,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       {/* Outside ScaleToFit on purpose: the overlay is position: fixed,
           and a transformed ancestor would make it fixed to the wrong
           thing. */}
-      <StageOverlay overlay={stage.overlay} size={riverSize} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} size={riverSize} />
 
       {myChoice && pending?.kind === 'choice' ? (
         <Modal label="Your decision">

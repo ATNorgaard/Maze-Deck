@@ -21,6 +21,8 @@ export const MOTION = {
   fly: 640,
   deal: 420,
   dealStagger: 110,
+  /** How high a dealt card lifts off the table mid-flight, in px. */
+  dealLift: 18,
   drop: 260,
   pulse: 900,
   pop: 360,

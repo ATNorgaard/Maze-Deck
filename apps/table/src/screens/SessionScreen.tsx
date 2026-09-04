@@ -14,6 +14,7 @@ import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useStage } from '../stage/useStage';
+import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import { useFittingSize } from '../useFittingSize';
 
@@ -72,8 +73,11 @@ export function SessionScreen({
   // `view` feeds the controls and the modals, `shown` feeds the river,
   // the piles, the tracks and the signpost, and lags by whatever beat is
   // still playing. Any input drops the queue first.
-  const stage = useStage(view, { riverRef, discardRef });
+  const deckRef = React.useRef<HTMLDivElement>(null);
+  const stage = useStage(view, { riverRef, discardRef, deckRef });
   const shown = stage.presented;
+  const deckCount = useTicking(shown.deckCount);
+  const discardCount = useTicking(shown.discardCount);
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
 
   const a = availableFor(view);
@@ -108,7 +112,7 @@ export function SessionScreen({
             {runName} <span className="t-panel__aside">DC {view.rules.mazeDc}</span>
           </h2>
           <p className="t-note">
-            {biome.name} · Round {shown.round} · {shown.deckCount} cards left
+            {biome.name} · Round {shown.round} · {deckCount} cards left
           </p>
           {hostCode ? (
             <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
@@ -217,10 +221,14 @@ export function SessionScreen({
         </div>
 
         <div className="t-piles">
-          <DeckPile count={shown.deckCount} size="sm" />
-          <div ref={discardRef}>
+          <div ref={deckRef}>
+            <DeckPile count={deckCount} size="sm" />
+          </div>
+          {/* Keyed on the count so a new top card remounts the wrapper
+              and its drop plays again. */}
+          <div ref={discardRef} className="t-drop" key={shown.discardCount}>
             <DiscardPile
-              count={shown.discardCount}
+              count={discardCount}
               size="sm"
               {...(shown.discardTop ? { top: shown.discardTop } : {})}
             />
@@ -284,7 +292,7 @@ export function SessionScreen({
         <EventLog log={view.log} />
       </div>
 
-      <StageOverlay overlay={stage.overlay} size={riverSize} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} size={riverSize} />
 
       {view.phase === 'check' && pending?.kind === 'check' ? (
         <Modal label="A roll is on the table">

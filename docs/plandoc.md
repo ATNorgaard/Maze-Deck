@@ -46,7 +46,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | # | Phase | Status |
 |---|---|---|
 | 1 | The choreographer — view diff → beat queue, motion tokens, reduced motion | **done** — `feel/1` |
-| 2 | The deck deals — refills fly from the deck pile, counts tick | planned |
+| 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2` |
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | planned |
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | planned |
 | 5 | The turn baton — highlight slides, action bar rises, phone pulse | planned |
@@ -172,3 +172,50 @@ mask at ~520ms; the server advanced at ~2000ms and the overlay flew for
 flight is the server's 2s, which Phase 4 retunes.
 
 **Commit:** see `git log --grep feel/1`.
+
+### feel/2 — the deck deals
+
+**Changed.** The `deal` beat now has a body: for each slot owed a card, a
+face-down card is measured off the deck pile's own top card and flown to the
+slot — `.t-deal` in `StageOverlay`, driven by custom properties (`--dx`,
+`--dy`, `--s`, `--ms`, `--lift`) so one stylesheet rule serves every flight.
+The outer element travels on the overshoot curve, the inner one lifts and
+comes down (the arc). Flights are staggered by `dealStagger` and the beat
+lasts until the last one lands; the dealt cards are removed as the slots
+underneath show their own, same place and size, so nothing is seen to
+change. The pile grows from the deck's `sm` to the river's size on the way.
+`useTicking` makes both pile counts step one unit at a time (capped at
+420ms for a reshuffle). The discard wrapper is keyed on its count, so a new
+top card remounts it and `.t-drop` plays. The `discard` beat (a forge, a
+sweep) now holds the queue for the drop and applies its state on the first
+frame, like the tracks.
+
+**Broke / retried.**
+- **Vite served a hybrid module.** The patch wrote `SessionScreen.tsx`
+  twice in one script. Vite picked up the first write and missed the second,
+  so the served file had the deck ref but not the pile markup: no `.t-drop`
+  in the DOM, no dealt cards, while `curl` of the module showed only part of
+  the change. Exactly the trap `STATUS.md` records. Fixed by stopping the
+  server, deleting `node_modules/.vite`, and starting it again. Lesson kept:
+  after a scripted edit, `curl` the served module and grep for the *last*
+  thing you wrote, not the first.
+- **The browser pane is hidden, and a hidden page renders no frames.** CSS
+  transitions and keyframes freeze mid-way (a card sat at opacity 0 after
+  its mask lifted and looked like a bug), and timers throttle to ~1s while
+  the tab is backgrounded, which stretched every beat. None of it is the
+  stage's doing. The stage's *logic* is verified through a
+  `MutationObserver` that records overlay elements as they mount, with their
+  custom properties and attached animations; the *look* of the motion is not
+  verifiable in this environment and is left to the author to eyeball on the
+  dev server or the deployed build.
+- Two verification cycles drew Obstacles, which settle and deal nothing;
+  the third drew the third Obstacle and jammed the river, which the diff
+  handled (three slots masked, one deal of three) but the stale module hid.
+
+**Verified** (after the restart, observer log): Forge success → `drop+`
+with `tDrop`; pick → `fly+`, slot masked; server advance → `fly-` and a
+second `drop+` as the card landed; `deal+` with `dx=-83.5 dy=-265.9 s=1
+delay=0ms anims=tDealTravel` carrying a card back; 433ms later `deal-` and
+the mask cleared. Counts ticked 12→11 and 14→15.
+
+**Commit:** `git log --grep feel/2`.

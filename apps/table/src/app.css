@@ -403,6 +403,48 @@ html, body, #root {
 
 .t-flip__face--front { transform: rotateY(180deg); }
 
+/* ---------------- the deal ----------------
+   A card on its way from the deck pile to a slot. Fixed at the pile's
+   top card and driven entirely by custom properties the stage sets:
+   --dx/--dy for the travel, --s for the growth from the pile's size to
+   the river's, --ms for the duration. The outer element travels with
+   the overshoot curve, so it lands a hair past the slot and settles;
+   the inner one lifts and comes down again, which is the arc. */
+.t-deal {
+  position: fixed;
+  z-index: 39;
+  pointer-events: none;
+  transform-origin: top left;
+  animation: tDealTravel var(--ms) cubic-bezier(.34, 1.45, .64, 1) both;
+}
+
+.t-deal__lift {
+  width: 100%;
+  height: 100%;
+  animation: tDealLift var(--ms) ease-in-out both;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .45));
+}
+
+@keyframes tDealTravel {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(var(--dx), var(--dy)) scale(var(--s)); }
+}
+
+@keyframes tDealLift {
+  0%   { transform: translateY(0); }
+  45%  { transform: translateY(calc(-1 * var(--lift))); }
+  100% { transform: translateY(0); }
+}
+
+/* A card landing on the discard: a touch too big, then down. The
+   wrapper is keyed on the count so each new top card replays it. */
+.t-drop { animation: tDrop 260ms cubic-bezier(.34, 1.45, .64, 1) both; }
+
+@keyframes tDrop {
+  from { transform: translateY(-6px) scale(1.06); }
+  to   { transform: none; }
+}
+
 /* ---------------- the scene ----------------
    The line drawn from the campaign's table for whatever card is in
    front of the party. GM-facing: in M4 this must not reach a player's
@@ -775,7 +817,7 @@ html, body, #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-scrim, .t-modal, .t-track[data-pulse] { animation: none; }
+  .t-scrim, .t-modal, .t-track[data-pulse], .t-deal, .t-deal__lift, .t-drop { animation: none; }
   .t-fly, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }
 }

@@ -1,11 +1,44 @@
+import type * as React from 'react';
 import { CardBack, DeckCard } from '@maze-deck/ui';
 import type { CardSize } from '@maze-deck/ui';
 import { MOTION } from './motion';
-import type { Overlay } from './useStage';
+import type { Deal, Overlay } from './useStage';
 
 interface Props {
   overlay: Overlay | null;
+  deals: Deal[];
   size: CardSize;
+}
+
+/**
+ * A card being dealt. The outer element travels (with the overshoot
+ * easing, so it lands a hair past the slot and settles back); the
+ * inner one lifts and comes down again on the way, which is what turns
+ * a slide into an arc. Both are keyframes driven by custom properties,
+ * so one stylesheet rule serves every flight.
+ */
+function DealtCard({ deal }: { deal: Deal }) {
+  const style = {
+    left: deal.rect.left,
+    top: deal.rect.top,
+    width: deal.rect.width,
+    height: deal.rect.height,
+    '--dx': `${deal.dx}px`,
+    '--dy': `${deal.dy}px`,
+    '--s': deal.s,
+    '--ms': `${MOTION.deal}ms`,
+    '--lift': `${MOTION.dealLift}px`,
+    animationDelay: `${deal.delay}ms`,
+  } as React.CSSProperties;
+  return (
+    <div className="t-deal" aria-hidden="true" style={style}>
+      <div className="t-deal__lift" style={{ animationDelay: `${deal.delay}ms` }}>
+        <div style={{ width: deal.box.w, height: deal.box.h, transform: `scale(${deal.scale})`, transformOrigin: 'top left' }}>
+          <CardBack size={deal.size} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -19,8 +52,16 @@ interface Props {
  * down to match what an ancestor (ScaleToFit on a phone) did to the
  * real one.
  */
-export function StageOverlay({ overlay, size }: Props) {
-  if (!overlay) return null;
+export function StageOverlay({ overlay, deals, size }: Props) {
+  return (
+    <>
+      {deals.map((d) => <DealtCard key={d.slot} deal={d} />)}
+      {overlay ? <HeldCard overlay={overlay} size={size} /> : null}
+    </>
+  );
+}
+
+function HeldCard({ overlay, size }: { overlay: Overlay; size: CardSize }) {
   const { rect, box, scale, turned, flight } = overlay;
   const flying = flight !== null;
 
