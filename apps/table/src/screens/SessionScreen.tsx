@@ -6,14 +6,14 @@ import { activeSeatOf, availableFor } from '@maze-deck/rules';
 import type {
   AbilityScore, ChoicePayload, GameAction, GameView, Phase,
 } from '@maze-deck/rules';
-import { CardFlight } from '../components/CardFlight';
-import type { FlightRequest } from '../components/CardFlight';
 import { CheckPanel } from '../components/CheckPanel';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
+import { StageOverlay } from '../stage/StageOverlay';
+import { useStage } from '../stage/useStage';
 import type { DrawnPrompt } from '../tables';
 import { useFittingSize } from '../useFittingSize';
 
@@ -64,68 +64,26 @@ export function SessionScreen({
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
   const [dcNudge, setDcNudge] = React.useState(0);
-  const [covered, setCovered] = React.useState<number | null>(null);
-  const [handFlight, setHandFlight] = React.useState<FlightRequest | null>(null);
   const riverRef = React.useRef<HTMLDivElement>(null);
   const discardRef = React.useRef<HTMLDivElement>(null);
   const riverSize = useFittingSize(riverRef);
 
+  // The truth decides what may be done; the stage decides what is drawn.
+  // `view` feeds the controls and the modals, `shown` feeds the river,
+  // the piles, the tracks and the signpost, and lags by whatever beat is
+  // still playing. Any input drops the queue first.
+  const stage = useStage(view, { riverRef, discardRef });
+  const shown = stage.presented;
+  const act = (action: GameAction) => { stage.flush(); dispatch(action); };
+
   const a = availableFor(view);
   const seat = activeSeatOf(view);
-  const activeIdx = view.turn % Math.max(view.order.length, 1);
+  const activeIdx = shown.turn % Math.max(shown.order.length, 1);
   const pending = view.pending;
-  const revealed = a.revealed;
 
-  const revealSlot = revealed?.slot;
-  const revealCategory = revealed?.category;
-  const revealLeaves = revealed?.leavesRiver;
-
-  // The engine's own reveal: turn the card over, then send it on — but
-  // only if it is actually leaving.
-  const revealFlight = React.useMemo<FlightRequest | null>(() => {
-    if (revealSlot === undefined || revealCategory === undefined) return null;
-    return {
-      slot: revealSlot,
-      category: revealCategory,
-      flip: true,
-      fly: revealLeaves === true,
-      // The session advances the reveal on its own clock — a client
-      // cannot, and must not, because two of them would double-resolve
-      // it. The animation just plays out under that timer.
-      onDone: () => {},
-    };
-  }, [revealSlot, revealCategory, revealLeaves]);
-
-  const flight = handFlight ?? revealFlight;
-
-  /**
-   * A Wanderer is turned over on the reveal but does not leave until
-   * the GM says they do not linger, so its trip to the discard is
-   * staged here rather than as part of the reveal.
-   */
-  const onResolveChoice = (payload: ChoicePayload) => {
-    const choice = pending?.kind === 'choice' ? pending.choice : null;
-    if (
-      payload.kind === 'wanderer-stays' && !payload.stays
-      && choice?.kind === 'wanderer-stays'
-    ) {
-      const leaving = view.river[choice.slot]?.category;
-      if (leaving) {
-        setHandFlight({
-          slot: choice.slot,
-          category: leaving,
-          flip: false,
-          fly: true,
-          onDone: () => {
-            setHandFlight(null);
-            dispatch({ type: 'RESOLVE_CHOICE', payload });
-          },
-        });
-        return;
-      }
-    }
-    dispatch({ type: 'RESOLVE_CHOICE', payload });
-  };
+  // A Wanderer that moves on is a depart beat like any other: the
+  // choice modal closes on the truth and the card flies on the stage.
+  const onResolveChoice = (payload: ChoicePayload) => act({ type: 'RESOLVE_CHOICE', payload });
 
   // R6: the table entry suggests the check, the GM overrides before the
   // roll. Adopting it here rather than forcing a choice from cold.
@@ -139,8 +97,8 @@ export function SessionScreen({
 
   const obstacleDc = view.rules.mazeDc + dcNudge;
 
-  const pulse = revealCategory === 'clear-path' ? 'escape'
-    : revealCategory === 'monster' ? 'threat' : null;
+  const pulse = stage.active?.kind === 'progress' ? 'escape'
+    : stage.active?.kind === 'strike' ? 'threat' : null;
 
   return (
     <div className="t-board">
@@ -150,7 +108,7 @@ export function SessionScreen({
             {runName} <span className="t-panel__aside">DC {view.rules.mazeDc}</span>
           </h2>
           <p className="t-note">
-            {biome.name} · Round {view.round} · {view.deckCount} cards left
+            {biome.name} · Round {shown.round} · {shown.deckCount} cards left
           </p>
           {hostCode ? (
             <p className="t-note" style={{ marginTop: 'calc(2 * var(--md-u))' }}>
@@ -162,19 +120,19 @@ export function SessionScreen({
         <div className="t-panel">
           <h2 className="t-panel__title">Initiative</h2>
           <div className="t-seats">
-            {view.order.map((id, i) => {
-              const s = view.seats.find((x) => x.id === id);
+            {shown.order.map((id, i) => {
+              const s = shown.seats.find((x) => x.id === id);
               if (!s) return null;
               return (
                 <PlayerSeat
                   key={id}
                   name={s.name}
                   order={i + 1}
-                  active={i === activeIdx && view.phase !== 'over'}
+                  active={i === activeIdx && shown.phase !== 'over'}
                   // Condensed, the seat's detail line is hidden and this is
                   // the only trace left of a Boost Morale. The circle wears it.
-                  {...(view.advantage.includes(id) ? { className: 't-seat--boosted' } : {})}
-                  detail={[s.cls, view.advantage.includes(id) ? 'advantage' : null]
+                  {...(shown.advantage.includes(id) ? { className: 't-seat--boosted' } : {})}
+                  detail={[s.cls, shown.advantage.includes(id) ? 'advantage' : null]
                     .filter(Boolean).join(' · ')}
                 />
               );
@@ -197,7 +155,7 @@ export function SessionScreen({
             {view.phase !== 'over' ? (
               <button
                 type="button" className="t-btn t-btn--danger"
-                onClick={() => dispatch({ type: 'END_RUN' })}
+                onClick={() => act({ type: 'END_RUN' })}
               >
                 End the run
               </button>
@@ -212,10 +170,10 @@ export function SessionScreen({
       <div className="t-col t-col--board">
         <div className="t-tracks">
           <div className="t-track" data-pulse={pulse === 'escape' || undefined}>
-            <ScoreTrack value={view.progress} total={view.rules.escapeTarget} />
+            <ScoreTrack value={shown.progress} total={shown.rules.escapeTarget} />
           </div>
           <div className="t-track" data-pulse={pulse === 'threat' || undefined}>
-            <ScoreTrack value={view.strikes} total={view.rules.encounterAt} variant="threat" />
+            <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
           </div>
         </div>
 
@@ -226,10 +184,10 @@ export function SessionScreen({
         ) : null}
 
         <div className="t-phase">
-          <h2 className="t-phase__title">{PHASE_TITLE[view.phase]}</h2>
+          <h2 className="t-phase__title">{PHASE_TITLE[shown.phase]}</h2>
           <p className="t-phase__note">
-            {PHASE_NOTE[view.phase]}
-            {seat && view.phase !== 'over' ? ` — ${seat.name}` : ''}
+            {PHASE_NOTE[shown.phase]}
+            {seat && shown.phase !== 'over' ? ` — ${seat.name}` : ''}
           </p>
           {prompt ? (
             <p className="t-phase__scene">
@@ -242,29 +200,29 @@ export function SessionScreen({
         <div
           className="t-river"
           ref={riverRef}
-          data-covered={covered === null ? undefined : String(covered)}
+          data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
           data-pickable={a.pickSlots.length ? true : undefined}
         >
           <River
             size={riverSize}
-            slots={view.river.map((s) => (
+            slots={shown.river.map((s) => (
               s.filled
                 ? { category: s.category ?? 'clear-path', faceDown: !s.faceUp }
                 : { category: null, faceDown: false }
             ))}
             {...(a.pickSlots.length
-              ? { onPick: (i: number) => dispatch({ type: 'PICK_SLOT', index: i }) }
+              ? { onPick: (i: number) => act({ type: 'PICK_SLOT', index: i }) }
               : {})}
           />
         </div>
 
         <div className="t-piles">
-          <DeckPile count={view.deckCount} size="sm" />
+          <DeckPile count={shown.deckCount} size="sm" />
           <div ref={discardRef}>
             <DiscardPile
-              count={view.discardCount}
+              count={shown.discardCount}
               size="sm"
-              {...(view.discardTop ? { top: view.discardTop } : {})}
+              {...(shown.discardTop ? { top: shown.discardTop } : {})}
             />
           </div>
         </div>
@@ -279,7 +237,7 @@ export function SessionScreen({
                 <ActionBar
                   abilities={view.rules.abilities}
                   showDc={false}
-                  onUse={(ability) => dispatch({ type: 'USE_ABILITY', ability })}
+                  onUse={(ability) => act({ type: 'USE_ABILITY', ability })}
                 />
               </MazeDeckProvider>
               {a.obstacleSlots.length ? (
@@ -308,7 +266,7 @@ export function SessionScreen({
                   {a.obstacleSlots.map((i) => (
                     <button
                       key={i} type="button" className="t-btn"
-                      onClick={() => dispatch({
+                      onClick={() => act({
                         type: 'ATTEMPT_OBSTACLE', slot: i, score, dc: obstacleDc,
                       })}
                     >
@@ -326,13 +284,7 @@ export function SessionScreen({
         <EventLog log={view.log} />
       </div>
 
-      <CardFlight
-        request={flight}
-        size={riverSize}
-        riverRef={riverRef}
-        discardRef={discardRef}
-        onOccupy={setCovered}
-      />
+      <StageOverlay overlay={stage.overlay} size={riverSize} />
 
       {view.phase === 'check' && pending?.kind === 'check' ? (
         <Modal label="A roll is on the table">
@@ -353,9 +305,7 @@ export function SessionScreen({
         </Modal>
       ) : null}
 
-      {/* Stand the modal down while the Wanderer is on its way out, so
-          the card being discarded is actually visible leaving. */}
-      {view.phase === 'choice' && pending?.kind === 'choice' && !handFlight ? (
+      {view.phase === 'choice' && pending?.kind === 'choice' ? (
         <Modal label="A decision is owed">
           <ChoicePanel
             view={view}

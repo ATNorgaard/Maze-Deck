@@ -7,6 +7,8 @@ import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
+import { StageOverlay } from '../stage/StageOverlay';
+import { useStage } from '../stage/useStage';
 import { useFittingSize } from '../useFittingSize';
 
 interface Props {
@@ -46,6 +48,13 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   const boardRef = React.useRef<HTMLDivElement>(null);
   const riverSize = useFittingSize(boardRef);
 
+  // Same split as the GM's board: `view` decides, `shown` is drawn.
+  const riverRef = React.useRef<HTMLDivElement>(null);
+  const discardRef = React.useRef<HTMLDivElement>(null);
+  const stage = useStage(view, { riverRef, discardRef });
+  const shown = stage.presented;
+  const act = (action: GameAction) => { stage.flush(); dispatch(action); };
+
   // The same check the server will run. Here it only decides whether a
   // control is worth offering; the server's answer is the one that counts.
   const mayPick = (index: number) =>
@@ -65,7 +74,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       <div className="t-panel">
         <h2 className="t-panel__title">
           {seat?.name ?? 'Watching'}
-          <span className="t-panel__aside">{biome.name} · Round {view.round}</span>
+          <span className="t-panel__aside">{biome.name} · Round {shown.round}</span>
         </h2>
         <p className="t-note">
           {view.phase === 'over'
@@ -81,34 +90,45 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       </div>
 
       <div className="t-tracks">
-        <ScoreTrack value={view.progress} total={view.rules.escapeTarget} />
-        <ScoreTrack value={view.strikes} total={view.rules.encounterAt} variant="threat" />
+        <div className="t-track" data-pulse={stage.active?.kind === 'progress' || undefined}>
+          <ScoreTrack value={shown.progress} total={shown.rules.escapeTarget} />
+        </div>
+        <div className="t-track" data-pulse={stage.active?.kind === 'strike' || undefined}>
+          <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
+        </div>
       </div>
 
       {/* River and piles scale as one block, so a deck pile never ends up
           drawn larger than the paths the player is choosing between. */}
       <ScaleToFit className="t-play__fit">
-      <div className="t-river" data-pickable={a.pickSlots.length && myTurn ? true : undefined}>
+      <div
+        className="t-river"
+        ref={riverRef}
+        data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
+        data-pickable={a.pickSlots.length && myTurn ? true : undefined}
+      >
         <River
           size={riverSize}
-          slots={view.river.map((s) => (
+          slots={shown.river.map((s) => (
             s.filled
               ? { category: s.category ?? 'clear-path', faceDown: !s.faceUp }
               : { category: null, faceDown: false }
           ))}
           {...(myTurn && a.pickSlots.length
-            ? { onPick: (i: number) => { if (mayPick(i)) dispatch({ type: 'PICK_SLOT', index: i }); } }
+            ? { onPick: (i: number) => { if (mayPick(i)) act({ type: 'PICK_SLOT', index: i }); } }
             : {})}
         />
       </div>
 
       <div className="t-piles">
-        <DeckPile count={view.deckCount} size="sm" />
-        <DiscardPile
-          count={view.discardCount}
-          size="sm"
-          {...(view.discardTop ? { top: view.discardTop } : {})}
-        />
+        <DeckPile count={shown.deckCount} size="sm" />
+        <div ref={discardRef}>
+          <DiscardPile
+            count={shown.discardCount}
+            size="sm"
+            {...(shown.discardTop ? { top: shown.discardTop } : {})}
+          />
+        </div>
       </div>
       </ScaleToFit>
 
@@ -142,7 +162,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
           <ActionBar
             abilities={view.rules.abilities}
             showDc={false}
-            onUse={(ability) => dispatch({ type: 'USE_ABILITY', ability })}
+            onUse={(ability) => act({ type: 'USE_ABILITY', ability })}
           />
           {a.obstacleSlots.length ? (
             <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
@@ -192,13 +212,18 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       </div>
       </div>
 
+      {/* Outside ScaleToFit on purpose: the overlay is position: fixed,
+          and a transformed ancestor would make it fixed to the wrong
+          thing. */}
+      <StageOverlay overlay={stage.overlay} size={riverSize} />
+
       {myChoice && pending?.kind === 'choice' ? (
         <Modal label="Your decision">
           <ChoicePanel
             view={view}
             choice={pending.choice}
             onResolve={(payload: ChoicePayload) =>
-              dispatch({ type: 'RESOLVE_CHOICE', payload })}
+              act({ type: 'RESOLVE_CHOICE', payload })}
           />
         </Modal>
       ) : null}

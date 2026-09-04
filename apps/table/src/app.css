@@ -310,17 +310,18 @@ html, body, #root {
 
 .t-river { display: flex; justify-content: center; }
 
-/* The overlay in CardFlight stands in front of one slot for the whole
-   reveal, so that slot is masked while it does. These select the
-   library's own markup — read-only, and the one place the app knows
+/* The stage's overlay stands in front of a slot while a card is turned,
+   held or sent away, and a slot owed a deal is masked until it lands.
+   `data-covered` is a space-separated list of slot indices. These select
+   the library's own markup — read-only, and the one place the app knows
    anything about River's DOM. */
 .t-river .md-river__slot article {
   transition: opacity 120ms ease, transform 200ms cubic-bezier(.2,.7,.3,1),
               box-shadow 200ms ease;
 }
-.t-river[data-covered='0'] .md-river__slot:nth-child(1) article,
-.t-river[data-covered='1'] .md-river__slot:nth-child(2) article,
-.t-river[data-covered='2'] .md-river__slot:nth-child(3) article { opacity: 0; }
+.t-river[data-covered~='0'] .md-river__slot:nth-child(1) article,
+.t-river[data-covered~='1'] .md-river__slot:nth-child(2) article,
+.t-river[data-covered~='2'] .md-river__slot:nth-child(3) article { opacity: 0; }
 
 /* A path you can actually take lifts under the cursor and catches a
    little light. Only while the pick is live — a card you cannot choose
