@@ -216,7 +216,9 @@ export function useStage(view: GameView, refs: Refs): Stage {
       case 'turn':
         // The held card is released once the reveal is really over.
         if (ov.current && !ov.current.flight && step.after.phase !== 'reveal') setOverlay(null);
-        return 0;
+        // The turn passing is the baton's slide; the new seat, the new
+        // signpost and the rest of the truth land as it arrives.
+        return beat.kind === 'turn' && beat.from !== beat.to ? MOTION.baton : 0;
 
     }
   };

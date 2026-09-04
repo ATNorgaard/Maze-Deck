@@ -49,7 +49,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 2 | The deck deals — refills fly from the deck pile, counts tick | **done** — `feel/2` |
 | 4 | Impact on the reveal — flare, pip pop, threat crack + shake, obstacle thud | **done** — `feel/4` |
 | 3 | The roll — the d20 as an object; the check in a tray, not a modal | **done** — `feel/3` |
-| 5 | The turn baton — highlight slides, action bar rises, phone pulse | planned |
+| 5 | The turn baton — highlight slides, action bar rises, phone pulse | **done** — `feel/5` |
 | 7 | Sound — synthesised, one toggle, off by default | planned |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | planned |
 | 8 | The ending — a flourish for through, the light going out for lost | planned |
@@ -293,3 +293,38 @@ modifier, `tLand@160` on the total, `data-verdict=good` and "Success";
 "Let it land" cleared the tray.
 
 **Commit:** `git log --grep feel/3`.
+
+### feel/5 — the turn baton
+
+**Changed.** `components/SeatBaton.tsx` is new: a glow ring positioned over
+one seat by its layout box, transitioning `transform` only, that slides to
+the next seat when the turn passes. The `turn` beat now lasts `baton`
+(320ms) when the seat actually changes, and applies its view — the new
+active seat, the new signpost line — as it ends, so the ring arrives first
+and the seat's own highlight lands on it. Both the board's initiative list
+and the phone's order list carry a baton; the phone's list now reads from
+the presented view too, so it moves in step with the board. The action bar
+is keyed on the turn and rises (`t-rise`) for each player rather than
+sitting there from the last one; a player's own action panel does the same.
+When the turn is a phone's own, its header pulses gold and the device
+vibrates a short double tap (`navigator.vibrate`, guarded).
+
+**Design notes.**
+- The bar rises the moment the truth says `act`, which is *before* the
+  baton has slid — the constraint that a fast GM is never made to wait
+  wins over strict sequencing here. The ring and the highlight still land
+  together, which is the part the eye reads.
+- The ring sits under the seats (`z-index` 0 / 1) so it reads as a rim of
+  light around the box rather than a plate on top of it. In the condensed
+  layout, where seats are transparent circles, it shows as a soft rounded
+  glow behind circle and name.
+
+**Broke / retried.** Nothing. The first verification cycle landed on a
+Wanderer choice with no turn change; resolving it produced the turn.
+
+**Verified** (observer log): `bar+ t-actions__bar t-rise anim=tRise`, then
+`baton translate(0px, 0px) activeSeat=3` — the ring moved while seat 3
+still held the highlight — then `seat-active idx=0 name=Odalis` as the
+beat ended.
+
+**Commit:** `git log --grep feel/5`.

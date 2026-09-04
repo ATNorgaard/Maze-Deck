@@ -884,6 +884,8 @@ html, body, #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .t-baton { transition: none; }
+  .t-rise, .t-play .t-panel[data-yours] { animation: none; }
   .t-tray, .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
@@ -1032,6 +1034,31 @@ html, body, #root {
 .t-roll__vs { font-size: calc(4 * var(--md-u)); color: var(--md-parchment-400); }
 .t-roll--good { color: var(--md-cat-obst-300); }
 .t-roll--bad { color: var(--md-cat-mons-300); }
+
+/* ---------------- the baton ----------------
+   The turn, as a thing that moves: a glow ring under the active seat
+   that slides to the next one. Only `transform` transitions; the seats
+   sit above it so the ring shows as a rim of light around the box. */
+.t-seats { position: relative; }
+.t-seats .md-seat { position: relative; z-index: 1; }
+.t-baton {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  border-radius: calc(1.6 * var(--md-u));
+  box-shadow: 0 0 0 2px var(--md-cat-path-700), 0 0 22px 4px var(--md-cat-path-glow);
+  transition: transform 320ms cubic-bezier(.2, .7, .3, 1);
+  pointer-events: none;
+}
+
+/* The action bar, and a player's own action panel, rise in for each
+   turn rather than sitting there from the last one. */
+.t-rise { animation: tRise 260ms cubic-bezier(.2, .7, .3, 1) both; }
+
+/* The one moment a phone has to be felt: the player's own header pulses
+   gold when the turn is theirs. */
+.t-play .t-panel[data-yours] { --t-pulse: var(--md-cat-path-glow); animation: tPulse 900ms ease-out; }
 
 /* ---------------- the roll, as an object ----------------
    The die tumbles (DieRoll cycles its face; this turns it), stops, and

@@ -10,6 +10,7 @@ import { CheckPanel } from '../components/CheckPanel';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
+import { SeatBaton } from '../components/SeatBaton';
 import type { Biome } from '../biomes';
 import { SCORES } from '../campaign';
 import { StageOverlay } from '../stage/StageOverlay';
@@ -105,6 +106,12 @@ export function SessionScreen({
     : stage.active?.kind === 'strike' ? 'threat' : null;
   const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
 
+  // Where the baton is going: the seat the turn is passing to while the
+  // beat plays, otherwise whoever is acting in the presented view.
+  const seatsRef = React.useRef<HTMLDivElement>(null);
+  const batonSeat = stage.active?.kind === 'turn' ? stage.active.to : shown.order[activeIdx] ?? null;
+  const batonIndex = shown.phase === 'over' || batonSeat === null ? -1 : shown.order.indexOf(batonSeat);
+
   return (
     <div className="t-board" data-shake={pulse === 'threat' || undefined}>
       <div className="t-col t-col--side">
@@ -124,7 +131,8 @@ export function SessionScreen({
 
         <div className="t-panel">
           <h2 className="t-panel__title">Initiative</h2>
-          <div className="t-seats">
+          <div className="t-seats" ref={seatsRef}>
+            <SeatBaton containerRef={seatsRef} index={batonIndex} />
             {shown.order.map((id, i) => {
               const s = shown.seats.find((x) => x.id === id);
               if (!s) return null;
@@ -265,7 +273,9 @@ export function SessionScreen({
               {/* Transparent: the page behind it carries the setting's
                   light, and a solid ink-900 block would sit on it as a
                   visible rectangle. */}
-              <MazeDeckProvider size="lg" className="t-actions__bar" background="transparent">
+              {/* Keyed on the turn, so the bar rises afresh for each
+                  player rather than sitting there from the last one. */}
+              <MazeDeckProvider key={view.turn} size="lg" className="t-actions__bar t-rise" background="transparent">
                 <ActionBar
                   abilities={view.rules.abilities}
                   showDc={false}

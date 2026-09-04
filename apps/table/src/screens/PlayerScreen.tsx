@@ -5,6 +5,7 @@ import * as React from 'react';
 import type { Biome } from '../biomes';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { DieRoll } from '../components/DieRoll';
+import { SeatBaton } from '../components/SeatBaton';
 import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { ScaleToFit } from '../components/ScaleToFit';
@@ -59,6 +60,19 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   const deckCount = useTicking(shown.deckCount);
   const discardCount = useTicking(shown.discardCount);
   const settling = stage.active?.kind === 'settle' ? stage.active.slot : null;
+
+  const seatsRef = React.useRef<HTMLDivElement>(null);
+  const shownActive = shown.order[shown.turn % Math.max(shown.order.length, 1)] ?? null;
+  const batonSeat = stage.active?.kind === 'turn' ? stage.active.to : shownActive;
+  const batonIndex = shown.phase === 'over' || batonSeat === null ? -1 : shown.order.indexOf(batonSeat);
+
+  // "Your turn" is the one moment a phone in a pocket has to be felt.
+  const yours = myTurn && view.phase === 'act';
+  React.useEffect(() => {
+    if (yours && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate([40, 60, 40]);
+    }
+  }, [yours]);
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
 
   // The same check the server will run. Here it only decides whether a
@@ -77,7 +91,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
   return (
     <div className="t-play" data-shake={stage.active?.kind === 'strike' || undefined}>
       <div className="t-play__board" ref={boardRef}>
-      <div className="t-panel">
+      <div className="t-panel" data-yours={yours || undefined}>
         <h2 className="t-panel__title">
           {seat?.name ?? 'Watching'}
           <span className="t-panel__aside">{biome.name} · Round {shown.round}</span>
@@ -161,7 +175,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       ) : null}
 
       {view.phase === 'act' && myTurn ? (
-        <div className="t-panel">
+        <div className="t-panel t-rise" key={view.turn}>
           <h2 className="t-panel__title">Your action</h2>
           <ActionBar
             abilities={view.rules.abilities}
@@ -189,19 +203,20 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       <div className="t-play__aside">
       <div className="t-panel">
         <h2 className="t-panel__title">Order</h2>
-        <div className="t-seats">
-          {view.order.map((id, i) => {
-            const s = view.seats.find((x) => x.id === id);
+        <div className="t-seats" ref={seatsRef}>
+          <SeatBaton containerRef={seatsRef} index={batonIndex} />
+          {shown.order.map((id, i) => {
+            const s = shown.seats.find((x) => x.id === id);
             if (!s) return null;
             return (
               <PlayerSeat
                 key={id}
                 name={s.name}
                 order={i + 1}
-                active={s.id === active?.id && view.phase !== 'over'}
+                active={s.id === shownActive && shown.phase !== 'over'}
                 detail={[
                   s.id === me ? 'you' : s.cls,
-                  view.advantage.includes(id) ? 'advantage' : null,
+                  shown.advantage.includes(id) ? 'advantage' : null,
                 ].filter(Boolean).join(' · ')}
               />
             );
