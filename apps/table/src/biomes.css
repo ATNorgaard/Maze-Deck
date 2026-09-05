@@ -12,6 +12,14 @@
    the palette to the dungeon's from tokens.css. The descendant
    selector catches both.
 
+   Each rule also names `.t-door[data-biome="…"]`: the campaign
+   screen's setting picker shows every biome at once as a tile, and
+   a tile wears its own palette inside a page that is wearing another.
+   The tile is not an `.md-root` — that would reset the unit — so the
+   tokens are set on the tile itself, where they beat what it would
+   inherit from the page. The dungeon needs a tile block of its own
+   for the same reason, since its palette is otherwise tokens.css.
+
    What a palette may move, and what it may not:
 
    - The GROUND (inks) and the PARCHMENT take the setting's cast:
@@ -34,8 +42,20 @@
   --t-biome-ground: var(--md-ink-900);
 }
 
+/* The dungeon's tile. Only what a tile paints; the values are
+   tokens.css as written. */
+.t-door[data-biome="dungeon"] {
+  --md-ink-900: #0A0F12;
+  --md-parchment-100: #F2EBDA;
+  --md-cat-path-500: #E3A445;
+  --md-cat-path-glow: rgba(227,164,69,0.40);
+  --md-cat-obst-500: #43917B;
+  --md-cat-mons-500: #A93343;
+}
+
 /* ---------- TOWER — dry stone, candle brass, dust --------------- */
-[data-biome="tower"] .md-root {
+[data-biome="tower"] .md-root,
+.t-door[data-biome="tower"] {
   --md-ink-900: #0E0D10;
   --md-ink-800: #161419;
   --md-ink-700: #201D24;
@@ -68,7 +88,8 @@
 }
 
 /* ---------- DEEP FOREST — green-black, canopy sun, lichen ------- */
-[data-biome="deep-forest"] .md-root {
+[data-biome="deep-forest"] .md-root,
+.t-door[data-biome="deep-forest"] {
   --md-ink-900: #080F0B;
   --md-ink-800: #0E1812;
   --md-ink-700: #152219;
@@ -111,7 +132,8 @@
 }
 
 /* ---------- DESERT — umber, sun, oxidised copper ---------------- */
-[data-biome="desert"] .md-root {
+[data-biome="desert"] .md-root,
+.t-door[data-biome="desert"] {
   --md-ink-900: #120F0A;
   --md-ink-800: #1B1710;
   --md-ink-700: #262017;
@@ -155,7 +177,8 @@
 }
 
 /* ---------- UNDERCITY — soot, gaslight, rust -------------------- */
-[data-biome="undercity"] .md-root {
+[data-biome="undercity"] .md-root,
+.t-door[data-biome="undercity"] {
   --md-ink-900: #0B0F0E;
   --md-ink-800: #121917;
   --md-ink-700: #1A2320;
@@ -188,7 +211,8 @@
 }
 
 /* ---------- FROZEN PASS — ink blue, snow, low winter sun -------- */
-[data-biome="frozen-pass"] .md-root {
+[data-biome="frozen-pass"] .md-root,
+.t-door[data-biome="frozen-pass"] {
   --md-ink-900: #070C14;
   --md-ink-800: #0D141E;
   --md-ink-700: #142030;

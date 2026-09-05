@@ -504,6 +504,28 @@ the same deck.
 Adding a setting is a file in `biomes/`, a line in `BIOMES`, and a palette
 block in `biomes.css`. Nothing else needs to know it exists.
 
+## The campaign screen is a threshold
+
+Redesigned 2026-09-05 from three sketched directions (a hero, a table of
+objects, a typographic ledger); the author chose the hero. The crossing's
+name is typed straight into a large title over the setting's own card-back
+motif and a pool of its light, with the one-line summary and the Start
+button under it. The setting is picked from a **strip of doors** — one
+tile per biome, each in its own palette, scroll-snapped, with arrows and
+faded edges that appear only once the strip overflows, so more settings
+can be added without the picker changing. The party is a ruled sheet; the
+dials keep their panel.
+
+Two things worth knowing:
+
+- **A door wears its own palette inside a page wearing another.** The
+  biomes.css rules now also match `.t-door[data-biome="…"]`, setting the
+  tokens on the tile itself so they beat what it inherits. The dungeon
+  needs its own tile block, since its palette is otherwise tokens.css.
+- `MazeField` is exported from `packages/ui` with a `fit="cover"` mode
+  that tiles at a fixed 24px instead of stretching the card's ratio. The
+  hero and the doors use it; cards are unchanged.
+
 ## Game feel — the table has beats now
 
 Eight phases, each one commit tagged `feel/N`, planned and logged in

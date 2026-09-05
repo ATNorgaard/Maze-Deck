@@ -757,22 +757,6 @@ html, body, #root {
    took the panel rules, which is why this screen ran full-bleed with
    its reference cards falling out the bottom. */
 
-.t-main {
-  display: grid;
-  /* 280px holds an md reference card (69 units of bleed) with room. */
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: calc(6 * var(--md-u));
-  align-items: start;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: calc(6 * var(--md-u)) calc(5 * var(--md-u));
-}
-
-@media (max-width: 1000px) {
-  .t-main { grid-template-columns: minmax(0, 1fr); }
-}
-
 .t-stack {
   display: flex;
   flex-direction: column;
@@ -780,10 +764,253 @@ html, body, #root {
   min-width: 0;
 }
 
-.t-stack--aside {
-  position: sticky;
-  top: calc(5 * var(--md-u));
+/* ---------------- the campaign screen ----------------
+   The threshold. The crossing's name is the biggest thing on the
+   page, over the setting's own motif and a pool of its light; the
+   setting is chosen by picking a door from a strip; the party is a
+   ruled sheet; the dials keep their panel. One column, 1280 wide. */
+
+.t-campaign {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 calc(5 * var(--md-u)) calc(10 * var(--md-u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(9 * var(--md-u));
+}
+
+.t-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(-5 * var(--md-u));
+  padding: calc(13 * var(--md-u)) calc(6 * var(--md-u)) calc(11 * var(--md-u));
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  text-align: center;
+  background: radial-gradient(
+    ellipse 55% 75% at 50% 100%,
+    color-mix(in srgb, var(--md-cat-path-500) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* The setting's card-back field, faint, fading out top and bottom so
+   the band has no edge. */
+.t-hero__field {
+  position: absolute;
+  inset: 0;
+  color: var(--md-cat-path-500);
+  opacity: .08;
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+}
+.t-hero__field .md-card__maze { color: inherit; opacity: 1; }
+
+.t-hero__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3.5 * var(--md-u));
+  max-width: 100%;
+}
+
+.t-hero__kicker {
+  display: flex;
+  align-items: center;
+  gap: calc(2.5 * var(--md-u));
+}
+
+.t-hero__campaign {
+  font-family: var(--md-font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--md-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--md-cat-path-300);
+}
+
+.t-hero__title {
+  font-family: var(--md-font-display);
+  font-size: clamp(30px, 4.4vw, 58px);
+  font-weight: 600;
+  letter-spacing: var(--md-track-title);
+  line-height: 1.1;
+  color: var(--md-parchment-100);
+}
+
+.t-hero__summary { margin: 0; font-size: 16px; color: var(--md-parchment-300); }
+.t-hero__dot { margin: 0 calc(2.5 * var(--md-u)); color: var(--md-cat-path-700); }
+
+.t-btn--lg { padding: calc(3 * var(--md-u)) calc(5.5 * var(--md-u)); font-size: 14px; }
+
+/* An input as wide as its text: the hidden sizer and the input share
+   one grid cell and inherit one font from the label around them. */
+.t-grow { display: inline-grid; max-width: 100%; }
+.t-grow > * { grid-area: 1 / 1; }
+.t-grow__sizer { visibility: hidden; white-space: pre; padding: 0 calc(1 * var(--md-u)); }
+.t-grow__input {
+  width: 100%;
+  min-width: 2ch;
+  margin: 0;
+  padding: 0 calc(1 * var(--md-u));
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--md-ink-600);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: center;
+  outline: 0;
+}
+.t-grow__input::placeholder { color: var(--md-parchment-400); }
+.t-grow__input:hover { border-bottom-color: var(--md-ink-500); }
+.t-grow__input:focus-visible { border-bottom-color: var(--md-cat-path-700); border-bottom-style: solid; }
+
+/* The doors. A strip that scrolls and snaps, the chosen one kept
+   centred; arrows and the faded edges appear only once the strip is
+   wider than its box. `safe center` centres a short strip and starts
+   a long one at the left. */
+.t-setting { display: flex; flex-direction: column; align-items: center; gap: calc(3 * var(--md-u)); }
+
+.t-doors {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--md-u));
+}
+
+.t-doors__arrow {
+  flex: 0 0 auto;
+  width: calc(9 * var(--md-u));
+  height: calc(9 * var(--md-u));
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--md-ink-600);
+  background: transparent;
+  color: var(--md-parchment-300);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  visibility: hidden;
+}
+.t-doors[data-overflowing] .t-doors__arrow { visibility: visible; }
+.t-doors__arrow:hover { border-color: var(--md-cat-path-700); color: var(--md-cat-path-300); }
+
+.t-doors__track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: safe center;
+  gap: calc(5 * var(--md-u));
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: calc(4 * var(--md-u)) calc(6 * var(--md-u));
+  scrollbar-width: none;
+}
+.t-doors__track::-webkit-scrollbar { display: none; }
+.t-doors[data-overflowing] .t-doors__track {
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+/* A door wears its own palette: biomes.css sets the tokens on
+   `.t-door[data-biome]`, so every var() below is that setting's. */
+.t-door {
+  position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  width: 150px;
+  height: 200px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(2 * var(--md-u));
+  overflow: hidden;
+  background: var(--md-ink-900);
+  color: var(--md-parchment-100);
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.t-door:hover, .t-door:focus-visible { opacity: .85; transform: translateY(-3px); }
+.t-door:focus-visible { outline: 2px solid var(--md-cat-path-500); outline-offset: 3px; }
+.t-door[aria-checked='true'] {
+  opacity: 1;
+  box-shadow: 0 0 0 1.5px var(--md-cat-path-500), 0 0 28px 2px var(--md-cat-path-glow);
+}
+
+.t-door__field { position: absolute; inset: 0; color: var(--md-cat-path-500); opacity: .5; }
+.t-door__field .md-card__maze { color: inherit; opacity: 1; }
+.t-door__fade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--md-ink-900) 92%); }
+.t-door__glyph {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  color: var(--md-cat-path-500);
+}
+.t-door__glyph svg { width: 56px; height: 66px; }
+.t-door__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  font-family: var(--md-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: var(--md-track-title);
+}
+.t-door__palette {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 11px;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.t-door__palette i { width: 6px; height: 6px; border-radius: 50%; }
+.t-door__palette i:nth-child(1) { background: var(--md-cat-path-500); }
+.t-door__palette i:nth-child(2) { background: var(--md-cat-obst-500); }
+.t-door__palette i:nth-child(3) { background: var(--md-cat-mons-500); }
+
+.t-setting__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: calc(7 * var(--md-u));
+  margin-top: calc(2 * var(--md-u));
+}
+.t-setting__copy { max-width: 380px; display: flex; flex-direction: column; gap: calc(2 * var(--md-u)); }
+
+.t-campaign__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: calc(6 * var(--md-u));
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .t-campaign__grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.t-sheet { display: flex; flex-direction: column; gap: calc(2 * var(--md-u)); min-width: 0; }
+.t-sheet__head { display: flex; align-items: baseline; gap: calc(3 * var(--md-u)); flex-wrap: wrap; }
+.t-sheet__aside { font-size: 10px; }
+
+.t-campaign__refs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(4 * var(--md-u));
 }
 
 /* The bar carries five controls. Let the secondary ones wrap and keep
@@ -804,18 +1031,80 @@ html, body, #root {
 
 .t-char {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto auto;
-  gap: calc(3 * var(--md-u));
-  align-items: end;
-  padding: calc(3 * var(--md-u));
-  border: 1px solid var(--md-ink-700);
-  border-radius: calc(1.6 * var(--md-u));
-  background: var(--md-ink-900);
+  grid-template-columns: calc(7 * var(--md-u)) minmax(0, 1.2fr) minmax(0, 1fr) auto auto;
+  gap: calc(3.5 * var(--md-u));
+  align-items: center;
+  padding: calc(2 * var(--md-u)) 0;
+  border-bottom: 1px solid var(--md-ink-700);
+}
+
+.t-char--head { padding-bottom: calc(1 * var(--md-u)); border-bottom-color: var(--md-ink-600); }
+.t-char--head .t-kicker { font-size: 9px; }
+.t-char--head .t-mod > span { width: calc(12 * var(--md-u)); text-align: center; }
+
+/* The seat's inputs are bare: an underline, nothing else. */
+.t-char .t-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--md-ink-600);
+  border-radius: 0;
+  padding: calc(1.5 * var(--md-u)) 0;
+  font-size: 16px;
+}
+.t-char .t-input:focus-visible { border-bottom-color: var(--md-cat-path-700); }
+
+.t-char__order {
+  width: calc(7 * var(--md-u));
+  height: calc(7 * var(--md-u));
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--md-parchment-400);
+  font-family: var(--md-font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-parchment-300);
+}
+.t-char__order--ghost { border-style: dashed; border-color: var(--md-ink-500); }
+
+.t-char--add {
+  display: flex;
+  gap: calc(3.5 * var(--md-u));
+  padding: calc(3 * var(--md-u)) 0;
+  border: 0;
+  background: none;
+  color: var(--md-parchment-400);
+  font-family: var(--md-font-body);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.t-char--add:hover { color: var(--md-cat-path-300); }
+.t-char--add:hover .t-char__order--ghost { border-color: var(--md-cat-path-700); }
+
+/* Wide: the column names sit once in the head row and the per-seat
+   ones are for screen readers. Narrow: the mods wrap to their own
+   line, so the head row goes and each cell says what it is. */
+@media (min-width: 821px) {
+  .t-char .t-mod__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 820px) {
-  .t-char { grid-template-columns: minmax(0, 1fr) auto; }
-  .t-char .t-mods { grid-column: 1 / -1; }
+  .t-char { grid-template-columns: calc(7 * var(--md-u)) minmax(0, 1fr) minmax(0, 1fr) auto; }
+  /* The mods take the second line; the remove button stays on the
+     first, or auto-placement would push it to a third. */
+  .t-char .t-mods { grid-row: 2; grid-column: 2 / -1; }
+  .t-char .t-x { grid-row: 1; grid-column: 4; }
+  .t-char--head { display: none; }
 }
 
 .t-mods {
@@ -869,9 +1158,12 @@ html, body, #root {
 
 .t-dials {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: calc(5 * var(--md-u));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(5 * var(--md-u)) calc(4 * var(--md-u));
 }
+
+.t-field--dial { align-items: center; text-align: center; }
+.t-field--dial > label { font-size: 10px; }
 
 /* ---------------- a single column ----------------
    The join flow and a player's own device. Phone first: one column,
@@ -1111,10 +1403,11 @@ html, body, #root {
 
 .t-step__value {
   font-family: var(--md-font-display);
-  font-size: calc(5 * var(--md-u));
-  font-weight: 700;
+  font-size: calc(9 * var(--md-u));
+  font-weight: 600;
+  line-height: 1;
   color: var(--md-cat-path-300);
-  min-width: 3ch;
+  min-width: 2ch;
   text-align: center;
 }
 
@@ -1731,26 +2024,19 @@ html, body, #root {
    The palettes themselves are in biomes.css.
    ============================================================ */
 
-.t-setting__kicker {
-  display: block;
-  margin-bottom: calc(2.5 * var(--md-u));
-}
-
-.t-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: calc(2 * var(--md-u));
-}
+.t-setting__kicker { display: block; }
 
 .t-setting__flavour {
-  margin-top: calc(3 * var(--md-u));
-  font-size: 15px;
+  margin: 0;
+  font-size: 18px;
+  font-style: italic;
+  line-height: 1.4;
   color: var(--md-parchment-200);
 }
 
 .t-setting__preview {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: calc(3 * var(--md-u));
-  margin-top: calc(4 * var(--md-u));
 }

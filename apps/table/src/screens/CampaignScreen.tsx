@@ -1,4 +1,7 @@
-import { ArchGlyph, DECK_TOTAL, DeckCard, ReferenceCard } from '@maze-deck/ui';
+import * as React from 'react';
+import {
+  ArchGlyph, DECK_TOTAL, DeckCard, MazeField, ReferenceCard,
+} from '@maze-deck/ui';
 import { BIOMES, biomeOf } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
 import type { Campaign, Character } from '../campaign';
@@ -22,7 +25,7 @@ function Stepper({
   onChange: (n: number) => void;
 }) {
   return (
-    <div className="t-field">
+    <div className="t-field t-field--dial">
       <label htmlFor={`step-${label}`}>{label}</label>
       <div className="t-step">
         <button
@@ -39,6 +42,32 @@ function Stepper({
   );
 }
 
+/**
+ * A text input that is exactly as wide as what is typed in it. The
+ * hidden sizer and the input share one grid cell and one font, so
+ * the input takes the sizer's width and the text stays centred as
+ * it grows. What the hero's name fields are made of.
+ */
+function GrowingInput({
+  value, placeholder, onChange, className, label,
+}: {
+  value: string; placeholder: string; onChange: (v: string) => void;
+  className: string; label: string;
+}) {
+  return (
+    <label className={`t-grow ${className}`}>
+      <span className="t-sr">{label}</span>
+      <span className="t-grow__sizer" aria-hidden="true">{value || placeholder}</span>
+      <input
+        className="t-grow__input"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
 export function CampaignScreen({
   campaign, onChange, onStart, hasRun, onResume, onEditTables, onHost, onJoin,
   onHome,
@@ -50,8 +79,43 @@ export function CampaignScreen({
     set('roster', campaign.roster.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   const deckSize = DECK_TOTAL + campaign.extraClearPath + campaign.extraMonster;
-  const ready = campaign.roster.length > 0;
+  const seats = campaign.roster.length;
+  const ready = seats > 0;
   const biome = biomeOf(campaign.biome);
+
+  // The doors are a strip that scrolls: more settings will come than
+  // fit in a row. The chosen one is kept centred, and the arrows only
+  // appear once the strip is actually wider than its box.
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = React.useState(false);
+  const settled = React.useRef(false);
+
+  React.useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const door = track.querySelector<HTMLElement>(`[data-biome="${campaign.biome}"]`);
+    if (!door) return;
+    const left = door.offsetLeft - (track.clientWidth - door.offsetWidth) / 2;
+    // Placed at once on the first paint; slid there after a choice.
+    track.scrollTo({ left, behavior: settled.current ? 'smooth' : 'auto' });
+    settled.current = true;
+  }, [campaign.biome]);
+
+  React.useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const measure = () => setOverflowing(track.scrollWidth > track.clientWidth + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, []);
+
+  const turnDoors = (dir: -1 | 1) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: dir * track.clientWidth * 0.6, behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -93,95 +157,158 @@ export function CampaignScreen({
         </span>
       </div>
 
-      <div className="t-main">
-        <div className="t-stack">
-          <div className="t-panel">
-            <h2 className="t-panel__title">The campaign</h2>
-            <div className="t-row" style={{ alignItems: 'flex-end' }}>
-              <label className="t-field" style={{ flex: '1 1 220px' }}>
-                <span>Campaign</span>
-                <input
-                  className="t-input" value={campaign.name}
-                  onChange={(e) => set('name', e.target.value)}
-                />
-              </label>
-              <label className="t-field" style={{ flex: '1 1 220px' }}>
-                <span>This crossing</span>
-                <input
-                  className="t-input" value={campaign.runName}
-                  onChange={(e) => set('runName', e.target.value)}
-                />
-              </label>
+      <div className="t-campaign">
+        {/* The threshold. The crossing's name is the biggest thing on
+            the page, over the setting's own ground and motif, with the
+            one line that sums the run up and the button that starts it.
+            Both names are typed straight into the title. */}
+        <section className="t-hero" aria-label="This crossing">
+          <div className="t-hero__field">
+            <MazeField motif={biome.motif} fit="cover" />
+          </div>
+          <div className="t-hero__body">
+            <div className="t-hero__kicker">
+              <span className="t-kicker">Campaign</span>
+              <GrowingInput
+                className="t-hero__campaign"
+                label="Campaign name"
+                value={campaign.name}
+                placeholder="A new campaign"
+                onChange={(v) => set('name', v)}
+              />
+            </div>
+            <GrowingInput
+              className="t-hero__title"
+              label="Name of this crossing"
+              value={campaign.runName}
+              placeholder="Name this crossing"
+              onChange={(v) => set('runName', v)}
+            />
+            <p className="t-hero__summary">
+              {biome.name}
+              <span className="t-hero__dot">·</span>
+              {seats} {seats === 1 ? 'seat' : 'seats'}
+              <span className="t-hero__dot">·</span>
+              Maze DC {campaign.mazeDc}
+              <span className="t-hero__dot">·</span>
+              {deckSize} cards
+            </p>
+            <div className="t-row t-row--centre">
+              <button
+                type="button" className="t-btn t-btn--primary t-btn--lg"
+                disabled={!ready} onClick={onStart}
+              >
+                {hasRun ? 'New crossing' : 'Start the crossing'}
+              </button>
+              <button
+                type="button" className="t-btn t-btn--lg" disabled={!ready} onClick={onHost}
+                title="Open a room your players can join from their own devices"
+              >
+                Host online
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* The whole page is already wearing the chosen setting — the
-              provider above this screen reskins from the campaign — so
-              the three cards below are not a mock-up, they are the real
-              components in the real palette. */}
-          <div className="t-panel">
-            <h2 className="t-panel__title">The setting</h2>
-            <span className="t-kicker t-setting__kicker">
-              Biome — reskins the card copy at the table
-            </span>
-            <div className="t-chips" role="group" aria-label="Biome">
+        {/* The setting, chosen by picking a door. Every biome is a tile
+            in its own palette and card-back field; the chosen one is
+            lit. The page behind is already wearing it — the three
+            cards under the strip are the real components. */}
+        <section className="t-setting" aria-label="The setting">
+          <span className="t-kicker t-setting__kicker">The setting — choose a door</span>
+          <div className="t-doors" data-overflowing={overflowing || undefined}>
+            <button
+              type="button" className="t-doors__arrow" aria-label="Earlier settings"
+              onClick={() => turnDoors(-1)}
+            >
+              ‹
+            </button>
+            <div className="t-doors__track" ref={trackRef} role="radiogroup" aria-label="Biome">
               {BIOMES.map((b) => (
                 <button
                   key={b.id}
                   type="button"
-                  className="t-btn"
-                  aria-pressed={b.id === campaign.biome}
+                  role="radio"
+                  aria-checked={b.id === campaign.biome}
+                  className="t-door"
+                  data-biome={b.id}
                   onClick={() => set('biome', b.id)}
                 >
-                  {b.name}
+                  <span className="t-door__field"><MazeField motif={b.motif} fit="cover" /></span>
+                  <span className="t-door__fade" />
+                  <span className="t-door__glyph"><ArchGlyph state="seal" /></span>
+                  <span className="t-door__name">{b.name}</span>
+                  <span className="t-door__palette" aria-hidden="true">
+                    <i /><i /><i />
+                  </span>
                 </button>
               ))}
             </div>
-            <p className="t-note t-setting__flavour">{biome.flavour}</p>
+            <button
+              type="button" className="t-doors__arrow" aria-label="Later settings"
+              onClick={() => turnDoors(1)}
+            >
+              ›
+            </button>
+          </div>
+          <div className="t-setting__body">
             <div className="t-setting__preview" aria-label="Three cards in this setting">
               <DeckCard category="clear-path" size="sm" showCount={false} />
               <DeckCard category="obstacle" size="sm" showCount={false} />
               <DeckCard category="monster" size="sm" showCount={false} />
             </div>
-            <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
-              The rules do not change; the names, the light and the card backs
-              do, and each setting keeps its own scenario tables. The small
-              capitals on every card still say what it is by the book.
-            </p>
+            <div className="t-setting__copy">
+              <p className="t-setting__flavour">{biome.flavour}</p>
+              <p className="t-note">
+                The rules do not change; the names, the light and the card backs
+                do, and each setting keeps its own scenario tables. The small
+                capitals on every card still say what it is by the book.
+              </p>
+            </div>
           </div>
+        </section>
 
-          <div className="t-panel">
-            <h2 className="t-panel__title">
-              The party
-              <span className="t-panel__aside">
-                {campaign.roster.length} {campaign.roster.length === 1 ? 'seat' : 'seats'}
+        <div className="t-campaign__grid">
+          {/* The party as a sheet: one ruled line per seat, the column
+              names once at the top, no boxes. */}
+          <section className="t-sheet" aria-label="The party">
+            <div className="t-sheet__head">
+              <h2 className="t-panel__title">The party</h2>
+              <span className="t-kicker t-sheet__aside">
+                {seats} {seats === 1 ? 'seat' : 'seats'} · modifiers as written on the sheet
               </span>
-            </h2>
-            <p className="t-note">
-              Modifiers exactly as written on the sheet. Nothing is enforced —
-              you are the one who checks them.
-            </p>
-            <div className="t-roster" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
-              {campaign.roster.map((c) => (
+            </div>
+            <div className="t-roster">
+              <div className="t-char t-char--head" aria-hidden="true">
+                <span />
+                <span className="t-kicker">Name</span>
+                <span className="t-kicker">Class</span>
+                <span className="t-mods">
+                  {SCORES.map((s) => <span className="t-mod" key={s}><span>{s}</span></span>)}
+                </span>
+                <span className="t-x" style={{ visibility: 'hidden' }} />
+              </div>
+              {campaign.roster.map((c, i) => (
                 <div className="t-char" key={c.id}>
+                  <span className="t-char__order">{i + 1}</span>
                   <label className="t-field">
-                    <span>Name</span>
+                    <span className="t-sr">Name</span>
                     <input
-                      className="t-input" value={c.name}
+                      className="t-input" value={c.name} placeholder="Name"
                       onChange={(e) => setChar(c.id, { name: e.target.value })}
                     />
                   </label>
                   <label className="t-field">
-                    <span>Class</span>
+                    <span className="t-sr">Class</span>
                     <input
-                      className="t-input" value={c.cls}
+                      className="t-input" value={c.cls} placeholder="Class"
                       onChange={(e) => setChar(c.id, { cls: e.target.value })}
                     />
                   </label>
                   <div className="t-mods">
                     {SCORES.map((s) => (
                       <label className="t-mod" key={s}>
-                        <span>{s}</span>
+                        <span className="t-mod__label">{s}</span>
                         <input
                           inputMode="numeric"
                           aria-label={`${c.name || 'Character'} ${s}`}
@@ -206,69 +333,70 @@ export function CampaignScreen({
                   </button>
                 </div>
               ))}
-            </div>
-            <div className="t-row" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
               <button
-                type="button" className="t-btn"
+                type="button" className="t-char t-char--add"
                 onClick={() => set('roster', [...campaign.roster, blankCharacter()])}
               >
-                Add a seat
+                <span className="t-char__order t-char__order--ghost" />
+                <span>Add a seat</span>
               </button>
             </div>
-          </div>
+          </section>
 
-          <div className="t-panel">
-            <h2 className="t-panel__title">The dials</h2>
-            <div className="t-dials">
-              <Stepper
-                label="Maze DC" value={campaign.mazeDc} min={8} max={22}
-                onChange={(n) => set('mazeDc', n)}
-              />
-              <Stepper
-                label="Clear Paths to win" value={campaign.escapeTarget} min={2} max={9}
-                onChange={(n) => set('escapeTarget', n)}
-              />
-              <Stepper
-                label="Extra Clear Paths" value={campaign.extraClearPath} min={0} max={6}
-                onChange={(n) => set('extraClearPath', n)}
-              />
-              <Stepper
-                label="Extra Monsters" value={campaign.extraMonster} min={0} max={6}
-                onChange={(n) => set('extraMonster', n)}
-              />
+          <div className="t-stack">
+            <div className="t-panel">
+              <h2 className="t-panel__title">The dials</h2>
+              <div className="t-dials">
+                <Stepper
+                  label="Maze DC" value={campaign.mazeDc} min={8} max={22}
+                  onChange={(n) => set('mazeDc', n)}
+                />
+                <Stepper
+                  label="Clear Paths to win" value={campaign.escapeTarget} min={2} max={9}
+                  onChange={(n) => set('escapeTarget', n)}
+                />
+                <Stepper
+                  label="Extra Clear Paths" value={campaign.extraClearPath} min={0} max={6}
+                  onChange={(n) => set('extraClearPath', n)}
+                />
+                <Stepper
+                  label="Extra Monsters" value={campaign.extraMonster} min={0} max={6}
+                  onChange={(n) => set('extraMonster', n)}
+                />
+              </div>
+              <p className="t-note" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
+                {deckSize} cards in the deck. The Monsters are the dial that
+                actually bites — raising the DC changes surprisingly little,
+                because a failed action still lets you take a path.
+              </p>
             </div>
-            <p className="t-note" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
-              {deckSize} cards in the deck. The Monsters are the dial that
-              actually bites — raising the DC changes surprisingly little,
-              because a failed action still lets you take a path.
-            </p>
-          </div>
 
-          <div className="t-panel">
-            <h2 className="t-panel__title">Who rolls?</h2>
-            <div className="t-row">
-              <button
-                type="button" className="t-btn" aria-pressed={campaign.rollMode === 'app'}
-                onClick={() => set('rollMode', 'app')}
-              >
-                The app rolls
-              </button>
-              <button
-                type="button" className="t-btn" aria-pressed={campaign.rollMode === 'manual'}
-                onClick={() => set('rollMode', 'manual')}
-              >
-                Players roll their own
-              </button>
+            <div className="t-panel">
+              <h2 className="t-panel__title">Who rolls?</h2>
+              <div className="t-row">
+                <button
+                  type="button" className="t-btn" aria-pressed={campaign.rollMode === 'app'}
+                  onClick={() => set('rollMode', 'app')}
+                >
+                  The app rolls
+                </button>
+                <button
+                  type="button" className="t-btn" aria-pressed={campaign.rollMode === 'manual'}
+                  onClick={() => set('rollMode', 'manual')}
+                >
+                  Players roll their own
+                </button>
+              </div>
+              <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
+                Either way the result is yours to confirm, and yours to overturn.
+              </p>
             </div>
-            <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
-              Either way the result is yours to confirm, and yours to overturn.
-            </p>
-          </div>
-        </div>
 
-        <div className="t-stack t-stack--aside">
-          <ReferenceCard variant="loop" dc={campaign.mazeDc} size="md" />
-          <ReferenceCard variant="deck" size="md" />
+            <div className="t-campaign__refs">
+              <ReferenceCard variant="loop" dc={campaign.mazeDc} size="md" />
+              <ReferenceCard variant="deck" size="md" />
+            </div>
+          </div>
         </div>
       </div>
     </>

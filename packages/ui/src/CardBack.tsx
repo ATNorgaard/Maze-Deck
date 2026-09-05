@@ -29,21 +29,50 @@ const FIELD: Record<CardBackMotif, string> = {
  * comes from the provider's skin, so every card in a run wears the
  * same one.
  */
-function MazeField({ motif }: { motif: CardBackMotif }) {
+export interface MazeFieldProps {
+  motif: CardBackMotif;
+  /**
+   * `card` (the default) tiles exactly 10 cells across the card's own
+   * 63:88 box, whatever size it renders at. `cover` tiles at a fixed
+   * 24px over any box — for a field behind something that is not a
+   * card, where stretching the card's ratio would distort the motif.
+   */
+  fit?: 'card' | 'cover';
+  className?: string;
+}
+
+/**
+ * The labyrinth field on its own. Exported so a surface outside the
+ * deck — a setting's tile, a banner — can wear the same motif; it
+ * carries nothing but the pattern, in `currentColor`.
+ */
+export function MazeField({ motif, fit = 'card', className }: MazeFieldProps) {
   const id = React.useId().replace(/:/g, '');
+  const cls = ['md-card__maze', className].filter(Boolean).join(' ');
+  const pattern = (
+    <defs>
+      <pattern id={`md-maze-${id}`} width="24" height="24" patternUnits="userSpaceOnUse">
+        <path d={FIELD[motif]}
+              fill="none" stroke="currentColor" strokeWidth="1.5" />
+      </pattern>
+    </defs>
+  );
+  if (fit === 'cover') {
+    return (
+      <svg className={cls} aria-hidden="true">
+        {pattern}
+        <rect width="100%" height="100%" fill={`url(#md-maze-${id})`} />
+      </svg>
+    );
+  }
   // The viewBox is the card's own 63:88 ratio, so the field always
   // tiles exactly 10 cells across whatever size the card renders at.
   // Without it the tile is a fixed 24px and the back visibly coarsens
   // as the card shrinks - the one thing a uniform back must never do.
   return (
-    <svg className="md-card__maze" aria-hidden="true"
+    <svg className={cls} aria-hidden="true"
          viewBox="0 0 240 335" preserveAspectRatio="none">
-      <defs>
-        <pattern id={`md-maze-${id}`} width="24" height="24" patternUnits="userSpaceOnUse">
-          <path d={FIELD[motif]}
-                fill="none" stroke="currentColor" strokeWidth="1.5" />
-        </pattern>
-      </defs>
+      {pattern}
       <rect width="240" height="335" fill={`url(#md-maze-${id})`} />
     </svg>
   );

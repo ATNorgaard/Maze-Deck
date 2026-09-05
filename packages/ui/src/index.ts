@@ -12,8 +12,8 @@ export type { ArchGlyphProps } from './ArchGlyph';
 export { DeckCard } from './DeckCard';
 export type { DeckCardProps } from './DeckCard';
 
-export { CardBack } from './CardBack';
-export type { CardBackProps } from './CardBack';
+export { CardBack, MazeField } from './CardBack';
+export type { CardBackProps, MazeFieldProps } from './CardBack';
 
 export { AbilityCard } from './AbilityCard';
 export type { AbilityCardProps } from './AbilityCard';
