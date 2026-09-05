@@ -55,6 +55,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | **done** — `feel/6` |
 | 8 | The ending — a flourish for through, the light going out for lost | **done** — `feel/8` |
+| 9 | The light — the phase signpost goes; the board lights the part to look at | **done** — `feel/9` |
 
 ### 1. The choreographer
 
@@ -471,6 +472,51 @@ answered. Nothing in `DieRoll` changed.
 
 **Commit:** `git log --grep feel/3b`.
 
+### feel/9 — the light, instead of the signpost
+
+**Reported.** "I would like to have this element removed" — the phase
+signpost (*Take an action* / *One action, then a path…* / the scene) —
+"and then instead highlight which section to pay attention to at a
+current moment."
+
+**Changed.** The signpost is gone: `PHASE_TITLE`, `PHASE_NOTE` and the
+`.t-phase` box with them. In its place `.t-board` carries `data-focus`,
+set from the *presented* phase as the signpost was, so the light moves
+when the beat lands and not when the truth does:
+
+| phase | focus |
+|---|---|
+| act | `actions` — the action strip |
+| pick, reveal | `river` |
+| check, choice, encounter, over | none — those are answered in a centred modal, which is its own light |
+
+The focus is a halo, not a box: a `::before` on `.t-river` and
+`.t-actions`, a gold radial under the section that fades in over 600ms
+and breathes on the torch's `tBreathe`. Who is acting was already said
+by the lit seat, so the name that trailed the note is not missed.
+
+Two library grounds had to go bare for it. `.md-actionbar` and
+`.md-river` both paint ink-900 — the page's own colour, invisible until a
+light sits behind them, when each shows as a dark rectangle over the
+halo. The app now passes `t-actions__strip` and `t-river__ground` and
+sets both transparent; the buttons and the cards keep their own ground.
+The `.t-river`/`.t-actions` wrappers are `isolation: isolate` so the
+halo's `z-index: -1` puts it under their content rather than under the
+board.
+
+The scene line stays, since it is the one thing the GM reads out and
+exists nowhere else, as a bare centred `.t-scene` between the tracks and
+the river. Reduced motion keeps the light and drops the breathing.
+
+**Verified** (DOM + screenshots at 1440 and 600 wide): on a fresh run
+`data-focus="actions"`, the strip's halo at opacity .9 with `tBreathe`,
+the river's at 0; after a failed check, `data-focus="river"` and the
+halos swap; a Wanderer's choice modal drops the focus; *They move on*
+brings it back to `actions` with the baton on the next seat. No
+`.t-phase` in the DOM.
+
+**Commit:** `git log --grep feel/9`.
+
 ## Returning to any of this
 
 Every phase is one commit whose subject starts with `feel/N`:
@@ -481,6 +527,6 @@ git show <hash>            # what one phase changed
 git revert <hash>          # take one phase back out, alone
 ```
 
-Phases 2–8 all sit on the choreographer (feel/1). Reverting that one alone
+Phases 2–9 all sit on the choreographer (feel/1). Reverting that one alone
 brings `CardFlight` back and takes the rest with it; revert the later ones
 first if the aim is to keep the beats and lose only the overlay.

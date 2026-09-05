@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-09-04 (game feel: eight phases, see plandoc.md)
+**Last updated:** 2026-09-05 (game feel: nine phases, see plandoc.md)
 
 ## Where we are
 
@@ -511,8 +511,9 @@ Eight phases, each one commit tagged `feel/N`, planned and logged in
 two views one beat at a time (`apps/table/src/stage/`), cards dealt from the
 deck pile, impact on the reveal, the d20 as an object in a tray instead of a
 modal, a baton that slides between seats, synthesised sound (off by
-default), ambient light, and an ending. The play did not change; the rules
-tests are the same 66.
+default), ambient light, and an ending. A ninth took the phase signpost
+off the board: the section the phase is about is lit instead (`feel/9`).
+The play did not change; the rules tests are the same 66.
 
 Two things learned there are worth carrying:
 

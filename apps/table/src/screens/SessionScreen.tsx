@@ -2,7 +2,7 @@ import * as React from 'react';
 import {
   ActionBar, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, ScoreTrack,
 } from '@maze-deck/ui';
-import { activeSeatOf, availableFor } from '@maze-deck/rules';
+import { availableFor } from '@maze-deck/rules';
 import type {
   AbilityScore, ChoicePayload, GameAction, GameView, Phase,
 } from '@maze-deck/rules';
@@ -42,24 +42,17 @@ interface Props {
 const POSITION = ['left', 'centre', 'right'];
 const position = (i: number) => POSITION[i] ?? `slot ${i + 1}`;
 
-const PHASE_TITLE: Record<Phase, string> = {
-  act: 'Take an action',
-  check: 'A roll is on the table',
-  choice: 'A decision is owed',
-  pick: 'Commit to a path',
-  reveal: 'The path is turned over',
-  encounter: 'The party is found',
-  over: 'The run is closed',
-};
-
-const PHASE_NOTE: Record<Phase, string> = {
-  act: 'One action, then a path — never the other way round.',
-  check: 'Read it out, then let it land.',
-  choice: 'The action is not finished until this is answered.',
-  pick: 'Pick a path from the river. Everyone sees what it is.',
-  reveal: 'Describe the scene while it lands.',
-  encounter: 'Run the fight at your table, then say how it went.',
-  over: 'Copy the log into your notes and pick the scene back up.',
+/** Where the light sits: the part of the board the phase is about.
+ *  The other phases are answered in a centred modal, which is its own
+ *  light, so the board carries none. */
+const FOCUS: Record<Phase, 'actions' | 'river' | null> = {
+  act: 'actions',
+  check: null,
+  choice: null,
+  pick: 'river',
+  reveal: 'river',
+  encounter: null,
+  over: null,
 };
 
 export function SessionScreen({
@@ -74,7 +67,7 @@ export function SessionScreen({
 
   // The truth decides what may be done; the stage decides what is drawn.
   // `view` feeds the controls and the modals, `shown` feeds the river,
-  // the piles, the tracks and the signpost, and lags by whatever beat is
+  // the piles, the tracks and the light, and lags by whatever beat is
   // still playing. Any input drops the queue first.
   const deckRef = React.useRef<HTMLDivElement>(null);
   const stage = useStage(view, { riverRef, discardRef, deckRef });
@@ -84,7 +77,6 @@ export function SessionScreen({
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
 
   const a = availableFor(view);
-  const seat = activeSeatOf(view);
   const activeIdx = shown.turn % Math.max(shown.order.length, 1);
   const pending = view.pending;
 
@@ -119,6 +111,9 @@ export function SessionScreen({
       className="t-board"
       data-shake={pulse === 'threat' || undefined}
       data-outcome={shown.outcome ?? undefined}
+      // Follows the presented phase, as the signpost did, so the light
+      // moves when the beat lands rather than when the truth does.
+      data-focus={FOCUS[shown.phase] ?? undefined}
     >
       <div className="t-col t-col--side">
         <div className="t-panel">
@@ -206,19 +201,15 @@ export function SessionScreen({
           </div>
         ) : null}
 
-        <div className="t-phase">
-          <h2 className="t-phase__title">{PHASE_TITLE[shown.phase]}</h2>
-          <p className="t-phase__note">
-            {PHASE_NOTE[shown.phase]}
-            {seat && shown.phase !== 'over' ? ` — ${seat.name}` : ''}
+        {/* The phase signpost is gone: the light on the board says where
+            to look, and the lit seat says who. What stays is the scene
+            line, which is the GM's to read out. */}
+        {prompt ? (
+          <p className="t-scene">
+            <span className="t-kicker">The scene</span>
+            {prompt.text}
           </p>
-          {prompt ? (
-            <p className="t-phase__scene">
-              <span className="t-kicker">The scene</span>
-              {prompt.text}
-            </p>
-          ) : null}
-        </div>
+        ) : null}
 
         {/* The roll is a centred modal — the author's call, reversing the
             tray tried in feel/3. The die still tumbles inside it. */}
@@ -249,6 +240,7 @@ export function SessionScreen({
           data-pickable={a.pickSlots.length ? true : undefined}
         >
           <River
+            className="t-river__ground"
             size={riverSize}
             slots={shown.river.map((s) => (
               s.filled
@@ -286,6 +278,7 @@ export function SessionScreen({
                   player rather than sitting there from the last one. */}
               <MazeDeckProvider key={view.turn} size="lg" className="t-actions__bar t-rise" background="transparent">
                 <ActionBar
+                  className="t-actions__strip"
                   abilities={view.rules.abilities}
                   showDc={false}
                   onUse={(ability) => act({ type: 'USE_ABILITY', ability })}
