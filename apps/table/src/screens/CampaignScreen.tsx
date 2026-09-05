@@ -1,8 +1,8 @@
 import * as React from 'react';
 import {
-  ArchGlyph, DECK_TOTAL, DeckCard, MazeField, ReferenceCard,
+  ArchGlyph, CANONICAL_CATEGORIES, CATEGORY_CLASS, DECK_TOTAL, DeckCard, MazeField,
 } from '@maze-deck/ui';
-import { BIOMES, biomeOf } from '../biomes';
+import { BIOMES, biomeOf, cardName } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
 import type { Campaign, Character } from '../campaign';
 
@@ -364,11 +364,33 @@ export function CampaignScreen({
                   onChange={(n) => set('extraMonster', n)}
                 />
               </div>
-              <p className="t-note" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
-                {deckSize} cards in the deck. The Monsters are the dial that
-                actually bites — raising the DC changes surprisingly little,
-                because a failed action still lets you take a path.
-              </p>
+              {/* What the shuffle will hold, live: the two extra dials
+                  move these counts. This is the part of the old deck
+                  reference card the creator actually needs; the rest of
+                  it, and all of the loop card, is how the game plays,
+                  which the landing page covers. */}
+              <div className="t-deck" aria-label="What the deck holds">
+                <span className="t-kicker">{deckSize} cards in the deck</span>
+                <ul className="t-deck__list">
+                  {CANONICAL_CATEGORIES.map((c) => {
+                    const extra = c.category === 'clear-path' ? campaign.extraClearPath
+                      : c.category === 'monster' ? campaign.extraMonster : 0;
+                    const local = cardName(biome, c.category);
+                    return (
+                      <li key={c.category} className={`t-deck__cat ${CATEGORY_CLASS[c.category]}`}>
+                        <span className="t-deck__count">{c.copies + extra}</span>
+                        <span className="t-deck__name">{c.title}</span>
+                        {local !== c.title ? <span className="t-deck__local">{local}</span> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="t-note">
+                  The Monsters are the dial that actually bites — two strikes
+                  and the party is found. Raising the DC changes surprisingly
+                  little, because a failed action still lets you take a path.
+                </p>
+              </div>
             </div>
 
             <div className="t-panel">
@@ -390,11 +412,6 @@ export function CampaignScreen({
               <p className="t-note" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
                 Either way the result is yours to confirm, and yours to overturn.
               </p>
-            </div>
-
-            <div className="t-campaign__refs">
-              <ReferenceCard variant="loop" dc={campaign.mazeDc} size="md" />
-              <ReferenceCard variant="deck" size="md" />
             </div>
           </div>
         </div>

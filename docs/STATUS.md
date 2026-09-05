@@ -514,7 +514,14 @@ button under it. The setting is picked from a **strip of doors** — one
 tile per biome, each in its own palette, scroll-snapped, with arrows and
 faded edges that appear only once the strip overflows, so more settings
 can be added without the picker changing. The party is a ruled sheet; the
-dials keep their panel.
+dials keep their panel, and under them the deck's composition is counted
+live, one figure per category, moving with the two extra dials.
+
+The two GM reference cards are gone from this screen. The loop card was
+rules of play, none of it a setting (and its last line, "the card is never
+named", was the reversed rule); the deck card's only creator-relevant part
+was the composition, which the live count now carries. `ReferenceCard`
+stays in `packages/ui` for print.
 
 Two things worth knowing:
 

@@ -1006,11 +1006,66 @@ html, body, #root {
 .t-sheet__head { display: flex; align-items: baseline; gap: calc(3 * var(--md-u)); flex-wrap: wrap; }
 .t-sheet__aside { font-size: 10px; }
 
-.t-campaign__refs {
+/* The deck, as the dials leave it: one count per category, each on
+   its own colour, under the dials that move them. */
+.t-deck {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: calc(4 * var(--md-u));
+  flex-direction: column;
+  gap: calc(3 * var(--md-u));
+  margin-top: calc(5 * var(--md-u));
+  padding-top: calc(4 * var(--md-u));
+  border-top: 1px solid var(--md-ink-700);
+}
+
+.t-deck__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: calc(2 * var(--md-u));
+}
+
+.t-deck__cat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.6 * var(--md-u));
+  padding: calc(2 * var(--md-u)) calc(1 * var(--md-u)) 0;
+  border-top: 2px solid var(--md-cat-500);
+  text-align: center;
+  min-width: 0;
+}
+
+.t-deck__count {
+  font-family: var(--md-font-display);
+  font-size: calc(6 * var(--md-u));
+  font-weight: 600;
+  line-height: 1;
+  color: var(--md-cat-300);
+}
+
+.t-deck__name {
+  font-family: var(--md-font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--md-parchment-300);
+}
+
+.t-deck__local {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--md-parchment-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .t-deck__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* The bar carries five controls. Let the secondary ones wrap and keep
