@@ -55,7 +55,7 @@ Order of execution: **1, 2, 4, 3, 5, 7, 6, 8.** Each is its own commit, tagged
 | 7 | Sound — synthesised, one toggle, off by default | **done** — `feel/7` |
 | 6 | Ambient life — torch flicker, haze drift, log lines slide in | **done** — `feel/6` |
 | 8 | The ending — a flourish for through, the light going out for lost | **done** — `feel/8` |
-| 9 | The light — the phase signpost goes; the board lights the part to look at | **done** — `feel/9` |
+| 9 | The light — the phase signpost goes; the board lights the part to look at | **done** — `feel/9`, retuned to a ledge in `feel/9b` |
 
 ### 1. The choreographer
 
@@ -516,6 +516,33 @@ brings it back to `actions` with the baton on the next seat. No
 `.t-phase` in the DOM.
 
 **Commit:** `git log --grep feel/9`.
+
+### feel/9b — the ledge, after the author's first look
+
+**Reported.** "That indicator is mildly irritating. How can we make this
+more hidden, but still noticeable and great visually?"
+
+**Found.** The pool of light was three things at once: the largest
+shape on the board, the brightest, and the only one that never stopped
+moving. It had become the signpost again, only louder.
+
+**Changed.** The pool is a ledge. Two pseudo-elements on `.t-river` and
+`.t-actions`: a 1px line of gold along the bottom edge, 62% wide, fading
+out at both ends, and a low half-ellipse of light thrown up from it
+under the cards or the buttons, as if they stood on a lit shelf. It
+arrives on `tLedge` (1.8s, `both`): swells to full in the first half
+second — the one moment the eye needs telling — then settles to a
+glimmer (line .85, up-light .55, via `--t-rest`) and holds still. No
+breathing. Leaving is the plain 700ms fade. Reduced motion keeps the
+ledge and drops the swell.
+
+**Verified** (computed styles, animations finished): on a fresh run the
+strip's line and up-light rest at .85/.55 with `tLedge` finished; after
+a failed check the river's do the same and the strip's are at 0. At
+1600×1200 the line sits under the LEFT/CENTRE/RIGHT labels and under
+the last row of buttons.
+
+**Commit:** `git log --grep feel/9b`.
 
 ## Returning to any of this
 

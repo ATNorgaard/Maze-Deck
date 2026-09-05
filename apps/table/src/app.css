@@ -380,42 +380,70 @@ html, body, #root {
    are answered in a centred modal, which is its own light.
 
    `data-focus` on .t-board follows the presented phase, so the light
-   moves when the beat lands. It is a halo under the section, not a box
-   around it — the board has no other boxes in the centre column, and
-   a rectangle here would have been the signpost back under another
-   name. It breathes, slowly, the way the torch does. */
-/* Isolated, so the halo's negative z-index puts it under the cards and
-   the bar rather than under the board. */
+   moves when the beat lands. It is a ledge, not a pool: a thin line of
+   gold under the section and a low light thrown up from it onto what
+   stands there, as if the cards were set on a lit shelf. It swells when
+   it arrives — that is the one moment the eye needs telling — and
+   settles to a glimmer. It does not breathe: a pool of light that kept
+   moving under the whole river was the signpost again, only louder. */
 .t-river, .t-actions { position: relative; isolation: isolate; }
 
-.t-river::before, .t-actions::before {
+.t-river::before, .t-actions::before,
+.t-river::after, .t-actions::after {
   content: '';
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 120%;
-  height: 150%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    color-mix(in srgb, var(--md-cat-path-500) 55%, transparent) 0%,
-    color-mix(in srgb, var(--md-cat-path-500) 28%, transparent) 35%,
-    transparent 68%
-  );
+  bottom: 0;
+  transform: translateX(-50%);
   opacity: 0;
-  transition: opacity 600ms ease;
+  transition: opacity 700ms ease;
   pointer-events: none;
+}
+
+/* The line. */
+.t-river::before, .t-actions::before {
+  --t-rest: .85;
+  width: 62%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--md-cat-path-700) 20%,
+    var(--md-cat-path-300) 50%,
+    var(--md-cat-path-700) 80%,
+    transparent
+  );
+  box-shadow: 0 0 12px 1px var(--md-cat-path-glow);
+}
+
+/* The light it throws up. Under the cards and the buttons: the wrapper
+   is isolated, so -1 puts it beneath its content and not the board. */
+.t-river::after, .t-actions::after {
+  --t-rest: .55;
+  width: 84%;
+  height: 48%;
+  background: radial-gradient(
+    ellipse 50% 100% at 50% 100%,
+    color-mix(in srgb, var(--md-cat-path-500) 26%, transparent) 0%,
+    transparent 72%
+  );
   z-index: -1;
 }
 
-/* The river's halo stops short of the piles under it. */
-.t-river::before { height: 128%; }
-
 .t-board[data-focus='river'] .t-river::before,
-.t-board[data-focus='actions'] .t-actions::before {
-  opacity: .9;
-  animation: tBreathe 2.6s ease-in-out infinite;
+.t-board[data-focus='river'] .t-river::after,
+.t-board[data-focus='actions'] .t-actions::before,
+.t-board[data-focus='actions'] .t-actions::after {
+  opacity: var(--t-rest);
+  animation: tLedge 1.8s ease-out both;
+}
+
+/* Arrives bright, settles. `both` holds the last frame, which is the
+   rule's own resting value, so leaving is the plain 700ms fade. */
+@keyframes tLedge {
+  0%   { opacity: 0; }
+  28%  { opacity: 1; }
+  100% { opacity: var(--t-rest); }
 }
 
 .t-river { display: flex; justify-content: center; }
@@ -985,7 +1013,7 @@ html, body, #root {
   .t-play[data-outcome='through']::after { animation: none; }
   .t-baton { transition: none; }
   .t-rise, .t-play .t-panel[data-yours] { animation: none; }
-  .t-river::before, .t-actions::before { animation: none; transition: none; }
+  .t-river::before, .t-actions::before, .t-river::after, .t-actions::after { animation: none; transition: none; }
   .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
