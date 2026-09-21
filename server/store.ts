@@ -15,10 +15,8 @@
    for why an empty root node_modules is worth protecting.
 
    It lives here rather than in api/ because api/ is a routes
-   directory: Vercel builds every file in it as an endpoint, and skips
-   the _-prefixed ones without building them at all. `api/_store.ts`
-   therefore typechecked, bundled locally, and was simply absent from
-   the deployed function.
+   directory: every file in it is a reachable endpoint, and shared
+   plumbing is not an endpoint.
    ============================================================ */
 
 // REVEAL_MS is imported rather than re-declared: client, server and this

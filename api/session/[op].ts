@@ -38,9 +38,10 @@ import { view } from '../../packages/rules/src/view.js';
 import type { GameAction } from '../../packages/rules/src/types.js';
 import type { Viewer } from '../../packages/rules/src/view.js';
 import type { RunSetup, SeatOffer } from '../../packages/rules/src/protocol.js';
-// Not under api/. Vercel treats everything there as a route and skips the
-// _-prefixed ones entirely -- it never builds them, so importing one
-// typechecks locally and is missing at runtime. That cost three deploys.
+// In server/, not api/: api/ is a routes directory and everything in it
+// is reachable, so shared plumbing does not belong there. (An earlier
+// note here blamed the _-prefix for a deploy failure. It was innocent --
+// _-prefixed files are built fine. The culprit was the module system.)
 import { bump, create, read, swap, topicFor } from '../../server/store.js';
 import type { Patch, Row } from '../../server/store.js';
 

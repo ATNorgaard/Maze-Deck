@@ -89,10 +89,18 @@ There are no rewrites. Routing is hash-based (`#/join/CODE`), so `/` serves the
 app and everything else is a genuine 404 — the same reasoning as the old
 `not_found_handling = "none"`.
 
-`api/` holds only routes. Vercel builds every file there as an endpoint
-and skips `_`-prefixed ones *without building them at all*, so shared code
-lives in `server/` — an `api/_store.ts` typechecks, bundles locally, and is
-then simply missing from the deployed function.
+`api/` holds only routes — every file in it is a reachable endpoint — so
+shared plumbing lives in `server/`.
+
+**The root `package.json` declares `"type": "module"`, and must keep it.**
+Nothing else lives directly under the root, so that one line is what makes
+`api/` and `server/` compile to ES modules. Without it they are CommonJS,
+`require()` of `packages/rules` (which declares `"type": "module"`) throws
+`ERR_REQUIRE_ESM`, and **every function 500s at load** with nothing in the
+response to say why. Relatedly, every relative specifier in `api/`,
+`server/` and `packages/rules` must carry its `.js` extension: ESM never
+appends one, and a bundler-style specifier resolves at typecheck and then
+fails at runtime.
 
 **Rooms survive a deploy.** They are rows, not process state. This is the one
 thing that got strictly better: redeploying mid-session is no longer forbidden.
