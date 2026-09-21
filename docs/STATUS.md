@@ -215,8 +215,8 @@ loop. `vercel dev` is the faithful rehearsal: one origin serving the app and
 the authority, exactly as production does. `VITE_SESSION_ENDPOINT` overrides
 the origin, for pointing a local app at a deployment.
 
-**Deployed on Vercel** — see [DEPLOY.md](DEPLOY.md), including the one secret
-that has to be pasted in by hand.
+**Deployed and live: <https://maze-deck-six.vercel.app>** (2026-09-21).
+Push to `main` to redeploy. See [DEPLOY.md](DEPLOY.md).
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -710,5 +710,48 @@ publish a fake bump. There is nothing on it to steal — that is the point of
 sending only a version number — but it is a door the Durable Object did not
 have.
 
+### Verified on the real deployment, not just locally
+
+A script drove two clients through the live authority over HTTPS. **23 checks,
+all passing:** a room opens; the GM payload carries no `seed`, no `rng` and no
+`deck`, only `deckCount: 20`; a player arriving without a seat is answered with
+the roster; claiming a taken seat and claiming to be the GM are both refused;
+`CONFIRM_CHECK` from a player comes back *"Only the GM can do that."*; and
+`ADVANCE_REVEAL` is refused for the player **and the GM** — *"The server
+advances the reveal on its own."*
+
+A second script drove a real turn to the reveal phase. **6 more checks, all
+passing:** `PICK_SLOT` lands in `reveal`; a nudge before the deadline answers
+`early: true` and the card stays up; after the deadline it resolves once, to
+`choice`; and a second nudge is a no-op that does not advance the version.
+
+The lockdown was tested rather than assumed: a row holding a seed and a deck
+was written directly, and both public keys were refused it. The shipped
+browser bundle contains the project URL and the publishable key and **no**
+service key.
+
+### The deploy fought back, and it is worth knowing why
+
+Three failures, each of which made *every* function return a bare 500 with
+nothing in the body, and all three found by elimination because the API token
+could not read runtime logs.
+
+1. **A root `tsconfig.json` with `noEmit: true`.** Vercel reads it to compile
+   `api/`, so every function compiled to nothing. It is now `tsconfig.api.json`,
+   which Vercel does not read.
+2. **Extensionless relative specifiers.** The lambda is ESM and ESM never
+   appends `.js`. A probe reading the lambda's own filesystem showed
+   `protocol.js` sitting right there while `'.../protocol'` could not find it
+   and `'.../protocol.js'` returned its five exports.
+3. **No `"type": "module"` at the root**, so `api/` and `server/` were CommonJS
+   while `packages/rules` is ESM — `ERR_REQUIRE_ESM` at load. The tell was that
+   every probe using a *static* import died and every probe using a *dynamic*
+   `import()` of the same files returned 200, because `import()` from CommonJS
+   is legal.
+
+All three are recorded in [DEPLOY.md](DEPLOY.md), because all three fail at
+module load where the response says only that a server error has occurred.
+
 **Still to verify at a real table:** everything below "Next single action"
-still stands, and none of it has been re-tested since the move.
+still stands. The engine did not change, but nobody has played a crossing on
+this host.
