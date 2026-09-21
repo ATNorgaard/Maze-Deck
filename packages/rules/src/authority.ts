@@ -12,8 +12,8 @@
    server's answer counts.
    ============================================================ */
 
-import type { GameAction } from './types';
-import type { GameView, Viewer } from './view';
+import type { GameAction } from './types.js';
+import type { GameView, Viewer } from './view.js';
 
 export type Verdict = { ok: true } | { ok: false; reason: string };
 

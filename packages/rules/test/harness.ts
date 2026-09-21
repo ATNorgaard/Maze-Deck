@@ -1,12 +1,12 @@
 /* Shared test helpers: build a run, and play one to the end. */
 
-import { apply, createGame, defaultConfig } from '../src/engine';
-import { availableFor, view } from '../src/view';
-import { int, seedFrom } from '../src/rng';
-import type { RngState } from '../src/rng';
+import { apply, createGame, defaultConfig } from '../src/engine.js';
+import { availableFor, view } from '../src/view.js';
+import { int, seedFrom } from '../src/rng.js';
+import type { RngState } from '../src/rng.js';
 import type {
   AbilityScore, CardCategory, GameAction, GameState, RunConfig, Seat,
-} from '../src/types';
+} from '../src/types.js';
 
 const SCORES: AbilityScore[] = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
 

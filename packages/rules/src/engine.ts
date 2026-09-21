@@ -14,13 +14,13 @@
 import {
   CANONICAL_CATEGORIES, ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC,
   OBSTACLE_JAM, RIVER_WIDTH, getAbility, getCategory,
-} from '../../ui/src/types';
-import type { AbilityKey, AbilityScore, CardCategory } from '../../ui/src/types';
-import { d, seedFrom, shuffle } from './rng';
+} from '../../ui/src/types.js';
+import type { AbilityKey, AbilityScore, CardCategory } from '../../ui/src/types.js';
+import { d, seedFrom, shuffle } from './rng.js';
 import type {
   Choice, ChoicePayload, GameAction, GameEvent, GameState,
   PendingCheck, RunConfig, Seat, Slot,
-} from './types';
+} from './types.js';
 
 export class IllegalActionError extends Error {
   constructor(message: string) {

@@ -17,8 +17,8 @@
 
 // REVEAL_MS is imported rather than re-declared: client, server and this
 // deadline must agree, and there is one definition of it.
-import { REVEAL_MS } from '../packages/rules/src/authority';
-import type { GameState } from '../packages/rules/src/types';
+import { REVEAL_MS } from '../packages/rules/src/authority.js';
+import type { GameState } from '../packages/rules/src/types.js';
 
 const TABLE = 'maze_sessions';
 

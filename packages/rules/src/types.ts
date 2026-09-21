@@ -11,8 +11,8 @@
 
 import type {
   AbilityKey, AbilityScore, CardCategory, ExpansionCategory,
-} from '../../ui/src/types';
-import type { RngState } from './rng';
+} from '../../ui/src/types.js';
+import type { RngState } from './rng.js';
 
 export type { AbilityKey, AbilityScore, CardCategory, ExpansionCategory };
 

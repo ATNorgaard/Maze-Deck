@@ -1,12 +1,12 @@
 /* Who may send what. The engine does not care; the server must. */
 
 import { describe, expect, it } from 'vitest';
-import { apply } from '../src/engine';
-import { mayAct, mayAdvanceReveal } from '../src/authority';
-import { isJoinCode, makeJoinCode, normaliseJoinCode } from '../src/protocol';
-import { view } from '../src/view';
-import { makeRun } from './harness';
-import type { GameAction, GameState } from '../src/types';
+import { apply } from '../src/engine.js';
+import { mayAct, mayAdvanceReveal } from '../src/authority.js';
+import { isJoinCode, makeJoinCode, normaliseJoinCode } from '../src/protocol.js';
+import { view } from '../src/view.js';
+import { makeRun } from './harness.js';
+import type { GameAction, GameState } from '../src/types.js';
 
 const GM = { role: 'gm' } as const;
 const seatOf = (g: GameState, i: number) => g.order[i] as string;

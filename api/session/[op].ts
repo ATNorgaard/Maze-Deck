@@ -31,15 +31,15 @@
    by the clients themselves. This file no longer knows who is looking.
    ============================================================ */
 
-import { apply, createGame, IllegalActionError } from '../../packages/rules/src/engine';
-import { mayAct, mayAdvanceReveal } from '../../packages/rules/src/authority';
-import { isJoinCode, normaliseJoinCode } from '../../packages/rules/src/protocol';
-import { view } from '../../packages/rules/src/view';
-import type { GameAction } from '../../packages/rules/src/types';
-import type { Viewer } from '../../packages/rules/src/view';
-import type { RunSetup, SeatOffer } from '../../packages/rules/src/protocol';
-import { bump, create, read, swap, topicFor } from '../_store';
-import type { Patch, Row } from '../_store';
+import { apply, createGame, IllegalActionError } from '../../packages/rules/src/engine.js';
+import { mayAct, mayAdvanceReveal } from '../../packages/rules/src/authority.js';
+import { isJoinCode, normaliseJoinCode } from '../../packages/rules/src/protocol.js';
+import { view } from '../../packages/rules/src/view.js';
+import type { GameAction } from '../../packages/rules/src/types.js';
+import type { Viewer } from '../../packages/rules/src/view.js';
+import type { RunSetup, SeatOffer } from '../../packages/rules/src/protocol.js';
+import { bump, create, read, swap, topicFor } from '../_store.js';
+import type { Patch, Row } from '../_store.js';
 
 export const config = { maxDuration: 15 };
 

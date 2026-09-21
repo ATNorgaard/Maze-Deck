@@ -18,11 +18,11 @@
    to read before they narrate it.
    ============================================================ */
 
-import { getCategory } from '../../ui/src/types';
-import type { AbilityKey, CardCategory } from '../../ui/src/types';
+import { getCategory } from '../../ui/src/types.js';
+import type { AbilityKey, CardCategory } from '../../ui/src/types.js';
 import type {
   Choice, GameEvent, GameState, Outcome, Pending, Phase, Revealed, RollMode, Seat,
-} from './types';
+} from './types.js';
 
 export type Viewer =
   | { role: 'gm' }

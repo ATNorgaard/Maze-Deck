@@ -3,9 +3,9 @@
    of bug the prototype actually shipped. */
 
 import { describe, expect, it } from 'vitest';
-import { DECK_TOTAL } from '../../ui/src/types';
-import { cardsInRun, countCards, makeRun, playOut } from './harness';
-import type { GameState } from '../src/types';
+import { DECK_TOTAL } from '../../ui/src/types.js';
+import { cardsInRun, countCards, makeRun, playOut } from './harness.js';
+import type { GameState } from '../src/types.js';
 
 const SEEDS = Array.from({ length: 120 }, (_, i) => `seed-${i}`);
 

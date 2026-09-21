@@ -2,9 +2,9 @@
    the GM confirmation rather than the dice. */
 
 import { describe, expect, it } from 'vitest';
-import { apply } from '../src/engine';
-import { makeRun } from './harness';
-import type { AbilityKey, CardCategory, GameState } from '../src/types';
+import { apply } from '../src/engine.js';
+import { makeRun } from './harness.js';
+import type { AbilityKey, CardCategory, GameState } from '../src/types.js';
 
 /** Force an action through to its effect, succeeding or failing. */
 function act(g: GameState, ability: AbilityKey, success = true): GameState {

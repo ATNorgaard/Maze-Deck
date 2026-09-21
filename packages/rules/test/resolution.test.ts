@@ -2,9 +2,9 @@
    run ends. */
 
 import { describe, expect, it } from 'vitest';
-import { apply } from '../src/engine';
-import { makeRun } from './harness';
-import type { CardCategory, GameState } from '../src/types';
+import { apply } from '../src/engine.js';
+import { makeRun } from './harness.js';
+import type { CardCategory, GameState } from '../src/types.js';
 
 /** A state with a known river, sitting in the pick phase. */
 function atPick(

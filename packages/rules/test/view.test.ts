@@ -2,10 +2,10 @@
    suite protects the rules, this file protects the secrets. */
 
 import { describe, expect, it } from 'vitest';
-import { apply } from '../src/engine';
-import { view } from '../src/view';
-import { makeRun, playOut } from './harness';
-import type { GameState } from '../src/types';
+import { apply } from '../src/engine.js';
+import { view } from '../src/view.js';
+import { makeRun, playOut } from './harness.js';
+import type { GameState } from '../src/types.js';
 
 const GM = { role: 'gm' } as const;
 const PLAYER = { role: 'player', seatId: 'A' } as const;

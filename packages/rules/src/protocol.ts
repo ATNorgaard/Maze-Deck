@@ -13,7 +13,7 @@
    like, and the join-code alphabet.
    ============================================================ */
 
-import type { RunConfig } from './types';
+import type { RunConfig } from './types.js';
 
 /** How a client asks to be let in. */
 export interface JoinRequest {
