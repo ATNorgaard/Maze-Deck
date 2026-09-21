@@ -1,5 +1,5 @@
 {
-  "//": "The authority functions only. The app, the engine and the component library each keep their own tsconfig; this one exists so Vercel compiles api/ the way we mean it.",
+  "//": "Type-checking the authority functions, and NOTHING ELSE. Deliberately not named tsconfig.json: Vercel reads a root tsconfig.json to compile api/, and this one is wrong for that job -- noEmit produces an empty function, and module:ESNext emits import syntax into a file the CommonJS root makes Node parse as script. Every function 500d until this was renamed. Vercel now generates its own.",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023", "DOM"],
