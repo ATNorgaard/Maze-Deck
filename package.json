@@ -4,6 +4,7 @@
   "description": "The repo root. Exists for Vercel and for nothing else \u2014 see .design-sync/NOTES.md before adding anything here.",
   "license": "UNLICENSED",
   "private": true,
+  "type": "module",
   "scripts": {
     "install:all": "cd packages/ui && npm ci && cd ../../apps/table && npm ci",
     "build": "cd apps/table && npm run build",
