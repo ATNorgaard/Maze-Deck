@@ -6,9 +6,9 @@
    the engine's job is the rules, not the table's politics.
 
    So this is the server's job, and it lives here — pure, and
-   next to the rules it defends — so the Durable Object and the
-   client can run exactly the same check. The client uses it to
-   grey a control out; the server uses it to refuse. Only the
+   next to the rules it defends — so the authority function and
+   the client can run exactly the same check. The client uses it
+   to grey a control out; the server uses it to refuse. Only the
    server's answer counts.
    ============================================================ */
 

@@ -4,8 +4,14 @@ Repo-specific gotchas. Read this before a re-sync.
 
 ## Build
 
-- The package lives at `packages/ui`. There is no workspace root and no
-  lockfile at the repo root — run `npm install` inside `packages/ui`.
+- The package lives at `packages/ui`. There is no workspace root — run
+  `npm install` inside `packages/ui`.
+- **The `package.json` at the repo root is not a workspace root.** It was added
+  on 2026-09-21 so Vercel has a project manifest, and it declares no runtime
+  dependency at all, so a root `npm install` cannot hoist anything this package
+  resolves. If it ever grows a `workspaces` field, the trap this note is about
+  is back. The converter is passed `--node-modules packages/ui/node_modules`
+  explicitly and never consults the root, which is the belt to that braces.
 - `npm run build` is **two** steps: `tsup` (JS + `.d.ts`) then
   `node scripts/build-css.mjs`. Skipping the second leaves `dist/styles.css`
   stale and the sync ships old CSS.
@@ -47,6 +53,12 @@ it has not been run through the converter since it was added. If the emitted
 `.d.ts` names `DeckSkin` without defining it, inline it in `dtsPropsFor` for
 `MazeDeckProvider` the same way `River.slots` is. The two hooks
 (`useDeckSkin`, `useCardCopy`) have no preview and need none.
+
+`DeckSkin` has since gained `backArt?: string` — a URL for a picture in place
+of the maze on the card back (`CardBack` renders it as an `<img class="md-card__art">`
+under the vignette, frame and seal). It is a plain string field, so it should
+extract like `motif`; the table app hands it Vite asset URLs from
+`apps/table/src/biomes/art/`, produced by `apps/atelier`.
 
 ## Library bugs the previews caught
 

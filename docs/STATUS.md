@@ -4,7 +4,15 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-09-05 (game feel: nine phases, see plandoc.md)
+**Last updated:** 2026-09-21 (moved off Cloudflare onto Vercel + Supabase)
+
+> **The host changed.** Everything below that says *Durable Object*,
+> *wrangler* or *workers.dev* is history, kept because it is the record of how
+> the multiplayer half was built and why it is shaped the way it is. The
+> mechanism it describes was replaced on 2026-09-21 — see
+> [the migration](#the-move-to-vercel--supabase) at the end of this file, and
+> [DEPLOY.md](DEPLOY.md). The *rules* did not move: `packages/rules` is
+> untouched except for two comments and the deletion of two dead wire types.
 
 ## Where we are
 
@@ -198,19 +206,17 @@ scenario prompt, and no action bar except on their own turn.
 ## Running it
 
 ```bash
-cd workers/session && npm run dev   # the session server, port 8787
-cd apps/table && npm run dev        # the app, port 5180
+cd apps/table && npm run dev   # the board, port 5180 — needs no backend
+npx vercel dev                 # app + /api/session/*, port 3000
 ```
 
-In a production build the app uses **its own origin**, because the Worker
-serves it: one deploy, one URL, no CORS and nothing to configure.
-`VITE_SESSION_ENDPOINT` still overrides either, for pointing a local app at a
-deployed server. See [DEPLOY.md](DEPLOY.md).
+The single-screen GM mode runs entirely in the tab, so 5180 alone is the fast
+loop. `vercel dev` is the faithful rehearsal: one origin serving the app and
+the authority, exactly as production does. `VITE_SESSION_ENDPOINT` overrides
+the origin, for pointing a local app at a deployment.
 
-**Deployed and live: <https://maze-deck-session.andreastorp123.workers.dev>**
-(2026-09-03). Redeploy with `cd workers/session && npm run deploy`. See
-[DEPLOY.md](DEPLOY.md) — including the one-time Cloudflare dashboard click a
-fresh account needs before its first deploy will succeed.
+**Deployed on Vercel** — see [DEPLOY.md](DEPLOY.md), including the one secret
+that has to be pasted in by hand.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -267,16 +273,10 @@ Beyond that, worth doing in rough order of value:
    that happens; see the balance findings, which say the card game cannot
    currently be lost.
 2. **What happens when the GM's tab closes mid-run.** The room survives — it is
-   in Durable Object storage — but players currently just see the board stop.
-3. **Deploying.** Fully prepared and verified locally — see [DEPLOY.md](DEPLOY.md).
-   The Worker now serves the built app as a static-assets binding, so it is one
-   deploy rather than two hosts plus CORS. Verified against `wrangler dev`:
-   `/` serves the app, `/session/<code>` still reaches the Worker and upgraded
-   to a live socket (101), and hosting a room from that single origin produced
-   a join code and a running crossing. **All that is left is `wrangler login`
-   and `npm run deploy`.**
-4. The player view is phone-first but has had no real device testing.
-5. Re-enabling Dead End and Trap as a playable expansion — the engine, the
+   a Postgres row — but players currently just see the board stop. The reveal,
+   at least, no longer stalls with it: any client may nudge that.
+3. The player view is phone-first but has had no real device testing.
+4. Re-enabling Dead End and Trap as a playable expansion — the engine, the
    tokens, the art and the print page all already support them.
 
 ## The front page, and Radix
@@ -556,6 +556,64 @@ Two things learned there are worth carrying:
   is verifiable through DOM state and a `MutationObserver`; the look of
   motion needs the pane displayed or a real browser.
 
+## The atelier — artwork from a seed
+
+`apps/atelier` (port 5181) is a workbench for the deck's artwork, built the
+same way as the table: Vite, React, both packages aliased to source, its own
+`node_modules`. Everything it draws is a pure function of a **biome**, a
+**style** (`flat`, `line`, `pixel`, `engraving`) and a **seed**, so a piece can
+be reproduced from its recipe and none of it is anyone else's work (A7).
+
+Four benches, each previewing on the real cards with the real palette read
+off `biomes.css` at runtime:
+
+- **Back** — a seamless 24-unit tile (maze walls, maze passages, or a square
+  fret; the maze is generated on a torus, which is what makes it seamless).
+  Exports the `FIELD` line for `CardBack.tsx`.
+- **Scene** — a view through the arch into the setting: a category-lit sky, a
+  horizon from the biome's terrain (pillars, stairs, trees, dunes, vaults,
+  peaks), the card's subject in front. Drawn on the glyph's 120 × 140 grid.
+- **Ground** — the page behind the table; exports a `--t-biome-ground` value
+  with the texture tile inlined.
+- **Palette** — a new biome's block for `biomes.css` from a cast, with the
+  category hues tuned within their families and never swapped.
+
+The benches never write into the library or the table app themselves.
+`node scripts/capture-atelier.cjs` writes a contact sheet of the generators'
+range into `proof/atelier/` with the Chromium in `.ds-sync` — the browser
+pane cannot screenshot reliably, so that is how the output was judged.
+
+**The table wears the atelier's art now.** Two things changed on the second
+pass, at the author's direction: the arch glyph and its symbols on the card
+face stay exactly as designed, and the scenes went to the card **back**
+instead — the setting's horizon across the whole field, no subject, behind
+the vignette, frame and seal. `DeckSkin` gained `backArt?: string` (a URL),
+`CardBack` draws it as `.md-card__art` in place of the maze when present,
+and each biome file imports its own from `apps/table/src/biomes/art/`. The
+motif stays as the print deck's back and the fallback. And every biome's
+`--t-biome-ground` is now a 2560 × 1440 picture as its top layer, with the
+motion **inside the SVG** as SMIL — the pool breathes, snow falls, embers
+rise, dust drifts — over the old gradient as a fallback. Verified in headless
+Chromium that the SVG animates both as a CSS background and as an `<img>`.
+
+The campaign screen shows the backs too: a setting's door wears its back
+picture instead of the motif tile, and the sample cards under the doors now
+start with the back. And the board has a **setting switch** in its controls
+row, for looking at the settings, not for play: it changes what this one
+screen wears (`previewBiome` in App.tsx) and nothing on the wire, and it is
+dropped on the way back to the campaign screen.
+
+The deep forest's trees are drawn as standing trees — tiered conifers and
+clusters of rounds on trunks, as shapes on a low bank of undergrowth — rather
+than a sawtooth height line, which read as peaks. A scene layer can carry
+`shapes` now, for anything with an overhang.
+
+All twelve pictures are baked from recipes by `node scripts/bake-art.cjs`
+(one seed per biome, in the script). Re-roll a setting by changing its seed
+there, never by editing a file under `art/`. Not yet measured: what the
+animated ground costs on a phone — the player's screen shares `.t-app`'s
+ground. If it stutters, the `animate` recipe flag off gives a still picture.
+
 ## Watch out for
 
 - **A new colour token has to be added to every biome block** in
@@ -619,3 +677,38 @@ faithful to the rules as printed. It may not be what was intended.
 | M4 | Multiplayer | **done** — verified across two devices |
 | M5 | Deck and print regeneration | **done** |
 | — | Biomes: six settings, reskinning cards, palette, backs and tables | **done** — verified over a socket |
+
+
+## The move to Vercel + Supabase
+
+Done 2026-09-21. `workers/` is deleted; the Cloudflare account is no longer
+part of this project.
+
+| Was | Is |
+|---|---|
+| One Worker serving app + sessions | One Vercel deployment serving app + `api/session/*` |
+| A Durable Object per join code | A row in `public.maze_sessions` per join code |
+| The DO's single thread | `version`, as a compare-and-swap token |
+| `storage.setAlarm` | `reveal_due_at`, and a client that may only *nudge* |
+| A WebSocket per client, each with its own view | Realtime broadcasts a version; each client fetches its own view |
+| Presence from `ctx.getWebSockets()` | Supabase Realtime presence, tracked by the clients |
+
+**What did not change.** `packages/rules` is the same engine, the same
+`view()` and the same `mayAct`. `ADVANCE_REVEAL` is still sendable by nobody.
+`SessionTransport` is the same interface — `socket.ts` became `remote.ts` and
+nothing above the seam noticed, which is the second time that interface has
+paid for itself.
+
+**What got better.** Rooms survive a deploy, because they are rows rather than
+process state. Redeploying mid-session used to be forbidden.
+
+**What got worse.** An action now costs a round trip to the authority plus a
+round trip back for the view, instead of one frame down an open socket. For a
+turn-based card game that is invisible, but it is no longer free. And the
+Realtime topic is public: anyone with a join code can subscribe to it, or
+publish a fake bump. There is nothing on it to steal — that is the point of
+sending only a version number — but it is a door the Durable Object did not
+have.
+
+**Still to verify at a real table:** everything below "Next single action"
+still stands, and none of it has been re-tested since the move.

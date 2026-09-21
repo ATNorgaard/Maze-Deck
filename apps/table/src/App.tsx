@@ -7,10 +7,10 @@ import type {
 import { biomeOf, skinOf } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign } from './campaign';
-import { loadIdentity, rememberSeat, SESSION_ENDPOINT } from './player';
+import { loadIdentity, rememberSeat } from './player';
 import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
-import { SocketSession } from './transport/socket';
+import { RemoteSession } from './transport/remote';
 import type { SessionTransport, Snapshot } from './transport/types';
 import { PortalHost } from './components/PortalHost';
 import { CampaignScreen } from './screens/CampaignScreen';
@@ -117,8 +117,7 @@ export function App() {
     if (!isJoinCode(code)) return;
     const remembered = identity.current.seats[code];
     const claim = seatId ?? remembered;
-    attach(new SocketSession({
-      endpoint: SESSION_ENDPOINT,
+    attach(new RemoteSession({
       code,
       playerId: identity.current.playerId,
       role: 'player',
@@ -130,7 +129,7 @@ export function App() {
   // A seat offer means "you are in the room but not seated yet".
   React.useEffect(() => {
     const s = session.current;
-    if (!(s instanceof SocketSession)) return;
+    if (!(s instanceof RemoteSession)) return;
     setSeatOffers(s.seatOffers);
   }, [snapshot]);
 
@@ -139,8 +138,7 @@ export function App() {
   const host = React.useCallback(() => {
     const code = campaign.hostCode || makeJoinCode();
     setCampaign((prev) => ({ ...prev, hostCode: code, prompt: null, lastPrompt: {} }));
-    attach(new SocketSession({
-      endpoint: SESSION_ENDPOINT,
+    attach(new RemoteSession({
       code,
       playerId: identity.current.playerId,
       role: 'gm',
@@ -179,7 +177,7 @@ export function App() {
   }, [ensureLocal]);
 
   const view = snapshot?.view ?? null;
-  const hosted = session.current instanceof SocketSession;
+  const hosted = session.current instanceof RemoteSession;
 
   // Inside a run the setting is the run's own — it is what every
   // device was told, and a joined player has no campaign at all.

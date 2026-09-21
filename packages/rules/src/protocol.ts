@@ -1,13 +1,19 @@
 /* ============================================================
    The wire.
 
-   Shared by the browser and the Durable Object, so the two cannot
-   drift. Nothing here carries game secrets: the server sends a
-   GameView, which is already the redacted form.
+   Shared by the browser and the authority function, so the two
+   cannot drift. Nothing here carries game secrets: the server
+   sends a GameView, which is already the redacted form.
+
+   `ClientMessage` and `ServerMessage` used to live here, describing
+   a WebSocket frame in each direction. The wire is request/response
+   over /api/session/* now, so both are gone rather than kept as a
+   shape nothing sends. What remains is the vocabulary both ends
+   still share: who is asking, what a run needs, what a seat looks
+   like, and the join-code alphabet.
    ============================================================ */
 
-import type { GameAction, RunConfig } from './types';
-import type { GameView, Viewer } from './view';
+import type { RunConfig } from './types';
 
 /** How a client asks to be let in. */
 export interface JoinRequest {
@@ -34,13 +40,6 @@ export interface JoinRequest {
  */
 export type RunSetup = Omit<RunConfig, 'seed'>;
 
-export type ClientMessage =
-  /** Open a session here. Whoever does this is its GM. */
-  | { t: 'create'; playerId: string; setup: RunSetup }
-  | ({ t: 'join' } & JoinRequest)
-  | { t: 'action'; action: GameAction }
-  | { t: 'ping' };
-
 /** A seat a joining player may claim. */
 export interface SeatOffer {
   id: string;
@@ -55,23 +54,6 @@ export interface Presence {
   role: 'gm' | 'player';
   connected: boolean;
 }
-
-export type ServerMessage =
-  /** Accepted. Carries the first view and who the server thinks you are. */
-  | { t: 'welcome'; viewer: Viewer; view: GameView; presence: Presence[] }
-  /** The state moved. Full view each time — they are small. */
-  | { t: 'view'; view: GameView; presence: Presence[] }
-  /** Refused, or something went wrong. Never fatal on its own. */
-  | { t: 'error'; message: string }
-  /**
-   * You are in the room but not yet seated. Carries the roster so a
-   * joining player can choose — they cannot know it before they
-   * arrive, which is why joining without a seat is not an error.
-   */
-  | { t: 'seats'; seats: SeatOffer[] }
-  /** Connected, but nobody has started a run here yet. */
-  | { t: 'waiting'; presence: Presence[] }
-  | { t: 'pong' };
 
 /**
  * Join codes are short and safe to read aloud across a table.

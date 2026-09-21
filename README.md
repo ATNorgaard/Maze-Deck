@@ -14,9 +14,11 @@ information and the narration prompts.
 |---|---|
 | `packages/ui` | `@maze-deck/ui` — the React component layer. 13 components, print-accurate card geometry, design tokens. Built and stable. |
 | `packages/rules` | The engine. Pure TypeScript, seeded, no React. **Not built yet — this is M1.** |
+| `apps/atelier` | The artwork workbench: seeded, procedural card backs, card scenes, page grounds and biome palettes, previewed on the real cards. See [apps/atelier/README.md](apps/atelier/README.md). |
 | `design-system/` | Static token/component reference and the print pipeline. |
 | `design/dc/` | The Claude Design prototype, imported. Reference for interaction, not code to port. |
 | `print/` | Generated print sheets. |
+| `api/` | The session authority — Vercel functions over a Supabase row. The successor to the Cloudflare Worker, which is gone. |
 | `docs/` | Everything below. |
 
 ## Read these first
@@ -38,7 +40,9 @@ disagrees with `DECISIONS.md`, `DECISIONS.md` wins.
 
 The component library is standalone — it has its own `node_modules` and there is
 deliberately **no npm workspace root**, because hoisting breaks the
-design-system sync (see `.design-sync/NOTES.md`).
+design-system sync (see `.design-sync/NOTES.md`). The `package.json` at the
+repo root exists for Vercel, declares no runtime dependency, and must never
+grow a `workspaces` field.
 
 ```bash
 cd packages/ui && npm install && npm run build
@@ -47,6 +51,10 @@ cd packages/ui && npm install && npm run build
 `npm run build` is two steps — `tsup` for JS and types, then
 `scripts/build-css.mjs` to flatten the stylesheet. Skipping the second ships
 stale CSS.
+
+The app and the live sessions deploy together to one Vercel project; see
+[docs/DEPLOY.md](docs/DEPLOY.md), which has the one secret that must be pasted
+in by hand.
 
 ## Provenance
 

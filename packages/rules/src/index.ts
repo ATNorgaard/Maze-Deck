@@ -15,7 +15,7 @@ export {
   CODE_ALPHABET, CODE_LENGTH, isJoinCode, makeJoinCode, normaliseJoinCode,
 } from './protocol';
 export type {
-  ClientMessage, JoinRequest, Presence, RunSetup, SeatOffer, ServerMessage,
+  JoinRequest, Presence, RunSetup, SeatOffer,
 } from './protocol';
 export type {
   Available, GameView, Viewer, ViewRules, ViewSlot,

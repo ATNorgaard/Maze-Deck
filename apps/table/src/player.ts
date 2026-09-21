@@ -46,13 +46,32 @@ export function rememberSeat(code: string, seatId: string): void {
 }
 
 /**
- * Where the session server lives.
+ * Where the session authority lives.
  *
- * In production the Worker serves this app as well, so the server is
- * wherever the page came from and there is nothing to configure. In
- * dev the two run on separate ports. `VITE_SESSION_ENDPOINT` overrides
- * both, for pointing a local app at a deployed server.
+ * In production the same Vercel deployment serves this app and the
+ * /api/session functions, so the server is wherever the page came from
+ * and there is nothing to configure. `VITE_SESSION_ENDPOINT` overrides
+ * it, which is how a `vite dev` app on 5180 points at a deployment —
+ * or at `vercel dev`, which serves both halves the way production does.
  */
-export const SESSION_ENDPOINT: string =
-  import.meta.env.VITE_SESSION_ENDPOINT
-  ?? (import.meta.env.DEV ? 'http://localhost:8787' : window.location.origin);
+export const API_BASE: string =
+  (import.meta.env.VITE_SESSION_ENDPOINT as string | undefined)?.replace(/\/+$/, '')
+  ?? (typeof window === 'undefined' ? '' : window.location.origin);
+
+/**
+ * The Realtime topic, or nothing.
+ *
+ * These two are public by construction: `maze_sessions` has RLS on and
+ * no policies, so the publishable key opens no door to the database at
+ * all, and the topic itself carries a version number and nothing else.
+ * The deck is never on this wire.
+ *
+ * Absent, the game still works — RemoteSession falls back to polling.
+ * It is slower and it is not what anyone should ship, but a missing
+ * environment variable should not be the thing that ends a session.
+ */
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+export const REALTIME: { url: string; anonKey: string } | null =
+  url && anonKey ? { url, anonKey } : null;
