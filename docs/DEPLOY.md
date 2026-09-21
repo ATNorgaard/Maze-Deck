@@ -89,6 +89,11 @@ There are no rewrites. Routing is hash-based (`#/join/CODE`), so `/` serves the
 app and everything else is a genuine 404 — the same reasoning as the old
 `not_found_handling = "none"`.
 
+`api/` holds only routes. Vercel builds every file there as an endpoint
+and skips `_`-prefixed ones *without building them at all*, so shared code
+lives in `server/` — an `api/_store.ts` typechecks, bundles locally, and is
+then simply missing from the deployed function.
+
 **Rooms survive a deploy.** They are rows, not process state. This is the one
 thing that got strictly better: redeploying mid-session is no longer forbidden.
 

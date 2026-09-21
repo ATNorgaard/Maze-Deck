@@ -13,6 +13,12 @@
    REST calls and a fetch, and keeping the dependency out means the
    repo root still installs to almost nothing. See .design-sync/NOTES.md
    for why an empty root node_modules is worth protecting.
+
+   It lives here rather than in api/ because api/ is a routes
+   directory: Vercel builds every file in it as an endpoint, and skips
+   the _-prefixed ones without building them at all. `api/_store.ts`
+   therefore typechecked, bundled locally, and was simply absent from
+   the deployed function.
    ============================================================ */
 
 // REVEAL_MS is imported rather than re-declared: client, server and this

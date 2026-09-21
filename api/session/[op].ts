@@ -8,7 +8,7 @@
    Three things a Durable Object gave for free had to be rebuilt:
 
    1. ONE THREAD.  A DO handled messages one at a time. Here every
-      write is a compare-and-swap on `version` (see _store.ts), and a
+      write is a compare-and-swap on `version` (see server/store.ts), and a
       lost swap re-reads and re-applies. `attempt()` is that loop.
 
    2. THE ALARM.   `storage.setAlarm` has no serverless equivalent at
@@ -38,8 +38,11 @@ import { view } from '../../packages/rules/src/view.js';
 import type { GameAction } from '../../packages/rules/src/types.js';
 import type { Viewer } from '../../packages/rules/src/view.js';
 import type { RunSetup, SeatOffer } from '../../packages/rules/src/protocol.js';
-import { bump, create, read, swap, topicFor } from '../_store.js';
-import type { Patch, Row } from '../_store.js';
+// Not under api/. Vercel treats everything there as a route and skips the
+// _-prefixed ones entirely -- it never builds them, so importing one
+// typechecks locally and is missing at runtime. That cost three deploys.
+import { bump, create, read, swap, topicFor } from '../../server/store.js';
+import type { Patch, Row } from '../../server/store.js';
 
 export const config = { maxDuration: 15 };
 
