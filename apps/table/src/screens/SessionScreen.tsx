@@ -222,12 +222,21 @@ export function SessionScreen({
 
         {/* The phase signpost is gone: the light on the board says where
             to look, and the lit seat says who. What stays is the scene
-            line, which is the GM's to read out. */}
-        {prompt ? (
-          <p className="t-scene">
+            line, which is the GM's to read out.
+
+            Its band is on the GM's board from the first turn, empty until
+            a card is turned, with two lines held open. The prompt is drawn
+            as the card flips, and mounting it then pushed the river down
+            under a card overlay measured a frame earlier — the revealed
+            card sat above its own slot for the whole hold. Reserved, a
+            new scene changes nothing around it. An entry longer than two
+            lines at this width still moves the river, and the held card
+            follows its slot when it does (useStage). */}
+        {view.viewer.role === 'gm' ? (
+          <div className="t-scene" data-empty={prompt ? undefined : true} aria-live="polite">
             <span className="t-kicker">The scene</span>
-            {prompt.text}
-          </p>
+            <p className="t-scene__text">{prompt?.text ?? ''}</p>
+          </div>
         ) : null}
 
         {/* The roll is a centred modal — the author's call, reversing the

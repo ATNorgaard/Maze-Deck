@@ -292,6 +292,32 @@ export function useStage(view: GameView, refs: Refs): Stage {
 
   React.useEffect(() => () => clearTimers(), []);
 
+  // The overlay is fixed to the viewport where the slot was when the
+  // beat began. Anything that moves the river while the card is held —
+  // a scene longer than its band, an error notice, the page scrolled —
+  // would leave it standing off its own slot, so until it flies it
+  // follows the slot. Runs after every render of the screen, which is
+  // when a mounting scene line would have moved it.
+  React.useLayoutEffect(() => {
+    if (!overlay || overlay.flight) return undefined;
+    const follow = () => {
+      const cur = ov.current;
+      if (!cur || cur.flight) return;
+      const el = slotCard(refs.riverRef.current, cur.slot);
+      if (!el) return;
+      const m = measure(el);
+      if (Math.abs(m.rect.top - cur.rect.top) < 0.5 && Math.abs(m.rect.left - cur.rect.left) < 0.5) return;
+      setOverlay({ ...cur, ...m });
+    };
+    follow();
+    window.addEventListener('scroll', follow, { passive: true });
+    window.addEventListener('resize', follow);
+    return () => {
+      window.removeEventListener('scroll', follow);
+      window.removeEventListener('resize', follow);
+    };
+  });
+
   // Only the slot an overlay stands in front of is masked. A slot owed a
   // deal is presented EMPTY instead — the dashed outline under the card
   // arriving — so there is never a dark hole in the river.

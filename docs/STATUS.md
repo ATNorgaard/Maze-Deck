@@ -4,7 +4,15 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-09-21 (moved off Cloudflare onto Vercel + Supabase)
+**Last updated:** 2026-10-07 (the overhaul planned and its phase 0 done —
+see [overhaul.md](overhaul.md))
+
+> **The overhaul is the work now.** [overhaul.md](overhaul.md) is the plan
+> and its log: the board becomes the place — the setting full-bleed, the
+> scene as the centrepiece, decisions on the table, the world reacting to
+> the crossing, phones as windows. Its eight decisions are in
+> [DECISIONS.md](DECISIONS.md) as O1–O8. Read its log before touching
+> `apps/table`.
 
 > **The host changed.** Everything below that says *Durable Object*,
 > *wrangler* or *workers.dev* is history, kept because it is the record of how
@@ -261,11 +269,20 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**Look at the motion in a real browser.** Every beat in plandoc.md was
-verified by DOM state in a hidden pane that renders no frames, so nobody has
-yet *seen* a card dealt, a die tumble or the river fan open. `cd apps/table
-&& npm run dev`, start a crossing, take an action, pick a path, and tune the
-tokens in `apps/table/src/stage/motion.ts` by eye. Then deploy.
+**[The overhaul's phase 1](overhaul.md#1-the-new-board-beside-the-old):
+the new board, beside the old.** The overhaul lives on the **`overhaul`
+branch**, not `main`, because a push to `main` deploys and the work runs
+to ten phases. `main` fast-forwards to it whenever a phase is worth
+shipping. On the branch so far: the atelier's art (`art: …`) and phase 0
+(`world/0`).
+
+Still owed from phase 0: one look at the animated ground on a real phone
+(the frame budget and the headless crash are in the log).
+
+`node scripts/capture-walk.cjs` and `node scripts/measure-frames.cjs` are
+how the board is judged now — the first photographs a whole crossing and
+fails if a revealed card stands off its slot, the second is the frame
+budget every visual phase is held to.
 
 Beyond that, worth doing in rough order of value:
 

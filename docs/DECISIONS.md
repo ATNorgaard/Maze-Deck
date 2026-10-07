@@ -45,6 +45,22 @@ something feels wrong in play.
 | A7 | **Never reuse the source's names, effect wording, or art.** No mark of the originating product appears anywhere in the app. |
 | A8 | **A biome is a campaign dial and pure presentation.** `RunConfig.biome` is a string the engine never reads; it rides the wire so every device reskins alike. The library exposes a `skin` (copy + back motif) and leaves colour to CSS; the app owns the biomes as content — copy, palette, motif and a full scenario set per setting. Card eyebrows keep the canonical name so the log and the rules stay legible. The printed deck is not reskinned. |
 
+## The overhaul
+
+Taken 2026-10-07, every one as recommended in
+[overhaul.md](overhaul.md), which has the reasoning (its D1–D8).
+
+| # | Decision |
+|---|---|
+| O1 | **Players see the scene text when the GM shares it** — a *Show the table* control per scene, and a campaign setting to make it automatic. It travels as a GM-only `share` op writing a `scene` column on the room row, never through `GameState`. |
+| O2 | **One additive engine change: a `cue` on `GameEvent`** (`jam`, `reshuffle`, `found`, `through`…) so the stage plays what happened instead of inferring it from counts. Every existing rules test stays as it is. |
+| O3 | **The roll stays a centred, blocking dialog** (feel/3b) and is restaged at the scale of the moment. |
+| O4 | **A WebGL2 canvas replaces the SMIL grounds as the default ambient layer**, with quality tiers and the still picture as the fallback. No dependency. |
+| O5 | **`packages/art`** holds the generators, shared by the atelier and the table, aliased to source. `packages/ui` and the design-sync stay out of it. |
+| O6 | **Sound stays off by default, and the threshold asks once.** |
+| O7 | **The new board is built beside the old**, behind a toggle, and the old one is retired at the end. |
+| O8 | **No rules change comes with the overhaul.** Whether a failed check should cost something stays a separate decision ([reference/balance.md](reference/balance.md)). |
+
 ## Build order
 
 Sliced so every milestone ends with something that runs, because sessions will

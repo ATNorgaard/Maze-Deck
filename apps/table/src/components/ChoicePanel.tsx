@@ -48,7 +48,7 @@ export function ChoicePanel({ view, choice, onResolve }: Props) {
           <h2 className="t-panel__title">Scouted off the deck</h2>
           <p className="t-note">
             One goes back on top and will be the next card drawn. The rest are
-            shuffled back in. Players are told a card was set, never which.
+            shuffled back in. The whole table is told which.
           </p>
           <div className="t-cards" style={{ marginTop: 'calc(3 * var(--md-u))' }}>
             {choice.cards.map((card, i) => (

@@ -34,7 +34,8 @@ const sample = (page) => page.evaluate(() => ({
     return `${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}`;
   }),
   covered: document.querySelector('.t-river')?.dataset.covered ?? '-',
-  phase: document.querySelector('.t-phase__title')?.textContent,
+  // The phase signpost went in feel/9; the light on the board says it now.
+  phase: document.querySelector('.t-board')?.dataset.focus ?? '-',
   modal: document.querySelector('.t-modal .t-panel__title')?.textContent ?? '',
   slots: [...document.querySelectorAll('.md-river__slot article')]
     .map((a) => (a.classList.contains('md-card--back') ? 'back' : a.dataset.category) + ':' + getComputedStyle(a).opacity).join('/'),
@@ -68,9 +69,9 @@ const sample = (page) => page.evaluate(() => ({
       if (await land.count()) await land.click();
       await page.waitForTimeout(1500);
     }
-    const phase = await page.locator('.t-phase__title').textContent();
+    const phase = await page.locator('.t-board').getAttribute('data-focus');
     console.log(`cycle ${cycle}: phase ${phase}`);
-    if (!/Commit/.test(phase)) continue;
+    if (phase !== 'river') continue;
 
     await page.locator('.md-river__slot article.md-card--back').first().click();
     const t0 = Date.now();

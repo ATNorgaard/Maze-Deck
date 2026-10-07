@@ -655,6 +655,17 @@ html, body, #root {
   color: var(--md-cat-path-300);
 }
 
+/* Two lines held open whether or not there is a scene yet, so the
+   prompt arriving mid-flip never moves the river (see SessionScreen). */
+.t-scene__text {
+  margin: 0;
+  min-height: calc(2em * var(--md-leading-body));
+}
+
+/* Before the first card is turned the band keeps its height and shows
+   nothing. */
+.t-scene[data-empty] { visibility: hidden; }
+
 /* ---------------- tables editor ---------------- */
 
 .t-tables {
