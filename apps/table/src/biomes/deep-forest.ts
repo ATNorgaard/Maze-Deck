@@ -1,6 +1,7 @@
 import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
+import backArt from './art/back-deep-forest.svg';
 
 /** Game trails that all look the same. The trees are older than the road, and they know it. */
 export const DEEP_FOREST: Biome = {
@@ -8,6 +9,7 @@ export const DEEP_FOREST: Biome = {
   name: 'Deep forest',
   flavour: 'Game trails that all look the same. The trees are older than the road, and they know it.',
   motif: 'branch',
+  backArt,
   cards: {
     'clear-path': {
       title: 'Game Trail',

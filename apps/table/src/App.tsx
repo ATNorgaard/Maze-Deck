@@ -5,6 +5,7 @@ import type {
   CardCategory, GameAction, GameState, SeatOffer, Viewer,
 } from '@maze-deck/rules';
 import { biomeOf, skinOf } from './biomes';
+import type { BiomeId } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign } from './campaign';
 import { loadIdentity, rememberSeat } from './player';
@@ -43,6 +44,7 @@ export function App() {
   });
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [asPlayer, setAsPlayer] = React.useState(false);
+  const [previewBiome, setPreviewBiome] = React.useState<BiomeId | null>(null);
   const [joinCode, setJoinCode] = React.useState(deepLink.current ?? '');
   const [seatOffers, setSeatOffers] = React.useState<SeatOffer[] | null>(null);
 
@@ -184,7 +186,10 @@ export function App() {
   // Everywhere else it is the campaign's, so a choice on the campaign
   // screen lands on the whole page as it is made.
   const inRun = (screen === 'session' || screen === 'play') && view !== null;
-  const biome = biomeOf(inRun ? view.rules.biome : campaign.biome);
+  // A testing override, from the board's setting switch: this screen
+  // alone wears another setting. Nothing on the wire changes and no
+  // other device sees it. Dropped when the board is left.
+  const biome = biomeOf(previewBiome ?? (inRun ? view.rules.biome : campaign.biome));
 
   return (
     <div className="t-biome" data-biome={biome.id}>
@@ -228,7 +233,9 @@ export function App() {
           asPlayer={asPlayer}
           onTogglePlayerView={togglePlayerView}
           {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
-          onExit={() => setScreen('campaign')}
+          previewBiome={previewBiome}
+          onPreviewBiome={setPreviewBiome}
+          onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
         />
       ) : screen === 'landing' ? (
         <LandingScreen

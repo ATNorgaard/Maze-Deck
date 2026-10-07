@@ -42,6 +42,17 @@
   --t-biome-ground: var(--md-ink-900);
 }
 
+/* Every ground below is a picture first — the setting's ink, its
+   light breathing, whatever is in its air drifting — with the old
+   gradient beneath as the fallback while it loads. The pictures are
+   baked from recipes by scripts/bake-art.cjs out of apps/atelier;
+   change a seed there, not a file here. */
+[data-biome="dungeon"] .md-root {
+  --t-biome-ground:
+    url("./biomes/art/ground-dungeon.svg") center / cover no-repeat,
+    var(--md-ink-900);
+}
+
 /* The dungeon's tile. Only what a tile paints; the values are
    tokens.css as written. */
 .t-door[data-biome="dungeon"] {
@@ -83,6 +94,7 @@
   --md-cat-wand-glow: rgba(123,135,166,0.34);
 
   --t-biome-ground:
+    url("./biomes/art/ground-tower.svg") center / cover no-repeat,
     radial-gradient(ellipse 60% 45% at 50% 0%, rgba(217,162,75,0.07), transparent 70%),
     var(--md-ink-900);
 }
@@ -127,6 +139,7 @@
   --md-cat-mons-glow: rgba(168,58,58,0.42);
 
   --t-biome-ground:
+    url("./biomes/art/ground-deep-forest.svg") center / cover no-repeat,
     radial-gradient(ellipse 70% 40% at 50% 100%, rgba(76,154,99,0.08), transparent 70%),
     var(--md-ink-900);
 }
@@ -171,6 +184,7 @@
   --md-cat-mons-glow: rgba(178,58,52,0.42);
 
   --t-biome-ground:
+    url("./biomes/art/ground-desert.svg") center / cover no-repeat,
     linear-gradient(180deg, rgba(233,174,62,0.05), transparent 35%),
     radial-gradient(ellipse 80% 30% at 50% 100%, rgba(233,174,62,0.10), transparent 70%),
     var(--md-ink-900);
@@ -206,6 +220,7 @@
   --md-cat-item-glow: rgba(134,86,163,0.38);
 
   --t-biome-ground:
+    url("./biomes/art/ground-undercity.svg") center / cover no-repeat,
     radial-gradient(ellipse 50% 35% at 50% 0%, rgba(223,178,76,0.05), transparent 70%),
     var(--md-ink-900);
 }
@@ -258,6 +273,7 @@
   --md-cat-dead-glow: rgba(138,144,150,0.28);
 
   --t-biome-ground:
+    url("./biomes/art/ground-frozen-pass.svg") center / cover no-repeat,
     radial-gradient(ellipse 70% 45% at 50% 0%, rgba(179,204,227,0.10), transparent 70%),
     var(--md-ink-900);
 }

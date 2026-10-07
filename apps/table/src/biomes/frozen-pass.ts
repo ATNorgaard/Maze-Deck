@@ -1,6 +1,7 @@
 import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
+import backArt from './art/back-frozen-pass.svg';
 
 /** Switchbacks in whiteout. Whatever lives up here is heard long before it is seen. */
 export const FROZEN_PASS: Biome = {
@@ -8,6 +9,7 @@ export const FROZEN_PASS: Biome = {
   name: 'Frozen pass',
   flavour: 'Switchbacks in whiteout. Whatever lives up here is heard long before it is seen.',
   motif: 'crystal',
+  backArt,
   cards: {
     'clear-path': {
       title: 'Switchback',

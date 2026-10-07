@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {
-  ArchGlyph, CANONICAL_CATEGORIES, CATEGORY_CLASS, DECK_TOTAL, DeckCard, MazeField,
+  ArchGlyph, CANONICAL_CATEGORIES, CATEGORY_CLASS, CardBack, DECK_TOTAL, DeckCard, MazeField,
 } from '@maze-deck/ui';
 import { BIOMES, biomeOf, cardName } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
@@ -234,7 +234,11 @@ export function CampaignScreen({
                   data-biome={b.id}
                   onClick={() => set('biome', b.id)}
                 >
-                  <span className="t-door__field"><MazeField motif={b.motif} fit="cover" /></span>
+                  <span className="t-door__field">
+                    {b.backArt
+                      ? <img className="t-door__art" src={b.backArt} alt="" draggable={false} />
+                      : <MazeField motif={b.motif} fit="cover" />}
+                  </span>
                   <span className="t-door__fade" />
                   <span className="t-door__glyph"><ArchGlyph state="seal" /></span>
                   <span className="t-door__name">{b.name}</span>
@@ -252,7 +256,8 @@ export function CampaignScreen({
             </button>
           </div>
           <div className="t-setting__body">
-            <div className="t-setting__preview" aria-label="Three cards in this setting">
+            <div className="t-setting__preview" aria-label="Cards in this setting">
+              <CardBack size="sm" />
               <DeckCard category="clear-path" size="sm" showCount={false} />
               <DeckCard category="obstacle" size="sm" showCount={false} />
               <DeckCard category="monster" size="sm" showCount={false} />

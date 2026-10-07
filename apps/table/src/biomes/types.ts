@@ -43,6 +43,13 @@ export interface Biome {
   /** The field on the card back. Same on every card in the run. */
   motif: CardBackMotif;
   /**
+   * A picture for the card back instead of the motif's maze: the
+   * setting's own horizon, from the atelier (apps/atelier, the Back
+   * bench in its Scene mode). A URL; the motif stays as the print
+   * deck's back and the fallback.
+   */
+  backArt?: string;
+  /**
    * The cards' copy. `null` keeps the canonical wording — the
    * dungeon is the printed deck, so it does not reword anything.
    */

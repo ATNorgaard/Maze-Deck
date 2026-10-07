@@ -250,6 +250,15 @@
   opacity: 0.85;
   color: var(--md-ink-500);
 }
+/* A skin's picture in place of the maze. Covers the trim; the
+   vignette, frame and seal still draw over it. */
+.md-card__art {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+}
 .md-card__vignette {
   position: absolute; inset: 0;
   background: radial-gradient(ellipse at 50% 50%,

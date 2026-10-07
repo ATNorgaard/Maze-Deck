@@ -42,6 +42,14 @@ export type CardBackMotif = 'fret' | 'stair' | 'branch' | 'dune' | 'brick' | 'cr
 export interface DeckSkin {
   copy?: Partial<Record<CardCategory, CardCopy>>;
   motif?: CardBackMotif;
+  /**
+   * A picture for the card back's field, as a URL. When set it
+   * stands in for the motif's maze; the vignette, frame and seal
+   * still draw over it. Like the motif it is set once on the
+   * provider, so it is the same on every card and says nothing
+   * about any one of them.
+   */
+  backArt?: string;
 }
 
 const DeckSkinContext = React.createContext<DeckSkin>({});
@@ -57,10 +65,12 @@ export function DeckSkinProvider({ skin, children }: { skin: DeckSkin; children?
     const merged: DeckSkin = {};
     const copy = skin.copy ?? parent.copy;
     const motif = skin.motif ?? parent.motif;
+    const backArt = skin.backArt ?? parent.backArt;
     if (copy) merged.copy = copy;
     if (motif) merged.motif = motif;
+    if (backArt) merged.backArt = backArt;
     return merged;
-  }, [skin.copy, skin.motif, parent.copy, parent.motif]);
+  }, [skin.copy, skin.motif, skin.backArt, parent.copy, parent.motif, parent.backArt]);
   return <DeckSkinContext.Provider value={value}>{children}</DeckSkinContext.Provider>;
 }
 

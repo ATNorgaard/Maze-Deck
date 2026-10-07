@@ -1,6 +1,7 @@
 import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
+import backArt from './art/back-undercity.svg';
 
 /** Sewer junctions and forgotten cellars. Everyone down here is going somewhere too. */
 export const UNDERCITY: Biome = {
@@ -8,6 +9,7 @@ export const UNDERCITY: Biome = {
   name: 'Undercity',
   flavour: 'Sewer junctions and forgotten cellars. Everyone down here is going somewhere too.',
   motif: 'brick',
+  backArt,
   cards: {
     'clear-path': {
       title: 'Culvert',

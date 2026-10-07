@@ -12,7 +12,8 @@ import { EventLog } from '../components/EventLog';
 import { Modal } from '../components/Modal';
 import { SeatBaton } from '../components/SeatBaton';
 import { SoundToggle } from '../components/SoundToggle';
-import type { Biome } from '../biomes';
+import { BIOMES, isBiomeId } from '../biomes';
+import type { Biome, BiomeId } from '../biomes';
 import { SCORES } from '../campaign';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
@@ -37,6 +38,12 @@ interface Props {
   /** Set when the run is hosted in a room players can join. */
   hostCode?: string;
   error: string | null;
+  /**
+   * The testing override: wear another setting on this screen only.
+   * `null` is the run's own. Nothing on the wire moves.
+   */
+  previewBiome?: BiomeId | null;
+  onPreviewBiome?: (id: BiomeId | null) => void;
 }
 
 const POSITION = ['left', 'centre', 'right'];
@@ -57,7 +64,7 @@ const FOCUS: Record<Phase, 'actions' | 'river' | null> = {
 
 export function SessionScreen({
   view, biome, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
-  hostCode, error,
+  hostCode, error, previewBiome = null, onPreviewBiome,
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
   const [dcNudge, setDcNudge] = React.useState(0);
@@ -167,6 +174,18 @@ export function SessionScreen({
               {asPlayer ? 'Seeing a player’s screen' : 'Preview a player’s screen'}
             </button>
             <SoundToggle />
+            {onPreviewBiome ? (
+              <label className="t-biome-switch" title="Look at the board in another setting. Only this screen changes; the run and every other device keep the run's own.">
+                <span>Setting</span>
+                <select
+                  value={previewBiome ?? ''}
+                  onChange={(e) => onPreviewBiome(isBiomeId(e.target.value) ? e.target.value : null)}
+                >
+                  <option value="">The run’s own</option>
+                  {BIOMES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </label>
+            ) : null}
             {view.phase !== 'over' ? (
               <button
                 type="button" className="t-btn t-btn--danger"

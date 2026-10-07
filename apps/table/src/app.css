@@ -946,6 +946,11 @@ html, body, #root {
 
 .t-door__field { position: absolute; inset: 0; color: var(--md-cat-path-500); opacity: .5; }
 .t-door__field .md-card__maze { color: inherit; opacity: 1; }
+/* A setting with a picture for its back wears it on the door too. The
+   picture is already the setting's ink and light, so it shows brighter
+   than the maze motif does. */
+.t-door__field:has(.t-door__art) { opacity: .85; }
+.t-door__art { width: 100%; height: 100%; display: block; object-fit: cover; }
 .t-door__fade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--md-ink-900) 92%); }
 .t-door__glyph {
   position: absolute;
@@ -1342,6 +1347,19 @@ html, body, #root {
 .t-modal .t-panel { text-align: center; }
 .t-modal .t-panel__title { text-align: center; }
 .t-modal .t-row { justify-content: center; }
+
+/* The setting switch on the board — for looking at the settings, not
+   for play. It changes what THIS screen wears and nothing on the wire. */
+.t-biome-switch {
+  display: inline-flex; align-items: center; gap: calc(1.5 * var(--md-u));
+  font-family: var(--md-font-ui); font-size: calc(2.6 * var(--md-u));
+  color: var(--md-parchment-400);
+}
+.t-biome-switch select {
+  font: inherit; color: var(--md-parchment-200);
+  background: var(--md-ink-800); border: 1px solid var(--md-ink-600);
+  border-radius: calc(1 * var(--md-u)); padding: calc(1 * var(--md-u)) calc(1.5 * var(--md-u));
+}
 .t-modal .t-cards { justify-content: center; }
 .t-modal .t-roll { justify-content: center; }
 .t-modal .t-note { margin-left: auto; margin-right: auto; max-width: 56ch; }
