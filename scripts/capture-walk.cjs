@@ -25,6 +25,8 @@
        --turns=40            give up after this many steps
        --still               paint the ground still, for comparing
        --board=table         which GM board: table (the new one) or session
+       --world=auto          the new board's world layer: auto, high, low, still, off
+       --gpu                 draw WebGL on this machine's GPU, not SwiftShader
 
    Writes walk.log beside the pictures: the board's state at every
    step, and the reveal offsets. Exits non-zero if the renderer
@@ -53,6 +55,8 @@ const frameReveals = Number(flag('frames', '2'));
 const maxTurns = Number(flag('turns', '40'));
 const still = args.includes('--still');
 const board = flag('board', 'table');
+const world = flag('world', 'auto');
+const gpu = args.includes('--gpu');
 fs.mkdirSync(out, { recursive: true });
 
 const lines = [];
@@ -93,7 +97,7 @@ const state = (page) => page.evaluate(() => ({
 }));
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(gpu ? { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu'] } : {});
   const page = await browser.newPage({ viewport: { width: W, height: H } });
   let crashed = false;
   page.on('crash', () => { crashed = true; log('!! the renderer crashed'); });
@@ -117,7 +121,11 @@ const state = (page) => page.evaluate(() => ({
 
   // A fresh visitor: no campaign, no run.
   await page.goto(url);
-  await page.evaluate((b) => { localStorage.clear(); localStorage.setItem('mazedeck.board', b); }, board);
+  await page.evaluate(([b, w]) => {
+    localStorage.clear();
+    localStorage.setItem('mazedeck.board', b);
+    localStorage.setItem('mazedeck.world', w);
+  }, [board, world]);
   await page.goto(url);
   await page.waitForTimeout(1000);
   await shot('landing');

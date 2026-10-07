@@ -21,9 +21,21 @@
        --biomes=all          or a list: dungeon,frozen-pass
        --cpu=4               CPU throttle; 4 is a mid phone
        --size=390x844        the viewport
+       --dpr=3               device pixels per CSS pixel; 3 is a phone, and
+                             a desktop size wants 1 or 2
        --window=4000         ms measured per row
        --board=table         which GM board: table (the new one) or
                              session. Phase 0's baseline was the old one.
+       --world=auto          the new board's world layer: auto, high, low,
+                             still or off (phase 3). `off` is the old ground.
+       --gpu                 draw WebGL on this machine's GPU. Without it
+                             headless Chromium uses SwiftShader, software
+                             GL, and a canvas's main-thread time is mostly
+                             waiting on a CPU pretending to be a GPU.
+
+   Rows, per setting: idle as configured; idle with nothing behind the
+   table at all (world off, old ground stilled) — the floor anything
+   ambient is measured against; and one turn as configured.
 
    Prints a Markdown table, ready to paste into docs/overhaul.md.
 
@@ -46,15 +58,22 @@ const url = flag('url', 'http://localhost:5180');
 const biomes = flag('biomes', 'all') === 'all' ? ALL : flag('biomes', '').split(',');
 const cpu = Number(flag('cpu', '4'));
 const [W, H] = flag('size', '390x844').split('x').map(Number);
+const dpr = Number(flag('dpr', '3'));
 const windowMs = Number(flag('window', '4000'));
 const board = flag('board', 'table');
+const world = flag('world', 'auto');
+const gpu = args.includes('--gpu');
 
 const STILL = '.t-app::before { background: var(--md-ink-900) !important; animation: none !important; }';
 
-async function open(browser, biome) {
-  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 3 });
+async function open(browser, biome, worldChoice = world) {
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
   await page.goto(url);
-  await page.evaluate((b) => { localStorage.clear(); localStorage.setItem('mazedeck.board', b); }, board);
+  await page.evaluate(([b, w]) => {
+    localStorage.clear();
+    localStorage.setItem('mazedeck.board', b);
+    localStorage.setItem('mazedeck.world', w);
+  }, [board, worldChoice]);
   await page.goto(url);
   await page.waitForTimeout(800);
   await page.getByRole('button', { name: /Set up a crossing/ }).first().click();
@@ -110,16 +129,20 @@ async function playTurn(page) {
 const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFixed(2)} s | ${r.layout.toFixed(2)} s | ${r.fps.toFixed(0)} | ${r.worst.toFixed(0)} ms | ${r.long} |`;
 
 (async () => {
-  const browser = await chromium.launch();
-  console.log(`${board} board, ${W}×${H}, ${cpu}× CPU, ${windowMs} ms a row\n`);
+  const browser = await chromium.launch(gpu ? { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu'] } : {});
+  console.log(`${board} board, world ${world}${gpu ? ', real GPU' : ', software GL'}, ${W}×${H} at ${dpr}x, ${cpu}× CPU, ${windowMs} ms a row\n`);
   console.log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
   console.log('|---|---|---|---|---|---|---|');
   for (const biome of biomes) {
     let page = await open(browser, biome);
-    console.log(row(`${biome}, idle`, await measure(page, windowMs)));
+    const tier = await page.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'off');
+    console.log(row(`${biome}, idle (world ${tier})`, await measure(page, windowMs)));
+    await page.close();
+
+    page = await open(browser, biome, 'off');
     await page.addStyleTag({ content: STILL });
     await page.waitForTimeout(300);
-    console.log(row(`${biome}, idle, ground still`, await measure(page, windowMs)));
+    console.log(row(`${biome}, idle, nothing behind`, await measure(page, windowMs)));
     await page.close();
 
     page = await open(browser, biome);

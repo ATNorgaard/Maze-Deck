@@ -233,8 +233,8 @@ can be found and reverted alone.
 | 0 | Fix and measure: the reveal shift, the stale copy, a walk-capture script, a frame-budget script | S | — | **done** — `world/0`, except the look on a real phone |
 | 1 | The new board, beside the old: world / table / rail / hand layers, GM and chronicle drawers, piles flanking the river, behind a toggle | L | 0 | **done** — `world/1` |
 | 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | **done** — `world/2` |
-| 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | next |
-| 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | |
+| 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | **done** — `world/3` |
+| 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | next, after the author's look at the slice |
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | |
@@ -879,3 +879,139 @@ lantern that burns without fuel" → lantern). The keywords can live with
 the tables, and the sprites can be judged on the atelier's Scene bench
 before the table uses them. The seed is the entry, so adding a subject
 changes one picture and no others.
+
+### world/3 — the world layer
+
+**Changed.**
+- **`world/renderer.ts` (new)** is one WebGL2 canvas with two programs.
+  It uses no library.
+  - **The ground** is a full-screen triangle: the setting's ink, two
+    layers of slow fog, the pool of the setting's light (breathing, as
+    the SMIL grounds did, at their opacities), paper grain and a
+    vignette.
+  - **The air** is a single draw of points: dust, motes, sand, drips,
+    snow or embers, with the grounds' counts, sizes and colours. Every
+    particle's path is a function of time and four random numbers,
+    computed in the vertex shader, so nothing is uploaded after the
+    setting is chosen.
+  - **The main thread's work per frame** is easing a handful of numbers
+    and setting about a dozen uniforms. Constants go only when the
+    setting, the size or a flash colour changes.
+- **`world/World.tsx` (new)** owns the canvas, the loop and the tier.
+  The mood is read off the **presented** view, so the world moves when a
+  beat lands:
+  - the light leans quietly towards the river or the hand, whichever
+    the phase is about; the focus element is measured a few times a
+    second, not every frame;
+  - a turned card's colour washes out from it and goes;
+  - threat draws the vignette in and warms its edge;
+  - *through* raises gold, and *lost* puts the light out;
+  - on desktop the fog and the air shift a few pixels with the pointer.
+- **Tiers** (`world/settings.ts`). Each device remembers its choice, set
+  from *Atmosphere* in the GM drawer:
+
+  | Tier | What it draws |
+  |---|---|
+  | Full (`high`) | 1.25 device px per CSS px, full air |
+  | Light (`low`) | half resolution, fewer particles |
+  | Still | one frame whenever the mood changes, never a loop |
+  | Off | the old animated ground |
+  | Auto | starts Full, or Light on a phone; see below |
+
+  - **Auto** steps down when the median frame over 120 frames or two
+    seconds runs past ~45 fps.
+  - **WebGL drawn by the CPU** (SwiftShader, llvmpipe) goes straight to
+    Still.
+  - **Reduced motion** is always Still.
+  - **No WebGL2, or a lost context**, leaves the old ground.
+  - **The loop pauses** when the tab is hidden.
+- **While the world is live, the old ground under it is dropped**
+  (`.t-app:has(.t-world[data-live])::before`): a covered SMIL picture
+  still costs its re-rasterising. The landing page, the campaign screen
+  and the old board keep the SMIL ground. The player's screen gets the
+  world in phase 8.
+- `measure-frames.cjs` takes `--world`, `--gpu` (this machine's GPU
+  instead of SwiftShader) and `--dpr`. Its floor row now means nothing
+  behind the table at all: world off and old ground stilled.
+  `capture-walk.cjs` takes `--world` and `--gpu`.
+
+**Design notes.**
+- **The world reproduces the old grounds before it adds anything.** The
+  same ink, pool, grain, air and vignette, in the same proportions, so
+  switching to it costs nothing in look. Side by side with *Off* at
+  1600 × 1000 they are hard to tell apart in a still frame. The
+  difference is that this one moves with the game, and costs a third as
+  much.
+- **The focus light is deliberately faint** (5% at its centre). The
+  ledge already says where to look, and feel/9b's lesson was that a
+  loud persistent indicator irritates. The world's lean is meant to be
+  felt.
+
+**Broke / retried.**
+- **Headless Chromium draws WebGL in software.** The first measurement
+  said the world kept the main thread busy for the whole 4 s window at
+  9 fps. A probe of `WEBGL_debug_renderer_info` showed SwiftShader. With
+  `--use-angle=d3d11` the same browser reports this machine's GPU (an
+  RTX 4070 Ti), and the cost falls to a fraction. Every number below
+  says which renderer it was taken on.
+- **The budget script emulated a phone's 3× density at every size.** So
+  its "1600 × 1000" was a 4800 × 3000 screen composited in software. On
+  that evidence the software-GL fallback was briefly set to the old
+  ground. Re-measured at 1× it was the wrong call — Still beats the old
+  ground there on every count — and it was set back. `--dpr` now exists
+  so this cannot happen silently.
+- **Auto took thirteen seconds to step down** at 9 fps, because it judged
+  every 120 frames. It now also judges every two seconds.
+- **Still redrew on every render of the table**, dozens a turn. It now
+  redraws when the mood changes (threat, progress, the outcome, the
+  focus).
+- **The grain read as television static.** It is halved.
+
+**Verified** (headless Chromium, 4× CPU).
+
+*The budget, on the GPU, at 1600 × 1000, 1×:*
+
+| Setting | World Full, idle | Nothing behind, idle | Old ground, idle | Turn, Full | Turn, old ground |
+|---|---|---|---|---|---|
+| Frozen pass | 0.28 s | 0.16 s | 0.75 s | 1.66 s | 1.91 s |
+| Deep forest | 0.30 s | 0.16 s | 0.78 s | 1.59 s | 1.99 s |
+
+The target was **at most 0.35 s** per 4 s idle. It is met, at about
+40% of the old ground's cost.
+
+*At phone width* (390 × 844, 3×, GPU, Auto → Full): idle is 0.27–0.34 s,
+against a floor of 0.14–0.18 s. A real phone starts on Light (coarse
+pointer).
+
+*On software GL* (1600 × 1000, 1×):
+
+| | Idle | One turn |
+|---|---|---|
+| Auto → Still | 0.14–0.17 s | 1.49–1.88 s |
+| Old ground | 1.21–1.25 s | 2.52–2.99 s |
+
+Both drop 18–27 long frames in a turn; that is software compositing,
+whatever is behind the table.
+
+**Also verified:**
+- **Every tier compiles and draws** in all six settings. There are no
+  console errors beyond headless's own "GPU stall due to ReadPixels",
+  which comes from the screenshot readback.
+- **Auto** stayed Full on the GPU and went to Still on SwiftShader.
+- **The drawer control** switches Off, Still, Light, Full and Auto live,
+  and remembers the choice. Off brings the old ground's drift back.
+- **Reduced motion** gives Still, and the page asked for no animation
+  frames in a second.
+- **A reveal's colour wash and the lost ending's darkness** were
+  photographed on the GPU.
+- **Full crossings.** New board, tower: 179 samples over 11 reveals,
+  **0px**. Old board, desert: 228 over 14, **0px**.
+- `npm run typecheck`, `npm test` (11) and `npm run build` are clean.
+  The bundle grew 7.3 KB gzipped.
+
+**Owed to the author** — this ends the first slice:
+- **Look at it moving, on a real screen.** No headless frame can show
+  fog drifting or snow falling.
+- **One look on a real phone**, still owed from phase 0.
+
+**Commit:** `git log --grep world/3`.

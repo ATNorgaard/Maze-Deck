@@ -22,6 +22,9 @@ import { useStage } from '../stage/useStage';
 import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import { useTableFit } from '../useTableFit';
+import { World } from '../world/World';
+import { WORLD_CHOICES, useWorldChoice } from '../world/settings';
+import type { WorldChoice } from '../world/settings';
 import '../table.css';
 
 interface Props {
@@ -152,6 +155,21 @@ export function TableScreen({
   }, [raised]);
 
   const ticker = view.log.filter((e) => e.visibility === 'all').slice(-2).reverse();
+
+  /* ---------------- the world ----------------
+     Read off the PRESENTED view, like everything else that is drawn, so
+     the light moves when the beat lands and not when the truth does. */
+  const focus = FOCUS[shown.phase];
+  const worldMood = {
+    threat: shown.strikes / Math.max(1, shown.rules.encounterAt),
+    progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
+    dim: shown.outcome === 'lost' ? 1 : 0,
+    bloom: shown.outcome === 'through' ? 1 : 0,
+  };
+  const worldFlash = shown.revealed
+    ? { key: `${shown.round}:${shown.turn}:${shown.revealed.slot}`, category: shown.revealed.category }
+    : null;
+  const [worldChoice, setWorldChoice] = useWorldChoice();
   const handStyle = { '--n': view.rules.abilities.length } as React.CSSProperties;
 
   return (
@@ -163,6 +181,13 @@ export function TableScreen({
       data-chronicle={chronicle || undefined}
       data-narrow={fit.narrow || undefined}
     >
+      <World
+        biome={biome}
+        mood={worldMood}
+        focus={focus === 'river' ? { name: focus, ref: riverRef } : focus === 'actions' ? { name: focus, ref: handRef } : null}
+        flash={worldFlash}
+      />
+
       <header className="t-top">
         <div className="t-top__run">
           <h1 className="t-top__title">{runName}</h1>
@@ -424,6 +449,15 @@ export function TableScreen({
             {asPlayer ? 'Seeing a player’s screen' : 'Preview a player’s screen'}
           </button>
           <SoundToggle />
+          <label className="t-biome-switch" title="How much of the setting this device draws behind the table. Auto steps down if the device cannot keep up; Off is the old animated ground.">
+            <span>Atmosphere</span>
+            <select
+              value={worldChoice}
+              onChange={(e) => setWorldChoice(e.target.value as WorldChoice)}
+            >
+              {WORLD_CHOICES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
           {onPreviewBiome ? (
             <label className="t-biome-switch" title="Look at the board in another setting. Only this screen changes; the run and every other device keep the run's own.">
               <span>Setting</span>

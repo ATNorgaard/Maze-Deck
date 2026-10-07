@@ -269,20 +269,24 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 3](overhaul.md#3-the-world-layer): the world
-layer** — one WebGL2 canvas behind everything for light, fog and the
-setting's air, driven by a `mood` read off the presented view, with
-quality tiers, replacing the SMIL grounds as the default. Phase 3 ends the
-first slice (phases 1–3), which is the author's first look at the
-direction before the bulk of the work.
+**The author's first look at the slice (phases 1–3), then [phase
+4](overhaul.md#4-decide-on-the-table): decide on the table.** The slice
+is the new board, the vista and the world layer — enough to judge the
+direction before the bulk of the work is spent on it. It wants seeing
+*moving* on a real screen (`cd apps/table && npm run dev`): headless
+frames cannot show the fog or the air, and three beats in the feel pass
+were reversed after a first look. Whatever the look turns up comes before
+phase 4.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
 fast-forwards to it whenever a phase is worth shipping. On the branch so
 far: the atelier's art (`art: …`), phase 0 (`world/0`), phase 1
 (`world/1` — the new board, now the default, with the old one a click
-away in the GM drawer) and phase 2 (`world/2` — the vista: every scene
-the GM reads out has a picture, drawn live by `packages/art`).
+away in the GM drawer), phase 2 (`world/2` — the vista: every scene
+the GM reads out has a picture, drawn live by `packages/art`) and phase 3
+(`world/3` — the world layer: one WebGL2 canvas behind the table, with
+an *Atmosphere* setting in the GM drawer whose *Off* is the old ground).
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

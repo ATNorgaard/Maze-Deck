@@ -571,3 +571,22 @@
   .t-vista__layer[data-entering] { animation: none; }
   .t-table[data-outcome='through']::after { animation: none; }
 }
+
+/* ---------------- the world ----------------
+   One canvas behind everything (world/World.tsx). While it is live,
+   the old animated ground under it is dropped: the canvas covers it,
+   and a covered SMIL picture still costs its re-rasterising. */
+.t-world {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.t-app:has(.t-world[data-live])::before {
+  background: var(--md-ink-900);
+  animation: none;
+}
