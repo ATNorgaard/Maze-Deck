@@ -175,7 +175,7 @@ const state = (page) => page.evaluate(() => ({
       // settling under the overlay is a 200ms transient, and four samples
       // a reveal let one through (world/1). Photographs at fixed moments.
       const photos = photograph ? [150, 450, 900, 1600, 2300, 2900] : [];
-      for (let t = Date.now() - t0; t < 2900; t = Date.now() - t0) {
+      for (let t = Date.now() - t0; t < 2900 || photos.length; t = Date.now() - t0) {
         if (t <= 1600) {
           const off = await revealOffset(page);
           if (off) offsets.push(off);

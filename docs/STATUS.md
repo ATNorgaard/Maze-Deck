@@ -269,14 +269,20 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 2](overhaul.md#2-the-vista): the vista.** Move
-the atelier's generators into `packages/art` and draw each scene's
-picture live. The overhaul lives on the **`overhaul` branch**, not
-`main`, because a push to `main` deploys and the work runs to ten
-phases; `main` fast-forwards to it whenever a phase is worth shipping.
-On the branch so far: the atelier's art (`art: …`), phase 0 (`world/0`)
-and phase 1 (`world/1` — the new board, now the default, with the old
-one a click away in the GM drawer).
+**[The overhaul's phase 3](overhaul.md#3-the-world-layer): the world
+layer** — one WebGL2 canvas behind everything for light, fog and the
+setting's air, driven by a `mood` read off the presented view, with
+quality tiers, replacing the SMIL grounds as the default. Phase 3 ends the
+first slice (phases 1–3), which is the author's first look at the
+direction before the bulk of the work.
+
+The overhaul lives on the **`overhaul` branch**, not `main`, because a
+push to `main` deploys and the work runs to ten phases; `main`
+fast-forwards to it whenever a phase is worth shipping. On the branch so
+far: the atelier's art (`art: …`), phase 0 (`world/0`), phase 1
+(`world/1` — the new board, now the default, with the old one a click
+away in the GM drawer) and phase 2 (`world/2` — the vista: every scene
+the GM reads out has a picture, drawn live by `packages/art`).
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

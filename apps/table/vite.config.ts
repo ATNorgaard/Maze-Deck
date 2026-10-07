@@ -17,7 +17,12 @@ export default defineConfig({
       '@maze-deck/ui/styles': here('../../packages/ui/src/styles/index.css'),
       '@maze-deck/ui': here('../../packages/ui/src/index.ts'),
       '@maze-deck/rules': here('../../packages/rules/src/index.ts'),
+      '@maze-deck/art': here('../../packages/art/src/index.ts'),
     },
+    // packages/art has no node_modules of its own, so its React is the
+    // app's. Said outright rather than left to how a build resolves a bare
+    // import from a directory with none: two Reacts would break every hook.
+    dedupe: ['react', 'react-dom'],
   },
   server: { port: 5180 },
 });

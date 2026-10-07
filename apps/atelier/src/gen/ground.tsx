@@ -18,11 +18,9 @@
    ============================================================ */
 
 import type { ReactElement, ReactNode } from 'react';
-import { alpha, hexToRgb } from '../core/biomes';
-import type { BiomeVocab, Palette, Particle } from '../core/biomes';
+import { alpha, hexToRgb, range, rngFor } from '@maze-deck/art';
+import type { BiomeVocab, Palette, Particle, Style } from '@maze-deck/art';
 import { svgDataUri } from '../core/export';
-import { range, rngFor } from '../core/rng';
-import type { Style } from '../core/style';
 
 export interface GroundParams {
   seed: string;

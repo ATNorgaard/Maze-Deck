@@ -37,6 +37,8 @@ export const MOTION = {
   /** The board's moment at the end of a run, before the dialog is allowed in. */
   ending: 1600,
   baton: 320,
+  /** A new scene's picture fading in over the last (the vista). */
+  vista: 900,
 
   /* easings */
   settle: 'cubic-bezier(.2, .7, .3, 1)',

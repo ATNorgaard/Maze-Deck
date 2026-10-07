@@ -20,8 +20,10 @@
 .t-table {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(calc(74 * var(--md-u)), 1fr) auto;
-  grid-template-areas: 'top' 'scene' 'surface' 'bottom';
+  /* The stage's minimum is a caption and a `sm` river; below that the
+     page scrolls rather than the rows overlapping. */
+  grid-template-rows: auto minmax(calc(92 * var(--md-u)), 1fr) auto;
+  grid-template-areas: 'top' 'stage' 'bottom';
   gap: calc(3 * var(--md-u));
   height: 100vh;
   height: 100dvh;
@@ -34,7 +36,7 @@
 .t-table[data-chronicle] {
   /* 80u keeps an `md` river beside it at 1600 wide; 84 missed by 17px. */
   grid-template-columns: minmax(0, 1fr) calc(80 * var(--md-u));
-  grid-template-areas: 'top top' 'scene log' 'surface log' 'bottom log';
+  grid-template-areas: 'top top' 'stage log' 'bottom log';
 }
 
 /* Too narrow for a pile either side of even a `sm` river: the piles
@@ -42,7 +44,7 @@
 .t-table[data-narrow] {
   height: auto;
   min-height: 100dvh;
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto auto auto;
 }
 
 /* ---------------- the top rail ---------------- */
@@ -94,23 +96,68 @@
   color: var(--md-parchment-400);
 }
 
+/* ---------------- the stage ----------------
+   The vista, the caption under it, and the surface. The surface is
+   as tall as the river useTableFit chose, the caption is reserved,
+   and the vista takes the rest. */
+.t-stage {
+  grid-area: stage;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(3 * var(--md-u));
+}
+
+/* ---------------- the vista ----------------
+   The scene as a picture (components/Vista.tsx). Its edges fade into
+   the setting's ground — a view into the place, not a framed print —
+   and a new picture fades in over the last. */
+.t-vista {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(180deg, transparent, #000 24%, #000 80%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(180deg, transparent, #000 24%, #000 80%, transparent);
+  mask-composite: intersect;
+}
+
+.t-vista__layer { position: absolute; inset: 0; }
+.t-vista__layer > svg { display: block; width: 100%; height: 100%; }
+.t-vista__layer[data-entering] { animation: tFade 900ms ease both; }
+
+/* Narrow, the page scrolls and there is no height left over to give:
+   the vista is a fixed band instead. */
+.t-table[data-narrow] .t-vista { flex: none; height: calc(40 * var(--md-u)); }
+
 /* ---------------- the scene ----------------
-   Same reserved band as the old board's (world/0); here it is
-   centred over the table at a reading measure. Phase 2 sets it large
-   over the vista. */
-.t-table > .t-scene {
-  grid-area: scene;
+   The old board's reserved band (world/0), set larger and centred
+   under the vista at a reading measure. The kicker names the card as
+   the setting does, in the card's own colour. */
+.t-stage > .t-scene {
+  flex: none;
   width: 100%;
   max-width: calc(230 * var(--md-u));
   margin: 0 auto;
 }
+.t-stage > .t-scene .t-scene__text { font-size: 19px; }
+.t-scene[data-category='clear-path'] .t-kicker { color: var(--md-cat-path-300); }
+.t-scene[data-category='obstacle'] .t-kicker { color: var(--md-cat-obst-300); }
+.t-scene[data-category='wanderer'] .t-kicker { color: var(--md-cat-wand-300); }
+.t-scene[data-category='item'] .t-kicker { color: var(--md-cat-item-300); }
+.t-scene[data-category='monster'] .t-kicker { color: var(--md-cat-mons-300); }
+.t-scene[data-category='dead-end'] .t-kicker { color: var(--md-cat-dead-300); }
+.t-scene[data-category='trap'] .t-kicker { color: var(--md-cat-trap-300); }
 
 /* ---------------- the surface ----------------
    The deck on the river's left, the discard on its right, the way
    they would lie on a table. The gap is the one useTableFit assumes. */
 .t-surface {
-  grid-area: surface;
-  min-height: 0;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -500,13 +547,11 @@
    The old board's, on this one: through blooms gold over everything,
    lost dims every row. The river's fan is shared (app.css). */
 .t-table > .t-top,
-.t-table > .t-scene,
-.t-table > .t-surface,
+.t-table > .t-stage,
 .t-table > .t-bottom { transition: filter 1.4s ease; }
 
 .t-table[data-outcome='lost'] > .t-top,
-.t-table[data-outcome='lost'] > .t-scene,
-.t-table[data-outcome='lost'] > .t-surface,
+.t-table[data-outcome='lost'] > .t-stage,
 .t-table[data-outcome='lost'] > .t-bottom { filter: brightness(.38) saturate(.45); }
 
 .t-table[data-outcome='through']::after {
@@ -522,6 +567,7 @@
 @media (prefers-reduced-motion: reduce) {
   .t-hand__cards, .t-hand .md-action { transition: none; }
   .t-ticker__line:first-child, .t-drawer, .t-drawerScrim { animation: none; }
-  .t-table > .t-top, .t-table > .t-scene, .t-table > .t-surface, .t-table > .t-bottom { transition: none; }
+  .t-table > .t-top, .t-table > .t-stage, .t-table > .t-bottom { transition: none; }
+  .t-vista__layer[data-entering] { animation: none; }
   .t-table[data-outcome='through']::after { animation: none; }
 }

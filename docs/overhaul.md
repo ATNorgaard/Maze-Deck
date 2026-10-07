@@ -232,8 +232,8 @@ can be found and reverted alone.
 |---|---|---|---|---|
 | 0 | Fix and measure: the reveal shift, the stale copy, a walk-capture script, a frame-budget script | S | — | **done** — `world/0`, except the look on a real phone |
 | 1 | The new board, beside the old: world / table / rail / hand layers, GM and chronicle drawers, piles flanking the river, behind a toggle | L | 0 | **done** — `world/1` |
-| 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | next |
-| 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | |
+| 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | **done** — `world/2` |
+| 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | next |
 | 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | |
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | |
@@ -758,3 +758,124 @@ A size step between `sm` and `md` (around 0.8mm) would give a real
 It means a new `CardSize` in `packages/ui` (tokens, type and
 design-sync) and one more row in each fit table. It is not needed for
 anything else in the plan.
+
+### world/2 — the vista
+
+**Changed.**
+- **`packages/art` (new) is `@maze-deck/art`.** It holds `rng.ts`,
+  `biomes.ts`, `style.ts` and `scene.tsx`, moved out of `apps/atelier`
+  with `git mv` so their history follows. It is consumed as source like
+  the other packages: both apps alias it, and the atelier now imports
+  from it. Neither `packages/ui` nor the design-sync was touched (D5).
+- **No `node_modules` in `packages/art`, so React is the app's, by
+  name.**
+  - Both `vite.config.ts` files set `resolve.dedupe: ['react',
+    'react-dom']`.
+  - Both `tsconfig.json` files map `react` and `react/jsx-runtime` to the
+    app's own `@types/react`.
+  - The production bundle was checked: one React (one version string
+    each for react and react-dom).
+- **The generator gained a `vista` frame.** It is a landscape of any
+  aspect (`aspect`, 1.2–12), cropped from the top so the subject's floor
+  is never lost. A wider landscape gets more features, by the square
+  root of the extra width (see *Broke*). The `wide`, `back` and `arch`
+  frames come out exactly as before. The atelier's Scene bench has the
+  frame, with an aspect slider.
+- **`components/Vista.tsx` (new)** measures its own box and draws the
+  scene composed for that aspect, half-step buckets so a resize does not
+  redraw per pixel. It reads the palette off the live CSS and crossfades
+  over 900 ms (`MOTION.vista`). Each picture is memoised on its key.
+  - **The seed is the setting plus the entry's id**, not the draw, so the
+    same line always comes with the same picture, in every crossing. A
+    GM's own entries get one too.
+  - **Before the first card turns** it is the setting's horizon at rest,
+    in the setting's own light, with no subject.
+- **The board's middle is now a stage:** the vista, the caption under it,
+  and the surface. `useTableFit` measures the stage, takes the caption's
+  reserved band off, sizes the river from what is left, and the vista
+  gets the rest.
+
+  | Viewport | Vista height |
+  |---|---|
+  | 1600 × 1000 | ~240px |
+  | 1920 × 1080 | ~160px (the `lg` river is tall) |
+  | 1366 × 768 | none, and the river keeps `md` |
+
+  Below 56px the vista steps aside rather than show a strip. On a narrow
+  window it is a fixed 40u band.
+- **The caption is 19px.** Its kicker names the card as the setting does
+  (*Switchback*, *Slip Face*, *Caravan Track*), in the card's own colour.
+  The card's eyebrow keeps the canonical name.
+
+**Departures from the plan, and why.**
+- **The vista is a band above the caption, not a full-bleed world
+  layer.** The generator stands its subject on the floor in the middle,
+  and the middle of the board is the river. Full-bleed, the subject
+  would always have stood behind the cards. As a band it reads as a
+  storybook page — picture, caption, then the choice — and it takes only
+  height the river does not need. The world layer behind everything is
+  still phase 3's canvas.
+- **The ground generator stayed in the atelier.** It serialises through
+  `react-dom/server`, which the table should not ship. Nothing at runtime
+  needs it yet: phase 3's still tier is the baked file.
+- **The picture stays as long as its caption does**, until the next card
+  turns, rather than returning to the horizon on the next action. The
+  latest discovery stays in view while the next player decides, which is
+  how the caption already behaved. One rule: the picture illustrates the
+  text.
+- **Subjects are still one per category.** Each entry's own seed varies
+  the land, but every Clear Path in a setting is the same lit doorway.
+  The `subject` vocabulary (lantern, rope, cairn, pack, tracks…) with
+  keyword inference is the natural next piece of work, and is listed
+  below as 2b.
+
+**Broke / retried.**
+- **The deep forest cost a slow phone most of a second per reveal.**
+  The other settings cost nothing measurable; the forest's turn was
+  +0.84 s of main-thread time at 4× CPU. The model costs under 1 ms; the
+  cost was the DOM. At the `wide` frame's density a 6:1 forest grew ~150
+  trees, about 600 SVG shapes. Growing feature counts by the square root
+  of the extra width instead brought every setting within noise.
+
+  | Setting | Turn, vista on | Turn, vista off |
+  |---|---|---|
+  | Deep forest | 1.84 s | 2.07 s |
+  | Frozen pass | 2.14 s | 1.79 s |
+  | Dungeon | 1.65 s | 1.42 s |
+
+  The worst long tasks were 166–167 ms with the vista on and 152–172 ms
+  with it off. Fewer, larger trees also read better as a forest across a
+  whole screen.
+- **An escaped apostrophe was eaten by a scripted edit** to the atelier's
+  bench and broke its compile. It was caught by `tsc` and fixed by hand.
+- **`capture-walk.cjs` never took its 2900 ms photograph.** The loop
+  stopped just short of it. Fixed.
+
+**Verified.**
+- **The atelier's output did not change.** With the atelier serving from
+  `packages/art`, `node scripts/bake-art.cjs` re-baked all twelve pictures
+  **byte-identical**: git saw no change. Every atelier bench loads with
+  no console errors.
+- **Full crossings.**
+  - New board, frozen pass: 202 reveal samples over 15 reveals, **0px**.
+    Each reveal's vista and caption were photographed.
+  - Old board, dungeon: 182 over 13, **0px**.
+- **Cost.** `buildScene` takes 0.04–0.97 ms per scene at 4× CPU across
+  the six settings, so idle-time pre-generation is not needed. The bundle
+  grew 7.4 KB gzipped.
+- `npm run typecheck`, `npm test` (11) and `npm run build` are clean in
+  `apps/table`. `apps/atelier` builds.
+
+**Commit:** `git log --grep world/2`.
+
+### 2b — subjects, for later
+
+A small vocabulary of subjects in `packages/art/src/scene.tsx` would let
+each picture show *this* scene rather than its category's doorway. Each
+subject is a sprite like the existing seven: lantern, door, stair, cairn,
+rope, pack, tracks, water, flame, boulder, two figures. `TableEntry` would
+get an optional `subject`, inferred from keywords when it is absent ("a
+lantern that burns without fuel" → lantern). The keywords can live with
+the tables, and the sprites can be judged on the atelier's Scene bench
+before the table uses them. The seed is the entry, so adding a subject
+changes one picture and no others.

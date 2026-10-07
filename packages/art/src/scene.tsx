@@ -15,19 +15,22 @@
 
 import type { ReactNode } from 'react';
 import type { CardCategory } from '@maze-deck/ui';
-import { alpha, mix } from '../core/biomes';
-import type { BiomeVocab, CatKey, Palette, Terrain } from '../core/biomes';
-import { fbm1d, int, pick, range, rngFor } from '../core/rng';
-import type { Rng } from '../core/rng';
-import type { Style } from '../core/style';
+import { alpha, mix } from './biomes';
+import type { BiomeVocab, CatKey, Palette, Terrain } from './biomes';
+import { fbm1d, int, pick, range, rngFor } from './rng';
+import type { Rng } from './rng';
+import type { Style } from './style';
 
 /**
  * `arch` is the doorway on the card face, on the glyph's grid. `wide`
  * is a landscape panel. `back` is the whole card back — the same
  * 63:88 field the maze tiles over, so a setting can wear its horizon
- * behind the seal instead of a fret.
+ * behind the seal instead of a fret. `vista` is a landscape of any
+ * aspect (`aspect`), composed for the space it fills: the table's
+ * picture of the scene the GM is reading out. It is cropped from the
+ * top, never the bottom, so the subject's floor is always in it.
  */
-export type Frame = 'arch' | 'wide' | 'back';
+export type Frame = 'arch' | 'wide' | 'back' | 'vista';
 
 export interface SceneParams {
   category: CardCategory;
@@ -46,6 +49,8 @@ export interface SceneParams {
   subject: boolean;
   /** Sink the whole picture towards the ink, 0–0.8. */
   fade: number;
+  /** `vista` only: width over height, 1.2–12. */
+  aspect?: number;
 }
 
 export const DEFAULT_SCENE: Omit<SceneParams, 'seed' | 'style'> = {
@@ -135,8 +140,15 @@ interface Scene {
 const frac = (t: number) => t - Math.floor(t);
 
 function terrain(kind: Terrain, r: Rng, k: number, W: number, H: number, colors: [string, string, string], dark: string, water: string): Layer[] {
+  // A landscape repeats its features across its width, so a wider vista
+  // gets more of them — by the square root of the extra width, not in
+  // proportion: a 6:1 forest drawn at the `wide` frame's density grew
+  // ~150 trees and ~600 shapes, which cost a slow phone most of a second
+  // on every reveal (docs/overhaul.md, world/2). Fewer, larger features
+  // read better across a whole screen anyway. The `wide` frame (240 x
+  // 140) is the unit, and comes out exactly as before.
   const wide = W / H > 1;
-  const stretch = wide ? 2.2 : 1;
+  const stretch = wide ? 2.2 * Math.sqrt(Math.max(1, (W / H) / (240 / 140))) : 1;
   const [far, mid, near] = colors;
 
   switch (kind) {
@@ -335,7 +347,9 @@ function focal(category: CardCategory, W: number, H: number, floor: number, pal:
 }
 
 export function buildScene(p: SceneParams, pal: Palette, vocab: BiomeVocab): Scene {
-  const W = p.frame === 'arch' ? ARCH_W : 240;
+  const W = p.frame === 'arch' ? ARCH_W
+    : p.frame === 'vista' ? Math.round(140 * Math.max(1.2, Math.min(12, p.aspect ?? 4)))
+    : 240;
   const H = p.frame === 'arch' ? ARCH_H : p.frame === 'back' ? 335 : 140;
   const r = rngFor(p.seed, `scene:${vocab.id}:${p.frame}`);
   const c = pal.cat[CAT_KEY[p.category]];
@@ -596,6 +610,14 @@ export function SceneArt({ p, pal, vocab, id }: { p: SceneParams; pal: Palette; 
   if (p.frame === 'back') {
     return (
       <svg viewBox={`0 0 ${sc.W} ${sc.H}`} preserveAspectRatio="xMidYMid slice">
+        {body}
+        {fade}
+      </svg>
+    );
+  }
+  if (p.frame === 'vista') {
+    return (
+      <svg viewBox={`0 0 ${sc.W} ${sc.H}`} preserveAspectRatio="xMidYMax slice">
         {body}
         {fade}
       </svg>

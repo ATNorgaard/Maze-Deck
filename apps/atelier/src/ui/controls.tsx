@@ -1,7 +1,7 @@
 /* The atelier's own controls. Small, unstyled beyond atelier.css. */
 
 import type { ReactNode } from 'react';
-import { seedWord } from '../core/rng';
+import { seedWord } from '@maze-deck/art';
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (

@@ -10,8 +10,8 @@
    exact shape the app expects.
    ============================================================ */
 
-import { alpha, hslToHex, CAT_KEYS } from '../core/biomes';
-import type { CatKey, LightKey, Palette, Ramp } from '../core/biomes';
+import { alpha, hslToHex, CAT_KEYS } from '@maze-deck/art';
+import type { CatKey, LightKey, Palette, Ramp } from '@maze-deck/art';
 
 export interface PaletteParams {
   /** The identifier the CSS is keyed by, e.g. `salt-marsh`. */

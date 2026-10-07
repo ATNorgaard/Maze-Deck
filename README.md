@@ -13,7 +13,8 @@ information and the narration prompts.
 | Path | What |
 |---|---|
 | `packages/ui` | `@maze-deck/ui` — the React component layer. 13 components, print-accurate card geometry, design tokens. Built and stable. |
-| `packages/rules` | The engine. Pure TypeScript, seeded, no React. **Not built yet — this is M1.** |
+| `packages/rules` | The engine. Pure TypeScript, seeded, no React. `createGame` → `apply` → `view`, with its own tests. |
+| `packages/art` | `@maze-deck/art` — the deck's procedural pictures (seeded scenes of each setting), moved out of the atelier so the table can draw them live. See [packages/art/README.md](packages/art/README.md). |
 | `apps/atelier` | The artwork workbench: seeded, procedural card backs, card scenes, page grounds and biome palettes, previewed on the real cards. See [apps/atelier/README.md](apps/atelier/README.md). |
 | `design-system/` | Static token/component reference and the print pipeline. |
 | `design/dc/` | The Claude Design prototype, imported. Reference for interaction, not code to port. |

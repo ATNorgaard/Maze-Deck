@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { FALLBACK_PALETTE, readPalette } from '../core/biomes';
-import type { BiomeId, Palette } from '../core/biomes';
+import { FALLBACK_PALETTE, readPalette } from '@maze-deck/art';
+import type { BiomeId, Palette } from '@maze-deck/art';
 
 /**
  * The biome's real palette, read off the CSS.

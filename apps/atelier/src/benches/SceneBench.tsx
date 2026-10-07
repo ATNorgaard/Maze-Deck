@@ -1,11 +1,9 @@
 import { useId } from 'react';
 import { DeckCard, MazeDeckProvider, getCategory } from '@maze-deck/ui';
 import type { CardCategory } from '@maze-deck/ui';
-import type { BiomeId, BiomeVocab, Palette } from '../core/biomes';
+import { DEFAULT_SCENE, SCENE_CATEGORIES, SceneArt } from '@maze-deck/art';
+import type { BiomeId, BiomeVocab, Palette, Style, Frame, SceneParams } from '@maze-deck/art';
 import { slug, svgText } from '../core/export';
-import type { Style } from '../core/style';
-import { DEFAULT_SCENE, SCENE_CATEGORIES, SceneArt } from '../gen/scene';
-import type { Frame, SceneParams } from '../gen/scene';
 import { CodePanel } from '../ui/CodePanel';
 import { Section, Segmented, Select, Slider, Toggle } from '../ui/controls';
 import { useStored } from '../ui/store';
@@ -16,6 +14,7 @@ type SceneState = Omit<SceneParams, 'seed' | 'style'> & { all: boolean };
 const FRAMES: readonly { id: Frame; name: string; blurb: string }[] = [
   { id: 'arch', name: 'Arch', blurb: 'Through the doorway, on the card.' },
   { id: 'wide', name: 'Wide', blurb: 'A 240 × 140 panel, for a tile or a banner.' },
+  { id: 'vista', name: 'Vista', blurb: 'Any aspect, composed for the space it fills: the table’s picture of a scene.' },
 ];
 
 /** A real card, with the scene standing where the glyph stands. */
@@ -35,14 +34,17 @@ function CardWithScene({ category, p, palette, vocab, id }: {
 export function SceneBench({ biome, style, seed, palette, vocab }: {
   biome: BiomeId; style: Style; seed: string; palette: Palette; vocab: BiomeVocab;
 }) {
-  const [s, set] = useStored<SceneState>('scene', { ...DEFAULT_SCENE, all: false });
+  const [s, set] = useStored<SceneState>('scene', { ...DEFAULT_SCENE, all: false, aspect: 4 });
   const id = useId().replace(/:/g, '');
   const p: SceneParams = {
     category: s.category, frame: s.frame, px: s.px, relief: s.relief, haze: s.haze, band: s.band,
     subject: s.subject, fade: s.fade, seed, style,
+    ...(s.frame === 'vista' ? { aspect: s.aspect ?? 4 } : {}),
   };
   const art = <SceneArt p={p} pal={palette} vocab={vocab} id={`${id}-x`} />;
-  const size = s.frame === 'arch' ? { width: 960, height: 1120 } : { width: 1440, height: 840 };
+  const size = s.frame === 'arch' ? { width: 960, height: 1120 }
+    : s.frame === 'vista' ? { width: 1680, height: Math.round(1680 / (s.aspect ?? 4)) }
+    : { width: 1440, height: 840 };
   const code = svgText(art, size.width, size.height);
 
   return (
@@ -61,13 +63,21 @@ export function SceneBench({ biome, style, seed, palette, vocab }: {
           <Slider label="Relief" value={s.relief} min={0.4} max={1.4} onChange={(relief) => set({ relief })} hint={`The ${vocab.terrain}, taller or lower.`} />
           <Slider label="Haze" value={s.haze} min={0} max={1} onChange={(haze) => set({ haze })} hint="How much the distance lightens." />
           <Slider label="Fade" value={s.fade} min={0} max={0.8} onChange={(fade) => set({ fade })} hint="Sink the picture towards the ink." />
+          {s.frame === 'vista' ? <Slider label="Aspect" value={s.aspect ?? 4} min={1.2} max={8} step={0.1} onChange={(aspect) => set({ aspect })} hint="Width over height. The table composes one for the space it has." /> : null}
           {style === 'pixel' ? <Slider label="Pixel" value={s.px} min={1.5} max={4} step={0.25} onChange={(px) => set({ px })} hint="In scene units; the arch is 64 across." /> : null}
         </Section>
       </aside>
 
       <section className="atl-stage">
         <div data-biome={biome} className="atl-stage__ground">
-          {s.frame === 'wide' ? (
+          {s.frame === 'vista' ? (
+            <MazeDeckProvider size="md" background="transparent">
+              <figure className="atl-fig" style={{ width: 960, maxWidth: '100%' }}>
+                <div style={{ width: '100%', aspectRatio: String(s.aspect ?? 4) }}>{art}</div>
+                <figcaption>{vocab.name} — {getCategory(s.category).title}, as the table draws it</figcaption>
+              </figure>
+            </MazeDeckProvider>
+          ) : s.frame === 'wide' ? (
             <MazeDeckProvider size="md" background="transparent">
               <figure className="atl-fig">
                 <div className="atl-wide">{art}</div>

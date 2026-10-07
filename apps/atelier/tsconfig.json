@@ -19,7 +19,10 @@
     "baseUrl": ".",
     "paths": {
       "@maze-deck/ui": ["../../packages/ui/src/index.ts"],
-      "@maze-deck/rules": ["../../packages/rules/src/index.ts"]
+      "@maze-deck/rules": ["../../packages/rules/src/index.ts"],
+      "@maze-deck/art": ["../../packages/art/src/index.ts"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
     }
   },
   "include": ["src", "vite.config.ts"]

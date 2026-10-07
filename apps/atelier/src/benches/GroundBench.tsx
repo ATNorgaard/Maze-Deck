@@ -1,8 +1,7 @@
 import { useId } from 'react';
 import { CardBack, DeckCard, MazeDeckProvider } from '@maze-deck/ui';
-import type { BiomeId, BiomeVocab, Palette } from '../core/biomes';
+import type { BiomeId, BiomeVocab, Palette, Style } from '@maze-deck/art';
 import { slug } from '../core/export';
-import type { Style } from '../core/style';
 import { DEFAULT_GROUND, GroundArt, groundCss, groundFileCss } from '../gen/ground';
 import type { GroundParams } from '../gen/ground';
 import { CodePanel } from '../ui/CodePanel';

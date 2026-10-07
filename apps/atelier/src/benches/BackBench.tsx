@@ -1,10 +1,8 @@
 import { useId } from 'react';
 import { ArchGlyph, CardBack, MazeDeckProvider } from '@maze-deck/ui';
-import type { BiomeId, BiomeVocab, Palette } from '../core/biomes';
+import { SceneArt } from '@maze-deck/art';
+import type { BiomeId, BiomeVocab, Palette, Style, SceneParams } from '@maze-deck/art';
 import { slug } from '../core/export';
-import type { Style } from '../core/style';
-import { SceneArt } from '../gen/scene';
-import type { SceneParams } from '../gen/scene';
 import { generateTile, tileFieldLine, TILE_MODES } from '../gen/tile';
 import type { Tile, TileMode } from '../gen/tile';
 import { CodePanel } from '../ui/CodePanel';

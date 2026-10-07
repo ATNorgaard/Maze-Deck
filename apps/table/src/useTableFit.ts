@@ -16,6 +16,11 @@ import type { CardSize } from '@maze-deck/ui';
  * no transform on any ancestor of the river, because the stage measures
  * the slots with getBoundingClientRect.
  *
+ * Since phase 2 the box measured is the whole stage — the vista, the
+ * scene's caption and the surface — and `reserve` is the caption: its
+ * height and the gaps either side of it are taken off, and the river is
+ * sized from what remains. The vista then gets whatever the river leaves.
+ *
  * `narrow` is the case where even `sm` cannot have a pile on each side;
  * the piles then go under the river and the page is allowed to scroll.
  *
@@ -47,7 +52,10 @@ export interface TableFit {
   narrow: boolean;
 }
 
-export function useTableFit(ref: React.RefObject<HTMLElement>): TableFit {
+export function useTableFit(
+  ref: React.RefObject<HTMLElement>,
+  reserve?: React.RefObject<HTMLElement>,
+): TableFit {
   const [fit, setFit] = React.useState<TableFit>({ river: 'md', piles: 'sm', narrow: false });
 
   React.useLayoutEffect(() => {
@@ -56,7 +64,9 @@ export function useTableFit(ref: React.RefObject<HTMLElement>): TableFit {
 
     const measure = () => {
       const w = el.clientWidth;
-      const h = el.clientHeight;
+      const gap = parseFloat(getComputedStyle(el).rowGap) || 0;
+      const reserved = reserve?.current ? reserve.current.offsetHeight + 2 * gap : 0;
+      const h = el.clientHeight - reserved;
       const step = STEPS.find((s) => w >= needW(s.river, s.piles) && h >= RIVER[s.river].h);
       const next: TableFit = step
         ? { river: step.river, piles: step.piles, narrow: false }
@@ -76,7 +86,7 @@ export function useTableFit(ref: React.RefObject<HTMLElement>): TableFit {
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [ref]);
+  }, [ref, reserve]);
 
   return fit;
 }

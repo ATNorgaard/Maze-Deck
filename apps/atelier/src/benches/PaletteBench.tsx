@@ -1,8 +1,7 @@
 import { CardBack, DeckCard, MazeDeckProvider } from '@maze-deck/ui';
-import { CAT_KEYS, hexToRgb } from '../core/biomes';
-import type { BiomeVocab, LightKey, Palette } from '../core/biomes';
+import { CAT_KEYS, hexToRgb, SCENE_CATEGORIES } from '@maze-deck/art';
+import type { BiomeVocab, LightKey, Palette } from '@maze-deck/art';
 import { slug } from '../core/export';
-import { SCENE_CATEGORIES } from '../gen/scene';
 import { buildPalette, DEFAULT_PALETTE_PARAMS, groundValue, paletteCss, paletteVars } from '../gen/palette';
 import type { PaletteParams } from '../gen/palette';
 import { CodePanel } from '../ui/CodePanel';

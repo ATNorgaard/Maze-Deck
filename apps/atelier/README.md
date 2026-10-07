@@ -22,7 +22,7 @@ Every bench takes the same two global choices from the bar.
 - **Biome** — which of the six settings. The atelier does not duplicate the
   biome's content; it reads the real palette off `biomes.css` at runtime
   (`src/ui/usePalette.tsx`) and adds only a drawing vocabulary
-  (`src/core/biomes.ts`): what the horizon is made of, what drifts in the
+  (`packages/art/src/biomes.ts`): what the horizon is made of, what drifts in the
   air, which category lights the room.
 - **Style** — how it is drawn: `flat` silhouettes, `line` outlines, `pixel`
   with an ordered dither, or `engraving` with hatching that thickens as it
@@ -77,8 +77,11 @@ decides. The landing places are:
 ## Layout of the code
 
 ```
-src/core/     rng (seeded), style, biome vocabulary + palette reader, export helpers
-src/gen/      the generators: tile, scene, ground, palette — pure, no React state
+src/core/     export helpers (SVG text, PNG, downloads)
+src/gen/      the generators the table does not use: tile, ground, palette — pure, no React state
+
+packages/art/ rng, style, biome vocabulary + palette reader, and the scene generator —
+              moved out so the table can draw scenes live (docs/overhaul.md, phase 2)
 src/ui/       controls, the export panel, localStorage, the palette probe
 src/benches/  one file per bench: controls on the left, stage, export on the right
 ```

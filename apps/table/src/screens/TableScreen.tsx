@@ -13,6 +13,7 @@ import { ObstacleWork } from '../components/ObstacleWork';
 import type { Suggestion } from '../components/ObstacleWork';
 import { SeatBaton } from '../components/SeatBaton';
 import { SoundToggle } from '../components/SoundToggle';
+import { Vista } from '../components/Vista';
 import { BIOMES, isBiomeId } from '../biomes';
 import type { Biome, BiomeId } from '../biomes';
 import { StageOverlay } from '../stage/StageOverlay';
@@ -89,14 +90,15 @@ export function TableScreen({
   view, biome, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
   hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard,
 }: Props) {
-  const surfaceRef = React.useRef<HTMLDivElement>(null);
+  const stageRef = React.useRef<HTMLDivElement>(null);
+  const sceneRef = React.useRef<HTMLDivElement>(null);
   const riverRef = React.useRef<HTMLDivElement>(null);
   const deckRef = React.useRef<HTMLDivElement>(null);
   const discardRef = React.useRef<HTMLDivElement>(null);
   const seatsRef = React.useRef<HTMLDivElement>(null);
   const handRef = React.useRef<HTMLDivElement>(null);
 
-  const fit = useTableFit(surfaceRef);
+  const fit = useTableFit(stageRef, sceneRef);
   const stage = useStage(view, { riverRef, discardRef, deckRef });
   const shown = stage.presented;
   const deckCount = useTicking(shown.deckCount);
@@ -194,15 +196,32 @@ export function TableScreen({
         </div>
       </header>
 
+      {/* The stage: the vista, the caption under it, and the surface the
+          river lies on. The river is sized first (useTableFit) and the
+          vista takes whatever height it leaves — on a big screen a
+          landscape, on a small laptop nothing at all. */}
+      <div className="t-stage" ref={stageRef}>
+      <Vista biome={biome} prompt={prompt} />
+
       {/* Reserved from the first turn, as on the old board since world/0,
           so a scene arriving mid-flip moves nothing. Empty on a player
-          preview, but kept, so the preview has the same geometry. */}
-      <div className="t-scene" data-empty={prompt ? undefined : true} aria-live="polite">
-        <span className="t-kicker">The scene</span>
+          preview, but kept, so the preview has the same geometry. The
+          kicker names the card as this setting does — a Switchback, not
+          a Clear Path; the card's own eyebrow keeps the canonical name. */}
+      <div
+        className="t-scene"
+        ref={sceneRef}
+        data-empty={prompt ? undefined : true}
+        data-category={prompt?.category}
+        aria-live="polite"
+      >
+        <span className="t-kicker">
+          {prompt ? biome.cards?.[prompt.category]?.title ?? getCategory(prompt.category).title : 'The scene'}
+        </span>
         <p className="t-scene__text">{prompt?.text ?? ''}</p>
       </div>
 
-      <div className="t-surface" ref={surfaceRef} data-narrow={fit.narrow || undefined}>
+      <div className="t-surface" data-narrow={fit.narrow || undefined}>
         <div className="t-surface__pile t-surface__pile--deck" ref={deckRef}>
           <DeckPile count={deckCount} size={fit.piles} />
         </div>
@@ -250,6 +269,7 @@ export function TableScreen({
             {...(shown.discardTop ? { top: shown.discardTop } : {})}
           />
         </div>
+      </div>
       </div>
 
       <div className="t-bottom">

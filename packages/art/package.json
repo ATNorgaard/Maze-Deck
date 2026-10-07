@@ -1,0 +1,17 @@
+{
+  "name": "@maze-deck/art",
+  "version": "0.1.0",
+  "description": "The deck's procedural artwork: seeded scenes of each setting, drawn as SVG. Shared by the atelier and the table.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

@@ -14,7 +14,7 @@ import type { CardBackMotif } from '@maze-deck/ui';
 
 export type BiomeId = 'dungeon' | 'tower' | 'deep-forest' | 'desert' | 'undercity' | 'frozen-pass';
 
-/** The horizon. Each is a family of height functions in gen/scene.ts. */
+/** The horizon. Each is a family of height functions in scene.tsx. */
 export type Terrain = 'pillars' | 'stairs' | 'trees' | 'dunes' | 'vaults' | 'peaks';
 
 /** What is in the air. */

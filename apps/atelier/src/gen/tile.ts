@@ -14,9 +14,8 @@
    is emitted again shifted by a tile, which the pattern clips.
    ============================================================ */
 
-import { int, rngFor } from '../core/rng';
-import type { Rng } from '../core/rng';
-import type { Style } from '../core/style';
+import { int, rngFor } from '@maze-deck/art';
+import type { Rng, Style } from '@maze-deck/art';
 
 export type TileMode = 'walls' | 'passages' | 'spiral';
 
