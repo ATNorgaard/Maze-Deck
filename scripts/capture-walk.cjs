@@ -24,6 +24,7 @@
        --frames=2            how many reveals to photograph as frames
        --turns=40            give up after this many steps
        --still               paint the ground still, for comparing
+       --board=table         which GM board: table (the new one) or session
 
    Writes walk.log beside the pictures: the board's state at every
    step, and the reveal offsets. Exits non-zero if the renderer
@@ -51,6 +52,7 @@ const biome = flag('biome', 'dungeon');
 const frameReveals = Number(flag('frames', '2'));
 const maxTurns = Number(flag('turns', '40'));
 const still = args.includes('--still');
+const board = flag('board', 'table');
 fs.mkdirSync(out, { recursive: true });
 
 const lines = [];
@@ -63,17 +65,27 @@ const revealOffset = (page) => page.evaluate(() => {
   const covered = document.querySelector('.t-river')?.dataset.covered;
   if (!fly || covered === undefined) return null;
   const slot = Number(covered.split(' ')[0]);
-  const card = document.querySelectorAll('.md-river__slot')[slot]?.querySelector('article');
-  if (!card) return null;
+  // Against where the card RESTS, read through its slot as the stage
+  // reads it. The card itself may still be dropping back from the
+  // pointer's lift under the mask, invisible and not yet at rest.
+  const holder = document.querySelectorAll('.md-river__slot')[slot];
+  const card = holder?.querySelector('article');
+  if (!holder || !card) return null;
+  const h = holder.getBoundingClientRect();
+  const scale = holder.offsetWidth > 0 ? h.width / holder.offsetWidth : 1;
   const a = fly.getBoundingClientRect();
-  const b = card.getBoundingClientRect();
-  return { slot, dx: Math.round(a.left - b.left), dy: Math.round(a.top - b.top) };
+  return {
+    slot,
+    dx: Math.round(a.left - (h.left + card.offsetLeft * scale)),
+    dy: Math.round(a.top - (h.top + card.offsetTop * scale)),
+  };
 });
 
 const state = (page) => page.evaluate(() => ({
-  focus: document.querySelector('.t-board')?.dataset.focus ?? '-',
+  // The old board is .t-board, the new one .t-table (docs/overhaul.md, phase 1).
+  focus: document.querySelector('.t-board, .t-table')?.dataset.focus ?? '-',
   modal: document.querySelector('.t-modal .t-panel__title')?.textContent ?? '',
-  outcome: document.querySelector('.t-board')?.dataset.outcome ?? '',
+  outcome: document.querySelector('.t-board, .t-table')?.dataset.outcome ?? '',
   river: [...document.querySelectorAll('.md-river__slot')]
     .map((s) => s.querySelector('article')?.dataset.category ?? (s.querySelector('.md-card--back') ? 'back' : '·'))
     .join('/'),
@@ -105,7 +117,7 @@ const state = (page) => page.evaluate(() => ({
 
   // A fresh visitor: no campaign, no run.
   await page.goto(url);
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate((b) => { localStorage.clear(); localStorage.setItem('mazedeck.board', b); }, board);
   await page.goto(url);
   await page.waitForTimeout(1000);
   await shot('landing');
@@ -159,12 +171,17 @@ const state = (page) => page.evaluate(() => ({
       const t0 = Date.now();
       reveals += 1;
       const photograph = reveals <= frameReveals;
-      for (const ms of [150, 450, 900, 1600, 2300, 2900]) {
-        const wait = ms - (Date.now() - t0);
-        if (wait > 0) await page.waitForTimeout(wait);
-        const off = await revealOffset(page);
-        if (off && ms <= 1600) offsets.push(off);
-        if (photograph) await shot(`reveal${reveals}-${ms}ms`);
+      // The hold is sampled every ~50ms, not at a few moments: a card
+      // settling under the overlay is a 200ms transient, and four samples
+      // a reveal let one through (world/1). Photographs at fixed moments.
+      const photos = photograph ? [150, 450, 900, 1600, 2300, 2900] : [];
+      for (let t = Date.now() - t0; t < 2900; t = Date.now() - t0) {
+        if (t <= 1600) {
+          const off = await revealOffset(page);
+          if (off) offsets.push(off);
+        }
+        if (photos.length && t >= photos[0]) await shot(`reveal${reveals}-${photos.shift()}ms`);
+        await page.waitForTimeout(50);
       }
       continue;
     }
@@ -184,6 +201,11 @@ const state = (page) => page.evaluate(() => ({
   }
 
   if (!crashed) {
+    // On the new board the GM's controls are in a drawer.
+    if (!(await page.getByRole('button', { name: 'End the run' }).count())) {
+      await click(page.getByRole('button', { name: 'GM', exact: true }));
+      await page.waitForTimeout(400);
+    }
     if (await click(page.getByRole('button', { name: 'End the run' }))) {
       await page.waitForTimeout(400);
       await shot('ending');
@@ -193,8 +215,9 @@ const state = (page) => page.evaluate(() => ({
   }
 
   const worst = offsets.reduce((m, o) => Math.max(m, Math.abs(o.dx), Math.abs(o.dy)), 0);
-  log(`reveals sampled: ${offsets.length}, worst offset from the slot: ${worst}px`);
-  if (offsets.length) log(`offsets: ${offsets.map((o) => `${o.slot}:${o.dx},${o.dy}`).join(' ')}`);
+  const off = offsets.filter((o) => o.dx !== 0 || o.dy !== 0);
+  log(`reveal samples: ${offsets.length} over ${reveals} reveals, worst offset from the slot: ${worst}px`);
+  if (off.length) log(`off its slot: ${off.map((o) => `${o.slot}:${o.dx},${o.dy}`).join(' ')}`);
   save();
   await browser.close();
   if (crashed || worst > 1) process.exit(1);

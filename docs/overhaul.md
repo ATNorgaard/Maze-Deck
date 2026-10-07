@@ -231,8 +231,8 @@ can be found and reverted alone.
 | # | Phase | Size | Needs | Status |
 |---|---|---|---|---|
 | 0 | Fix and measure: the reveal shift, the stale copy, a walk-capture script, a frame-budget script | S | — | **done** — `world/0`, except the look on a real phone |
-| 1 | The new board, beside the old: world / table / rail / hand layers, GM and chronicle drawers, piles flanking the river, behind a toggle | L | 0 | next |
-| 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | |
+| 1 | The new board, beside the old: world / table / rail / hand layers, GM and chronicle drawers, piles flanking the river, behind a toggle | L | 0 | **done** — `world/1` |
+| 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | next |
 | 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | |
 | 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | |
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | |
@@ -625,3 +625,136 @@ It is a deploy away, or on the dev server over the LAN with
 atelier's art went in just before it as its own commit (`art: …`),
 because the two shared `SessionScreen.tsx` and `app.css`. The art commit
 was checked to build on its own.
+
+### world/1 — the new board, beside the old
+
+**Changed.**
+- `screens/TableScreen.tsx` (new) is the GM's board rebuilt as one
+  screen. From the top:
+  - a thin rail with the run and both tracks;
+  - the scene band;
+  - the surface, with the deck on the river's left and the discard on its
+    right;
+  - the bottom edge: the party as tokens on the left, the six actions as a
+    fanned hand in the middle, and the newest two lines of the log on the
+    right.
+
+  The GM's controls are in a drawer (`components/Drawer.tsx`, Radix
+  Dialog as a side sheet). The full log is a chronicle column that opens
+  beside the table and is remembered per device. It uses the same stage,
+  transport, view and dialogs as the old board.
+- **The hand** is always on the table. When an action is owed it rises;
+  otherwise it sinks so only the cards' tops show, dimmed and `inert`.
+  The fan is computed in CSS from each card's place and the number of
+  actions in play (`--i`, `--n`).
+- **Working an Obstacle moved onto the Obstacle**
+  (`components/ObstacleWork.tsx`). A face-up blocker carries *Work on
+  it*, which opens on the card's face into the six abilities, a DC
+  stepper (±2, as before) and *Roll*. It is positioned from the slots'
+  layout boxes.
+  - **Each blocker keeps the check its own scene suggested**, by slot. The
+    old board adopted the latest scene's suggestion, which was the wrong
+    card's once anything else had been turned since. The latest scene is
+    still the fallback, so R6 is unchanged.
+- `useTableFit.ts` (new) picks the card step from the surface's width
+  **and height**, with the piles one step under the river. It uses
+  measured sizes (river sm 541×261, md 873×422, lg 1179×569; pile sm 162,
+  md 261 wide). Too narrow for a pile either side of a `sm` river, the
+  piles go under it and the page may scroll.
+- `App.tsx`: which board a run is played on is a per-device choice
+  (`mazedeck.board`), **new by default**. *Use the old board* is in the
+  drawer, and *Use the new table* is on the old board's controls. The old
+  board is otherwise untouched.
+- `app.css`: the shared ledge and shake now switch on for `.t-table`
+  too. Everything else for the new board is in `table.css`, so retiring
+  the old one later is a deletion.
+- `stage/useStage.ts`: a turned card is measured where it **rests**, read
+  through its slot, rather than off the card (see *Broke* below). This
+  affects both boards.
+- `capture-walk.cjs` drives either board (`--board=`), finds "End the
+  run" in the drawer, and samples every reveal's hold every ~50ms
+  against the resting card. `measure-frames.cjs` takes `--board=` too.
+
+**Design notes.**
+- **Height is the scarce dimension.** The fixed rows (top rail, scene
+  band, bottom edge, gaps) cost about 311px, and the surface gets the
+  rest. Measured with no scrolling at every size:
+
+  | Viewport | River |
+  |---|---|
+  | 1920 × 1080 | `lg` |
+  | 1600 × 1000 | `md` |
+  | 1366 × 768 | `md` |
+  | 1280 × 720 | `sm` |
+  | 1024 × 768 | `sm` |
+
+  A real 1366 × 768 laptop has only about 657px of viewport inside a
+  browser, which leaves `sm` there. 1440 × 900 and 1536 × 864 laptops
+  get `md`.
+- **The step a laptop is missing is between `sm` (0.62mm) and `md`
+  (1mm).** STATUS says to add a size step rather than move the base, but
+  that is a change to `packages/ui` and its design-sync, so it is the
+  author's call. It is listed below as D9.
+- **The chronicle is a column, not an overlay.** Opening it narrows the
+  table, and the fit takes a step down if it must. At 84u it cost `md` at
+  1600 wide by 17px; it is 80u now and keeps it.
+- **On a narrow window the hand lies flat and wraps.** Six fanned cards are
+  wider than the screen, and the outer ones were clipped out of reach.
+  This turned up only because the frame-budget probe drives the board at
+  phone width. The GM board's hard floor (~580px) is the same as the old
+  board's.
+
+**Broke / retried.**
+- **A revealed card stood 10px above its slot** in about one reveal in
+  ten, on both boards. A frame-by-frame trace of every row's height
+  showed nothing moved in the layout. The cause was the pointer's lift: a
+  pickable card under the cursor is raised 10px by a transform *on the
+  card*. The overlay measured the raised card, then the card dropped back
+  under the mask as the pick landed. The four-moment sampling in world/0
+  missed it, because it is a 200ms transient. The fix is that the stage
+  now measures through the slot, which is never transformed in play, and
+  so does the check.
+- **Vite served a stale `SessionScreen.tsx` for the third time on this
+  setup.** *Use the new table* was on disk but not served. Fixed the
+  usual way: stop the server, delete `node_modules/.vite`, start it, and
+  `curl` every changed module for its last edit before trusting a test.
+  Every test in this entry was re-run after the restart.
+- **The trace script waited Playwright's 30s default for a dialog title
+  that was not there**, every step. Probes now ask `count()` first.
+
+**Verified** (headless Chromium, after the restart):
+- **Full crossings.**
+  - New board, deep forest: 136 reveal samples over 12 reveals, worst
+    offset **0px**. Roll, every kind of choice, the Wanderer, the
+    encounter and the ending were all photographed.
+  - Old board, tower: 209 samples over 14 reveals, **0px**.
+- **No scrolling at five sizes**, with the steps in the table above.
+- **The drawer.** Focus moves into it, Escape closes it, and *End the
+  run* works from it.
+- **The chronicle.** `aria-expanded` follows it, and with it open at 1600
+  the river stays `md`.
+- **The board choice.** The switch both ways works, and the choice
+  survives a reload.
+- **Working an Obstacle**, at 1600 × 1000 and 1366 × 768. The panel opened
+  on the blocker's *own* suggestion (WIS at +1 opened at DC 16, while a
+  Wanderer's scene was on the band). Overruled to CHA and raised once,
+  the log read *"… clearing the left path — CHA check against DC 17."*
+- **The frame budget**, measured in one run, at phone width. Both boards
+  sit on the same still-ground floor (0.15–0.16 s idle), and their turn
+  rows are within noise of each other:
+
+  | Board | Dungeon turn | Frozen pass turn |
+  |---|---|---|
+  | Old | 2.88 s | 2.61 s |
+  | New | 2.11 s | 2.22 s |
+- `npm run typecheck`, `npm test` (11) and `npm run build` are clean.
+
+**Commit:** `git log --grep world/1`.
+
+### D9 — for the author
+
+A size step between `sm` and `md` (around 0.8mm) would give a real
+1366 × 768 laptop a river about 30% larger than the `sm` it gets now.
+It means a new `CardSize` in `packages/ui` (tokens, type and
+design-sync) and one more row in each fit table. It is not needed for
+anything else in the plan.

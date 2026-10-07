@@ -79,11 +79,6 @@ interface Refs {
   deckRef: React.RefObject<HTMLElement>;
 }
 
-function slotCard(river: HTMLElement | null, slot: number): HTMLElement | null {
-  const slots = river?.querySelectorAll('.md-river__slot');
-  return slots?.[slot]?.querySelector('article') ?? null;
-}
-
 /** The slot itself. Its box is the card's box, card or no card. */
 function slotBox(river: HTMLElement | null, slot: number): HTMLElement | null {
   const slots = river?.querySelectorAll<HTMLElement>('.md-river__slot');
@@ -94,6 +89,30 @@ function measure(el: HTMLElement): Pick<Overlay, 'rect' | 'box' | 'scale'> {
   const rect = el.getBoundingClientRect();
   const box = { w: el.offsetWidth, h: el.offsetHeight };
   return { rect, box, scale: box.w > 0 ? rect.width / box.w : 1 };
+}
+
+/**
+ * Where a slot's card RESTS, on screen. Read through the slot, never the
+ * card: a pickable card lifts under the pointer (a transform on the card
+ * itself) and drops back as the pick lands, so measuring the card put the
+ * overlay ~10px above where the card came to rest, for as long as nothing
+ * re-rendered. The slot is never transformed in play, and the card's
+ * offset inside it is layout, which no transform touches.
+ */
+function measureSlotCard(river: HTMLElement | null, slot: number): Pick<Overlay, 'rect' | 'box' | 'scale'> | null {
+  const holder = slotBox(river, slot);
+  const card = holder?.querySelector<HTMLElement>('article');
+  if (!holder || !card) return null;
+  const outer = holder.getBoundingClientRect();
+  const scale = holder.offsetWidth > 0 ? outer.width / holder.offsetWidth : 1;
+  const box = { w: card.offsetWidth, h: card.offsetHeight };
+  const rect = new DOMRect(
+    outer.left + card.offsetLeft * scale,
+    outer.top + card.offsetTop * scale,
+    box.w * scale,
+    box.h * scale,
+  );
+  return { rect, box, scale };
 }
 
 export function useStage(view: GameView, refs: Refs): Stage {
@@ -138,12 +157,12 @@ export function useStage(view: GameView, refs: Refs): Stage {
     const { beat } = step;
     switch (beat.kind) {
       case 'reveal': {
-        const el = slotCard(refs.riverRef.current, beat.slot);
-        if (!el) return 0;
+        const m = measureSlotCard(refs.riverRef.current, beat.slot);
+        if (!m) return 0;
         const wasFaceUp = presentedRef.current.river[beat.slot]?.faceUp === true;
         if (wasFaceUp) return 0;
         setOverlay({
-          slot: beat.slot, category: beat.category, ...measure(el), turned: false, flight: null,
+          slot: beat.slot, category: beat.category, ...m, turned: false, flight: null,
         });
         // One frame face down, then turn — otherwise there is nothing
         // to animate away from and it simply appears face up.
@@ -156,9 +175,9 @@ export function useStage(view: GameView, refs: Refs): Stage {
       case 'depart': {
         let current = ov.current;
         if (!current || current.slot !== beat.slot || current.flight) {
-          const el = slotCard(refs.riverRef.current, beat.slot);
-          if (!el) { setOverlay(null); return 0; }
-          current = { slot: beat.slot, category: beat.category, ...measure(el), turned: true, flight: null };
+          const m = measureSlotCard(refs.riverRef.current, beat.slot);
+          if (!m) { setOverlay(null); return 0; }
+          current = { slot: beat.slot, category: beat.category, ...m, turned: true, flight: null };
         }
         const to = refs.discardRef.current?.getBoundingClientRect();
         if (!to) { setOverlay(null); return 0; }
@@ -303,9 +322,8 @@ export function useStage(view: GameView, refs: Refs): Stage {
     const follow = () => {
       const cur = ov.current;
       if (!cur || cur.flight) return;
-      const el = slotCard(refs.riverRef.current, cur.slot);
-      if (!el) return;
-      const m = measure(el);
+      const m = measureSlotCard(refs.riverRef.current, cur.slot);
+      if (!m) return;
       if (Math.abs(m.rect.top - cur.rect.top) < 0.5 && Math.abs(m.rect.left - cur.rect.left) < 0.5) return;
       setOverlay({ ...cur, ...m });
     };

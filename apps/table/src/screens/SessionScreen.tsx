@@ -44,6 +44,8 @@ interface Props {
    */
   previewBiome?: BiomeId | null;
   onPreviewBiome?: (id: BiomeId | null) => void;
+  /** Over to the new board (docs/overhaul.md, D7). */
+  onSwitchBoard?: () => void;
 }
 
 const POSITION = ['left', 'centre', 'right'];
@@ -64,7 +66,7 @@ const FOCUS: Record<Phase, 'actions' | 'river' | null> = {
 
 export function SessionScreen({
   view, biome, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
-  hostCode, error, previewBiome = null, onPreviewBiome,
+  hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard,
 }: Props) {
   const [score, setScore] = React.useState<AbilityScore>('STR');
   const [dcNudge, setDcNudge] = React.useState(0);
@@ -185,6 +187,11 @@ export function SessionScreen({
                   {BIOMES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </label>
+            ) : null}
+            {onSwitchBoard ? (
+              <button type="button" className="t-btn" onClick={onSwitchBoard}>
+                Use the new table
+              </button>
             ) : null}
             {view.phase !== 'over' ? (
               <button

@@ -360,7 +360,7 @@ html, body, #root {
   100% { transform: none; filter: none; }
 }
 
-.t-board[data-shake], .t-play[data-shake] { animation: tShake 380ms ease-out; }
+.t-board[data-shake], .t-play[data-shake], .t-table[data-shake] { animation: tShake 380ms ease-out; }
 
 @keyframes tShake {
   0%   { transform: translate(0, 0); }
@@ -386,10 +386,10 @@ html, body, #root {
    it arrives — that is the one moment the eye needs telling — and
    settles to a glimmer. It does not breathe: a pool of light that kept
    moving under the whole river was the signpost again, only louder. */
-.t-river, .t-actions { position: relative; isolation: isolate; }
+.t-river, .t-actions, .t-hand { position: relative; isolation: isolate; }
 
-.t-river::before, .t-actions::before,
-.t-river::after, .t-actions::after {
+.t-river::before, .t-actions::before, .t-hand::before,
+.t-river::after, .t-actions::after, .t-hand::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -401,7 +401,7 @@ html, body, #root {
 }
 
 /* The line. */
-.t-river::before, .t-actions::before {
+.t-river::before, .t-actions::before, .t-hand::before {
   --t-rest: .85;
   width: 62%;
   height: 1px;
@@ -418,7 +418,7 @@ html, body, #root {
 
 /* The light it throws up. Under the cards and the buttons: the wrapper
    is isolated, so -1 puts it beneath its content and not the board. */
-.t-river::after, .t-actions::after {
+.t-river::after, .t-actions::after, .t-hand::after {
   --t-rest: .55;
   width: 84%;
   height: 48%;
@@ -433,7 +433,11 @@ html, body, #root {
 .t-board[data-focus='river'] .t-river::before,
 .t-board[data-focus='river'] .t-river::after,
 .t-board[data-focus='actions'] .t-actions::before,
-.t-board[data-focus='actions'] .t-actions::after {
+.t-board[data-focus='actions'] .t-actions::after,
+.t-table[data-focus='river'] .t-river::before,
+.t-table[data-focus='river'] .t-river::after,
+.t-table[data-focus='actions'] .t-hand::before,
+.t-table[data-focus='actions'] .t-hand::after {
   opacity: var(--t-rest);
   animation: tLedge 1.8s ease-out both;
 }
@@ -1389,13 +1393,14 @@ html, body, #root {
   .t-play[data-outcome='through']::after { animation: none; }
   .t-baton { transition: none; }
   .t-rise, .t-play .t-panel[data-yours] { animation: none; }
-  .t-river::before, .t-actions::before, .t-river::after, .t-actions::after { animation: none; transition: none; }
+  .t-river::before, .t-actions::before, .t-hand::before,
+  .t-river::after, .t-actions::after, .t-hand::after { animation: none; transition: none; }
   .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
   .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
   .t-scrim, .t-modal, .t-track, .t-track .md-score__pip,
-  .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake],
+  .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake], .t-table[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
   .t-fly, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }

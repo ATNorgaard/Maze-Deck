@@ -1,0 +1,527 @@
+/* ============================================================
+   The table — the new board (docs/overhaul.md, phase 1).
+
+   Its own file so that retiring the old board (phase 10) is a
+   deletion in app.css and nothing here. The machinery both boards
+   share — the river's masking and lift, the ledge, the stage's
+   overlay, the tracks' pulse, the baton — stays in app.css, which
+   this file only switches on for `.t-table`.
+
+   Same rules as app.css: every colour and dimension is a token.
+   `--md-u` is a millimetre here (the app's provider is `md`).
+   ============================================================ */
+
+/* ---------------- the frame ----------------
+   A screen, not a page: four rows in the viewport's height. The
+   surface takes what is left, and useTableFit picks the card size
+   from what it measures, so nothing scrolls at a laptop's size. Its
+   minimum is a `sm` river; below that the page scrolls rather than
+   the rows overlapping. */
+.t-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(calc(74 * var(--md-u)), 1fr) auto;
+  grid-template-areas: 'top' 'scene' 'surface' 'bottom';
+  gap: calc(3 * var(--md-u));
+  height: 100vh;
+  height: 100dvh;
+  padding: calc(3 * var(--md-u)) calc(5 * var(--md-u)) 0;
+}
+
+/* The chronicle is a column, not an overlay: opening it gives the
+   table less width, and the fit takes a step down if it must, rather
+   than the log covering the discard. */
+.t-table[data-chronicle] {
+  /* 80u keeps an `md` river beside it at 1600 wide; 84 missed by 17px. */
+  grid-template-columns: minmax(0, 1fr) calc(80 * var(--md-u));
+  grid-template-areas: 'top top' 'scene log' 'surface log' 'bottom log';
+}
+
+/* Too narrow for a pile either side of even a `sm` river: the piles
+   go under it and the page scrolls. */
+.t-table[data-narrow] {
+  height: auto;
+  min-height: 100dvh;
+  grid-template-rows: auto auto auto auto;
+}
+
+/* ---------------- the top rail ---------------- */
+.t-top {
+  grid-area: top;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: calc(4 * var(--md-u));
+}
+
+.t-top__run { min-width: 0; }
+
+.t-top__title {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-size: calc(4.6 * var(--md-u));
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--md-parchment-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.t-top__meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--md-parchment-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.t-top__tracks { grid-column: 2; }
+
+.t-top__tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(2.5 * var(--md-u));
+}
+
+.t-top__join {
+  margin: 0;
+  font-family: var(--md-font-ui);
+  font-size: 13px;
+  color: var(--md-parchment-400);
+}
+
+/* ---------------- the scene ----------------
+   Same reserved band as the old board's (world/0); here it is
+   centred over the table at a reading measure. Phase 2 sets it large
+   over the vista. */
+.t-table > .t-scene {
+  grid-area: scene;
+  width: 100%;
+  max-width: calc(230 * var(--md-u));
+  margin: 0 auto;
+}
+
+/* ---------------- the surface ----------------
+   The deck on the river's left, the discard on its right, the way
+   they would lie on a table. The gap is the one useTableFit assumes. */
+.t-surface {
+  grid-area: surface;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(6 * var(--md-u));
+}
+
+.t-surface__pile { flex: none; }
+
+.t-surface[data-narrow] {
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+.t-surface[data-narrow] .t-river { order: -1; flex-basis: 100%; }
+
+/* ---------------- the bottom edge ----------------
+   The party on the left, the hand in the middle, the newest of the
+   log on the right. Narrower than a laptop, the hand gets its own
+   row under the other two. */
+.t-bottom {
+  grid-area: bottom;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: 'rail hand ticker';
+  align-items: end;
+  gap: calc(4 * var(--md-u));
+}
+
+@media (max-width: 1100px) {
+  .t-bottom {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'rail ticker' 'hand hand';
+  }
+}
+
+/* ---------------- the party ----------------
+   Tokens: a numbered circle with the name under it, the old board's
+   condensed seats always. Ported rather than shared, because those
+   rules live inside the old board's breakpoint. */
+.t-rail {
+  grid-area: rail;
+  align-self: center;
+  min-width: 0;
+  padding-bottom: calc(3 * var(--md-u));
+}
+
+.t-rail .t-seats {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: calc(3 * var(--md-u));
+}
+
+.t-rail .t-seats .md-seat {
+  flex-direction: column;
+  align-items: center;
+  gap: calc(1.2 * var(--md-u));
+  padding: calc(1.2 * var(--md-u));
+  border: 0;
+  background: none;
+  max-width: calc(26 * var(--md-u));
+}
+
+.t-rail .t-seats .md-seat__body { align-items: center; }
+
+.t-rail .t-seats .md-seat__name {
+  font-size: calc(2.7 * var(--md-u));
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The class and the advantage tag, kept for a screen reader. */
+.t-rail .t-seats .md-seat__meta {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.t-rail .t-seats .md-seat__order {
+  position: relative;
+  width: calc(9 * var(--md-u));
+  height: calc(9 * var(--md-u));
+  font-size: calc(3.8 * var(--md-u));
+}
+
+/* Boost Morale, as a dot on the rim. */
+.t-rail .t-seats .t-seat--boosted .md-seat__order::after {
+  content: '';
+  position: absolute;
+  top: calc(-0.4 * var(--md-u));
+  right: calc(-0.4 * var(--md-u));
+  width: calc(2.6 * var(--md-u));
+  height: calc(2.6 * var(--md-u));
+  border-radius: 50%;
+  background: var(--md-cat-path-300);
+  border: calc(0.4 * var(--md-u)) solid var(--md-ink-900);
+}
+
+.t-rail .t-seats .md-seat[data-active='true'] .md-seat__order {
+  background: var(--md-ink-700);
+  box-shadow: 0 0 0 calc(0.6 * var(--md-u)) var(--md-cat-path-700);
+}
+
+/* ---------------- the hand ----------------
+   The six actions as cards held along the table's edge, fanned. When
+   an action is owed the hand rises; otherwise it sinks so that only
+   their tops show, dimmed and inert. The box clips what has sunk.
+
+   The fan is worked out from each card's place (`--i`, from
+   nth-child) against the hand's middle (`--n` is set inline from the
+   number of actions in play): turned a few degrees each way and
+   dropped a little at the ends, along an arc. */
+.t-hand {
+  grid-area: hand;
+  overflow: hidden;
+  /* Room above for a card lifting out of the fan, and below for the arc
+     the outer cards drop along, so a raised hand shows every score. */
+  padding: calc(5 * var(--md-u)) calc(6 * var(--md-u)) calc(4 * var(--md-u));
+  --mid: calc((var(--n, 6) + 1) / 2);
+}
+
+.t-hand__cards {
+  display: flex;
+  justify-content: center;
+  transition: transform 420ms cubic-bezier(.2, .7, .3, 1), filter 420ms ease;
+}
+
+.t-hand:not([data-raised]) .t-hand__cards {
+  transform: translateY(54%);
+  filter: brightness(.5) saturate(.6);
+}
+
+/* The library's strip paints ink behind its buttons and wraps; a hand
+   does neither. */
+.t-hand__strip {
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.t-hand .md-action {
+  --i: 1;
+  --off: calc(var(--i) - var(--mid));
+  position: relative;
+  margin: 0 calc(-0.8 * var(--md-u));
+  transform-origin: 50% 160%;
+  transform:
+    rotate(calc(var(--off) * 3.2deg))
+    translateY(calc(var(--off) * var(--off) * 0.5 * var(--md-u)));
+  box-shadow: 0 calc(2 * var(--md-u)) calc(5 * var(--md-u)) rgba(0, 0, 0, .45);
+  transition: transform 220ms cubic-bezier(.2, .7, .3, 1), border-color .16s ease, background .16s ease;
+}
+.t-hand .md-action:nth-child(2) { --i: 2; }
+.t-hand .md-action:nth-child(3) { --i: 3; }
+.t-hand .md-action:nth-child(4) { --i: 4; }
+.t-hand .md-action:nth-child(5) { --i: 5; }
+.t-hand .md-action:nth-child(6) { --i: 6; }
+
+/* The card under the hand straightens and lifts out of the fan. */
+.t-hand[data-raised] .md-action:hover,
+.t-hand[data-raised] .md-action:focus-visible {
+  z-index: 1;
+  transform: translateY(calc(-4 * var(--md-u)));
+}
+
+/* Narrow, six fanned cards are wider than the screen and the outer ones
+   would be clipped out of reach. The hand lies flat and wraps instead,
+   and sinks by dimming alone — the page scrolls here anyway. */
+.t-table[data-narrow] .t-hand { overflow: visible; padding: calc(3 * var(--md-u)) 0; }
+.t-table[data-narrow] .t-hand__strip { flex-wrap: wrap; justify-content: center; gap: calc(2 * var(--md-u)); }
+.t-table[data-narrow] .t-hand .md-action { margin: 0; transform: none; }
+.t-table[data-narrow] .t-hand:not([data-raised]) .t-hand__cards { transform: none; }
+
+/* ---------------- the newest of the log ---------------- */
+.t-ticker {
+  grid-area: ticker;
+  align-self: center;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(1.4 * var(--md-u));
+  padding-bottom: calc(3 * var(--md-u));
+  text-align: right;
+}
+
+.t-ticker__line {
+  margin: 0;
+  max-width: calc(110 * var(--md-u));
+  font-size: 14px;
+  line-height: var(--md-leading-body);
+  color: var(--md-parchment-400);
+}
+
+.t-ticker__line:first-child {
+  color: var(--md-parchment-200);
+  animation: tSlideIn 360ms cubic-bezier(.2, .7, .3, 1) both;
+}
+
+/* ---------------- the chronicle ---------------- */
+.t-chronicle {
+  grid-area: log;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(4 * var(--md-u));
+}
+
+.t-chronicle .t-panel--log { flex: 1 1 auto; }
+
+.t-chronicle__close {
+  position: absolute;
+  top: calc(2.5 * var(--md-u));
+  right: calc(2.5 * var(--md-u));
+  z-index: 1;
+  padding: calc(1 * var(--md-u)) calc(2.6 * var(--md-u));
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ---------------- working an Obstacle ----------------
+   Laid over the blocker's own card (ObstacleWork). The layer itself
+   lets the pointer through; only what is on it takes clicks. */
+.t-work {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(3 * var(--md-u));
+  pointer-events: none;
+}
+.t-work > * { pointer-events: auto; }
+
+.t-work__open {
+  background: var(--md-ink-900);
+  border-color: var(--md-cat-obst-500);
+  color: var(--md-cat-obst-300);
+}
+.t-work__open:hover { border-color: var(--md-cat-obst-300); color: var(--md-parchment-100); }
+
+.t-work__panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2.4 * var(--md-u));
+  padding: calc(3 * var(--md-u));
+  /* Solid: the card's own rule text showed through behind the DC. */
+  background: var(--md-ink-900);
+  border: 1px solid var(--md-cat-obst-700);
+  border-radius: calc(1.6 * var(--md-u));
+  box-shadow: 0 calc(5 * var(--md-u)) calc(11 * var(--md-u)) rgba(0, 0, 0, .55);
+}
+.t-work__panel .t-kicker { color: var(--md-cat-obst-300); }
+
+.t-work__scores {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(1.2 * var(--md-u));
+}
+
+.t-work__score {
+  font-family: var(--md-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: calc(1.2 * var(--md-u)) calc(1.8 * var(--md-u));
+  border-radius: calc(1 * var(--md-u));
+  border: 1px solid var(--md-ink-600);
+  background: transparent;
+  color: var(--md-parchment-300);
+  cursor: pointer;
+}
+.t-work__score[aria-checked='true'] {
+  background: var(--md-cat-obst-700);
+  border-color: var(--md-cat-obst-500);
+  color: var(--md-parchment-100);
+}
+/* What the scene asked for keeps a mark even when the GM overrules it. */
+.t-work__score[data-suggested] { box-shadow: inset 0 calc(-0.6 * var(--md-u)) 0 var(--md-cat-obst-300); }
+
+.t-work__dc {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--md-u));
+}
+.t-work__dcValue {
+  min-width: calc(16 * var(--md-u));
+  text-align: center;
+  font-family: var(--md-font-display);
+  font-size: calc(3.6 * var(--md-u));
+  color: var(--md-parchment-100);
+}
+
+.t-work__go {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--md-u));
+}
+
+/* ---------------- the GM's drawer ---------------- */
+.t-drawerScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(4, 7, 9, .45);
+  animation: tFade 180ms ease both;
+}
+
+.t-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 51;
+  width: min(calc(92 * var(--md-u)), 100vw);
+  display: flex;
+  flex-direction: column;
+  gap: calc(4 * var(--md-u));
+  padding: calc(5 * var(--md-u));
+  overflow-y: auto;
+  outline: none;
+  background: var(--md-ink-800);
+  border-left: 1px solid var(--md-ink-600);
+  box-shadow: calc(-8 * var(--md-u)) 0 calc(20 * var(--md-u)) rgba(0, 0, 0, .6);
+  animation: tSheet 240ms cubic-bezier(.2, .7, .3, 1) both;
+}
+
+@keyframes tSheet {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+
+.t-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.t-drawer__title {
+  margin: 0;
+  font-family: var(--md-font-display);
+  font-size: calc(4.4 * var(--md-u));
+  letter-spacing: .06em;
+  color: var(--md-parchment-100);
+}
+
+.t-drawer__close { padding: calc(1 * var(--md-u)) calc(2.6 * var(--md-u)); font-size: 16px; line-height: 1; }
+
+.t-drawer__body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(3 * var(--md-u));
+}
+.t-drawer__body > .t-btn { text-align: left; }
+
+/* ---------------- a notice ----------------
+   Fixed, so it never moves the river (world/0). */
+.t-toast {
+  position: fixed;
+  top: calc(3 * var(--md-u));
+  left: 50%;
+  z-index: 40;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: calc(2 * var(--md-u)) calc(4 * var(--md-u));
+  border-radius: calc(1.4 * var(--md-u));
+  background: var(--md-ink-800);
+  border: 1px solid var(--md-cat-mons-700);
+  color: var(--md-cat-mons-300);
+  font-size: 14px;
+}
+
+/* ---------------- the ending ----------------
+   The old board's, on this one: through blooms gold over everything,
+   lost dims every row. The river's fan is shared (app.css). */
+.t-table > .t-top,
+.t-table > .t-scene,
+.t-table > .t-surface,
+.t-table > .t-bottom { transition: filter 1.4s ease; }
+
+.t-table[data-outcome='lost'] > .t-top,
+.t-table[data-outcome='lost'] > .t-scene,
+.t-table[data-outcome='lost'] > .t-surface,
+.t-table[data-outcome='lost'] > .t-bottom { filter: brightness(.38) saturate(.45); }
+
+.t-table[data-outcome='through']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 40%, var(--md-cat-path-glow), transparent 70%);
+  animation: tBloom 1.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-hand__cards, .t-hand .md-action { transition: none; }
+  .t-ticker__line:first-child, .t-drawer, .t-drawerScrim { animation: none; }
+  .t-table > .t-top, .t-table > .t-scene, .t-table > .t-surface, .t-table > .t-bottom { transition: none; }
+  .t-table[data-outcome='through']::after { animation: none; }
+}

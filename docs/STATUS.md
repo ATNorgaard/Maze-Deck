@@ -269,12 +269,18 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 1](overhaul.md#1-the-new-board-beside-the-old):
-the new board, beside the old.** The overhaul lives on the **`overhaul`
-branch**, not `main`, because a push to `main` deploys and the work runs
-to ten phases. `main` fast-forwards to it whenever a phase is worth
-shipping. On the branch so far: the atelier's art (`art: …`) and phase 0
-(`world/0`).
+**[The overhaul's phase 2](overhaul.md#2-the-vista): the vista.** Move
+the atelier's generators into `packages/art` and draw each scene's
+picture live. The overhaul lives on the **`overhaul` branch**, not
+`main`, because a push to `main` deploys and the work runs to ten
+phases; `main` fast-forwards to it whenever a phase is worth shipping.
+On the branch so far: the atelier's art (`art: …`), phase 0 (`world/0`)
+and phase 1 (`world/1` — the new board, now the default, with the old
+one a click away in the GM drawer).
+
+An open question for the author from phase 1 is
+[D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`
+for 1366 × 768 laptops.
 
 Still owed from phase 0: one look at the animated ground on a real phone
 (the frame budget and the headless crash are in the log).

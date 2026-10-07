@@ -19,9 +19,22 @@ import { LandingScreen } from './screens/LandingScreen';
 import { JoinScreen } from './screens/JoinScreen';
 import { PlayerScreen } from './screens/PlayerScreen';
 import { SessionScreen } from './screens/SessionScreen';
+import { TableScreen } from './screens/TableScreen';
 import { TablesScreen } from './screens/TablesScreen';
 
 type Screen = 'landing' | 'campaign' | 'tables' | 'session' | 'join' | 'play';
+
+/**
+ * Which GM board a run is played on. The overhaul builds the new one
+ * beside the old (docs/overhaul.md, D7), so either is one click from the
+ * other and the choice is remembered per device. New by default.
+ */
+type Board = 'table' | 'session';
+const BOARD_KEY = 'mazedeck.board';
+
+function loadBoard(): Board {
+  try { return window.localStorage.getItem(BOARD_KEY) === 'session' ? 'session' : 'table'; } catch { return 'table'; }
+}
 
 /** `#/join/ABC234` so a GM can paste a link instead of reading letters out. */
 function codeFromHash(): string | null {
@@ -45,6 +58,14 @@ export function App() {
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [asPlayer, setAsPlayer] = React.useState(false);
   const [previewBiome, setPreviewBiome] = React.useState<BiomeId | null>(null);
+  const [board, setBoard] = React.useState<Board>(loadBoard);
+  const switchBoard = React.useCallback(() => {
+    setBoard((was) => {
+      const next: Board = was === 'table' ? 'session' : 'table';
+      try { window.localStorage.setItem(BOARD_KEY, next); } catch { /* blocked: not remembered */ }
+      return next;
+    });
+  }, []);
   const [joinCode, setJoinCode] = React.useState(deepLink.current ?? '');
   const [seatOffers, setSeatOffers] = React.useState<SeatOffer[] | null>(null);
 
@@ -223,20 +244,39 @@ export function App() {
           onBack={() => { detach(); setSeatOffers(null); setScreen('landing'); }}
         />
       ) : screen === 'session' && view ? (
-        <SessionScreen
-          view={view}
-          biome={biome}
-          dispatch={dispatch}
-          error={snapshot?.error ?? null}
-          runName={campaign.runName}
-          prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
-          asPlayer={asPlayer}
-          onTogglePlayerView={togglePlayerView}
-          {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
-          previewBiome={previewBiome}
-          onPreviewBiome={setPreviewBiome}
-          onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
-        />
+        board === 'table' ? (
+          <TableScreen
+            view={view}
+            biome={biome}
+            dispatch={dispatch}
+            error={snapshot?.error ?? null}
+            runName={campaign.runName}
+            prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
+            asPlayer={asPlayer}
+            onTogglePlayerView={togglePlayerView}
+            {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
+            previewBiome={previewBiome}
+            onPreviewBiome={setPreviewBiome}
+            onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
+            onSwitchBoard={switchBoard}
+          />
+        ) : (
+          <SessionScreen
+            view={view}
+            biome={biome}
+            dispatch={dispatch}
+            error={snapshot?.error ?? null}
+            runName={campaign.runName}
+            prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
+            asPlayer={asPlayer}
+            onTogglePlayerView={togglePlayerView}
+            {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
+            previewBiome={previewBiome}
+            onPreviewBiome={setPreviewBiome}
+            onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
+            onSwitchBoard={switchBoard}
+          />
+        )
       ) : screen === 'landing' ? (
         <LandingScreen
           onStart={() => setScreen('campaign')}

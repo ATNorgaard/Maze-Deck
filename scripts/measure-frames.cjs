@@ -22,6 +22,8 @@
        --cpu=4               CPU throttle; 4 is a mid phone
        --size=390x844        the viewport
        --window=4000         ms measured per row
+       --board=table         which GM board: table (the new one) or
+                             session. Phase 0's baseline was the old one.
 
    Prints a Markdown table, ready to paste into docs/overhaul.md.
 
@@ -45,13 +47,14 @@ const biomes = flag('biomes', 'all') === 'all' ? ALL : flag('biomes', '').split(
 const cpu = Number(flag('cpu', '4'));
 const [W, H] = flag('size', '390x844').split('x').map(Number);
 const windowMs = Number(flag('window', '4000'));
+const board = flag('board', 'table');
 
 const STILL = '.t-app::before { background: var(--md-ink-900) !important; animation: none !important; }';
 
 async function open(browser, biome) {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 3 });
   await page.goto(url);
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate((b) => { localStorage.clear(); localStorage.setItem('mazedeck.board', b); }, board);
   await page.goto(url);
   await page.waitForTimeout(800);
   await page.getByRole('button', { name: /Set up a crossing/ }).first().click();
@@ -108,7 +111,7 @@ const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFix
 
 (async () => {
   const browser = await chromium.launch();
-  console.log(`${W}×${H}, ${cpu}× CPU, ${windowMs} ms a row\n`);
+  console.log(`${board} board, ${W}×${H}, ${cpu}× CPU, ${windowMs} ms a row\n`);
   console.log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
   console.log('|---|---|---|---|---|---|---|');
   for (const biome of biomes) {
