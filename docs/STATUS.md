@@ -286,12 +286,22 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 6](overhaul.md#6-cards-with-weight): cards with
-weight.**
-- Pointer tilt and a sheen on face-up cards.
-- The backs' art in depth.
-- Piles with thickness.
-- A signature for each category on the reveal.
+**[The overhaul's phase 7](overhaul.md#7-ceremony): ceremony.**
+- The opening: the crossing's name over the setting's horizon, the
+  shuffle, the deal, the party taking their places.
+- The chronicle at the end: the crossing told back as a storyboard of
+  its scenes. `campaign.chronicle` (phase 5) already keeps every scene
+  drawn, with its round and seat.
+
+Phase 6 (`world/6`) gave the cards weight:
+- the card under the pointer tilts, a sheen crosses a face-up card, and
+  a setting's back moves in depth — its art is baked as sky, far and
+  near layers now, and `DeckSkin` has `backLayers` for them;
+- the deck shows its thickness and the discard its last three cards;
+- a path being taken lifts towards the viewer before it turns;
+- every category has its own signature on the reveal.
+
+`node scripts/capture-weight.cjs` photographs all of that.
 
 Phase 5 (`world/5`) made the world keep score:
 - escape is a route across the top rail, with each Clear Path's scene
@@ -306,10 +316,10 @@ Phase 5 (`world/5`) made the world keep score:
 `node scripts/capture-score.cjs` stages each of those moments and
 photographs it, because a walk only meets a jam when the deck deals one.
 
-Phases 1–5 still want the author's eyes, moving, on a real screen
-(`cd apps/table && npm run dev`). Phase 5's dark is mostly motion — eyes
-blinking, candles guttering, the air slowing — that no headless frame
-shows.
+Phases 1–6 still want the author's eyes, moving, on a real screen
+(`cd apps/table && npm run dev`). Phase 5's dark and phase 6's tilt are
+mostly motion — eyes blinking, candles guttering, a card turning under
+the hand — that no headless frame shows.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
@@ -323,8 +333,8 @@ the GM reads out has a picture, drawn live by `packages/art`), phase 3
 an *Atmosphere* setting in the GM drawer whose *Off* is the old ground),
 phase 4 (`world/4` — decisions made on the table, not in dialogs) and
 phase 5 (`world/5` — the route, the dark, round marks, the jam and the
-reshuffle). Production serves `world/3`; `world/4` and `world/5` are on
-the branch only.
+reshuffle) and phase 6 (`world/6` — cards with weight). Production serves
+`world/3`; `world/4` to `world/6` are on the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`
@@ -679,8 +689,9 @@ clusters of rounds on trunks, as shapes on a low bank of undergrowth — rather
 than a sawtooth height line, which read as peaks. A scene layer can carry
 `shapes` now, for anything with an overhang.
 
-All twelve pictures are baked from recipes by `node scripts/bake-art.cjs`
-(one seed per biome, in the script). Re-roll a setting by changing its seed
+All the pictures are baked from recipes by `node scripts/bake-art.cjs`,
+one seed per biome, in the script. Since phase 6 each back is baked whole
+and as sky, far and near layers: thirty files. Re-roll a setting by changing its seed
 there, never by editing a file under `art/`. Not yet measured: what the
 animated ground costs on a phone — the player's screen shares `.t-app`'s
 ground. If it stutters, the `animate` recipe flag off gives a still picture.

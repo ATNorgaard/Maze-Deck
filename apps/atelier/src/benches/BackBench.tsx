@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { ArchGlyph, CardBack, MazeDeckProvider } from '@maze-deck/ui';
 import { SceneArt } from '@maze-deck/art';
-import type { BiomeId, BiomeVocab, Palette, Style, SceneParams } from '@maze-deck/art';
+import type { BiomeId, BiomeVocab, Palette, ScenePart, Style, SceneParams } from '@maze-deck/art';
 import { slug } from '../core/export';
 import { generateTile, tileFieldLine, TILE_MODES } from '../gen/tile';
 import type { Tile, TileMode } from '../gen/tile';
@@ -28,7 +28,16 @@ interface BackState {
   fade: number;
   subject: boolean;
   px: number;
+  /** One depth alone, for a back drawn in layers; empty is the whole picture. */
+  part: '' | ScenePart;
 }
+
+const PARTS: readonly { id: '' | ScenePart; name: string; blurb: string }[] = [
+  { id: '', name: 'Whole', blurb: 'The picture as one: the card back, and the fallback.' },
+  { id: 'sky', name: 'Sky', blurb: 'The back layer: sky, light and disc. Moves least as the card tilts.' },
+  { id: 'far', name: 'Far', blurb: 'The distance, on a transparent ground.' },
+  { id: 'near', name: 'Near', blurb: 'The foreground, on a transparent ground. Moves most.' },
+];
 
 /** The tile as a field. `fit` mirrors MazeField in the library. */
 function TileField({ tile, color, fit, id, background }: {
@@ -83,7 +92,7 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
   biome: BiomeId; style: Style; seed: string; palette: Palette; vocab: BiomeVocab;
 }) {
   const [s, set] = useStored<BackState>('back', {
-    mode: 'walls', cells: 4, weight: 1, name: '', relief: 1, haze: 0.6, fade: 0.3, subject: false, px: 2.5,
+    mode: 'walls', cells: 4, weight: 1, name: '', relief: 1, haze: 0.6, fade: 0.3, subject: false, px: 2.5, part: '',
   });
   const id = useId().replace(/:/g, '');
 
@@ -91,10 +100,12 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
     const p: SceneParams = {
       category: 'clear-path', frame: 'back', seed, style,
       px: s.px, relief: s.relief, haze: s.haze, band: false, subject: s.subject, fade: s.fade,
+      ...(s.part ? { part: s.part } : {}),
     };
+    const stem = `back-${biome}${s.part ? `-${s.part}` : ''}`;
     const art = <SceneArt p={p} pal={palette} vocab={vocab} id={`${id}-x`} />;
     const code = [
-      `// Save the SVG as apps/table/src/biomes/art/back-${biome}.svg, then in`,
+      `// Save the SVG as apps/table/src/biomes/art/${stem}.svg, then in`,
       `// apps/table/src/biomes/${biome}.ts:`,
       `import backArt from './art/back-${biome}.svg';`,
       '',
@@ -102,7 +113,7 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
       `  backArt,`,
       '',
       `// recipe: ?bench=back&biome=${biome}&style=${style}&seed=${seed}&back.mode=scene` +
-        `&back.relief=${s.relief}&back.haze=${s.haze}&back.fade=${s.fade}&back.subject=${s.subject ? 1 : 0}&back.px=${s.px}`,
+        `&back.relief=${s.relief}&back.haze=${s.haze}&back.fade=${s.fade}&back.subject=${s.subject ? 1 : 0}&back.px=${s.px}&back.part=${s.part}`,
     ].join('\n');
 
     return (
@@ -115,6 +126,7 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
             <Slider label="Fade" value={s.fade} min={0} max={0.8} onChange={(fade) => set({ fade })} hint="Sink the picture towards the ink, so the seal stays the brightest thing." />
             {style === 'pixel' ? <Slider label="Pixel" value={s.px} min={1.5} max={6} step={0.25} onChange={(px) => set({ px })} hint="In field units; the back is 240 across." /> : null}
             <Toggle label="A doorway of light in front" value={s.subject} onChange={(subject) => set({ subject })} />
+            {style === 'flat' ? <Select label="Layer" value={s.part} options={PARTS} onChange={(part) => set({ part })} /> : null}
           </Section>
         </aside>
 
@@ -139,7 +151,7 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
           title="Card back scene"
           note="The setting's horizon across the whole field, lit in the deck's gold and carrying no subject, so every back still says nothing. The vignette, frame and seal draw over it as they do over the maze."
           code={code}
-          stem={`back-${biome}`}
+          stem={stem}
           svg={{ node: art, width: 960, height: 1340, pixelated: style === 'pixel' }}
         />
       </>

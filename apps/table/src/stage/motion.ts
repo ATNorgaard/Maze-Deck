@@ -54,6 +54,17 @@ export const MOTION = {
   route: 760,
   /** The vista stepping forward into the scene when ground is gained. */
   step: 1800,
+  /* The reveal's signatures (phase 6), one per category. */
+  /** An Item turns slowly. */
+  flipSlow: 900,
+  /** A Clear Path's light pouring out of the arch towards the route. */
+  beam: 1300,
+  /** An Obstacle's dust, kicked up as it slams down. */
+  dust: 950,
+  /** The glint crossing an Item's face once it has turned. */
+  glint: 800,
+  /** A Wanderer standing up. */
+  stand: 700,
 
   /* easings */
   settle: 'cubic-bezier(.2, .7, .3, 1)',

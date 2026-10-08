@@ -50,6 +50,14 @@ export interface DeckSkin {
    * about any one of them.
    */
   backArt?: string;
+  /**
+   * The same picture as layers, back to front, as URLs — for a host
+   * that moves them against each other in depth. When set they stand
+   * in for `backArt`, each as a `.md-card__art` carrying `data-depth`
+   * (0 for the farthest); the library itself never moves them. Set
+   * once on the provider like the rest, so every back is the same.
+   */
+  backLayers?: string[];
 }
 
 const DeckSkinContext = React.createContext<DeckSkin>({});
@@ -66,11 +74,13 @@ export function DeckSkinProvider({ skin, children }: { skin: DeckSkin; children?
     const copy = skin.copy ?? parent.copy;
     const motif = skin.motif ?? parent.motif;
     const backArt = skin.backArt ?? parent.backArt;
+    const backLayers = skin.backLayers ?? parent.backLayers;
     if (copy) merged.copy = copy;
     if (motif) merged.motif = motif;
     if (backArt) merged.backArt = backArt;
+    if (backLayers) merged.backLayers = backLayers;
     return merged;
-  }, [skin.copy, skin.motif, skin.backArt, parent.copy, parent.motif, parent.backArt]);
+  }, [skin.copy, skin.motif, skin.backArt, skin.backLayers, parent.copy, parent.motif, parent.backArt, parent.backLayers]);
   return <DeckSkinContext.Provider value={value}>{children}</DeckSkinContext.Provider>;
 }
 

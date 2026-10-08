@@ -98,7 +98,7 @@ export interface CardBackProps {
  */
 export function CardBack({ size, onSelect, className, style }: CardBackProps) {
   const interactive = Boolean(onSelect);
-  const { motif = 'fret', backArt } = useDeckSkin();
+  const { motif = 'fret', backArt, backLayers } = useDeckSkin();
   return (
     <article
       className={['md-card', 'md-card--back', 'md-cat-path', className].filter(Boolean).join(' ')}
@@ -118,9 +118,13 @@ export function CardBack({ size, onSelect, className, style }: CardBackProps) {
       }
     >
       <div className="md-card__trim">
-        {backArt
-          ? <img className="md-card__art" src={backArt} alt="" draggable={false} />
-          : <MazeField motif={motif} />}
+        {backLayers?.length
+          ? backLayers.map((src, i) => (
+              <img key={src} className="md-card__art" data-depth={i} src={src} alt="" draggable={false} />
+            ))
+          : backArt
+            ? <img className="md-card__art" src={backArt} alt="" draggable={false} />
+            : <MazeField motif={motif} />}
         <div className="md-card__vignette" />
         <div className="md-card__frame" />
         <ArchGlyph state="seal" className="md-card__seal" />

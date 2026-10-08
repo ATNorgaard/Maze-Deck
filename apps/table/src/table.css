@@ -610,7 +610,10 @@
 .t-river[data-raised~='0'] .md-river__slot:nth-child(1) article,
 .t-river[data-raised~='1'] .md-river__slot:nth-child(2) article,
 .t-river[data-raised~='2'] .md-river__slot:nth-child(3) article {
-  transform: translateY(calc(-3 * var(--md-u))) scale(1.03);
+  /* Parts of the card's pose (phase 6's "a card's pose", below). */
+  --t-lift: calc(-3 * var(--md-u));
+  --t-scale: 1.03;
+  transform: var(--t-pose);
   box-shadow: 0 calc(5 * var(--md-u)) calc(12 * var(--md-u)) rgba(0, 0, 0, .55),
               0 0 calc(8 * var(--md-u)) calc(1 * var(--md-u)) var(--md-cat-glow, var(--md-cat-path-glow));
 }
@@ -1110,4 +1113,230 @@
 @media (prefers-reduced-motion: reduce) {
   .t-route__lit, .t-route__party, .t-table::before { transition: none; }
   .t-route__way[data-fresh], .t-route__way[data-fresh]::after, .t-roundmark { animation: none; }
+}
+
+/* ============================================================
+   Cards with weight (docs/overhaul.md, phase 6).
+   ============================================================ */
+
+/* ---------------- a card's pose ----------------
+   Whatever moves a card on this board sets parts — a lift, a scale,
+   and under the pointer a tilt (useTilt's --tx and --ty, -1 to 1) —
+   and one transform puts them together, so a lifted card can also
+   tilt and nothing overwrites anything. The point under the pointer
+   presses away from the viewer. A transform on the card only: the
+   stage and SlotLayer measure the slot. */
+.t-table .md-card {
+  --t-pose: translateY(var(--t-lift, 0px)) scale(var(--t-scale, 1));
+}
+.t-table .md-card[data-tilt] {
+  --t-pose: perspective(calc(240 * var(--md-u))) translateY(var(--t-lift, 0px)) scale(var(--t-scale, 1))
+    rotateX(calc(var(--ty, 0) * -7deg)) rotateY(calc(var(--tx, 0) * 8deg));
+}
+
+/* A path that can be taken lifts under the pointer (app.css draws its
+   light and shadow), and lifts further, towards the viewer, while it is
+   pressed or while the pick is on its way to a server: anticipation,
+   before it turns. Outranks app.css's lift, which would drop the tilt. */
+.t-table .t-river[data-pickable] .md-river__slot:hover article,
+.t-table .t-river[data-pickable] .md-river__slot:focus-within article { --t-lift: -10px; }
+.t-table .t-river[data-pickable] .md-river__slot article:active,
+.t-table .t-river[data-picking='0'] .md-river__slot:nth-child(1) article,
+.t-table .t-river[data-picking='1'] .md-river__slot:nth-child(2) article,
+.t-table .t-river[data-picking='2'] .md-river__slot:nth-child(3) article {
+  --t-lift: -16px;
+  --t-scale: 1.05;
+  transition-duration: 110ms;
+}
+.t-table .t-surface .md-card[data-tilt],
+.t-table .t-river[data-pickable] .md-river__slot:hover article,
+.t-table .t-river[data-pickable] .md-river__slot:focus-within article,
+.t-table .t-river[data-pickable] .md-river__slot article:active,
+.t-table .t-river[data-picking] .md-river__slot article { transform: var(--t-pose); }
+
+/* The piles' top cards tilt as well, and ease as the river's do. */
+.t-table .t-surface__pile .md-pile__stack > .md-card { transition: transform 200ms cubic-bezier(.2, .7, .3, 1); }
+
+/* ---------------- the sheen ----------------
+   A band of light across a face-up card, crossing as it tilts: a
+   gradient far larger than the card, moved by a transform, inside the
+   trim's rounded clip. */
+.t-table .md-card:not(.md-card--back) > .md-card__trim::after {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 248, 230, .16) 49%, rgba(255, 248, 230, .05) 53%, transparent 60%);
+  opacity: 0;
+  transform: translate(calc(var(--tx, 0) * -22%), calc(var(--ty, 0) * -16%));
+  transition: opacity 220ms ease, transform 200ms cubic-bezier(.2, .7, .3, 1);
+}
+.t-table .md-card[data-tilt]:not(.md-card--back) > .md-card__trim::after { opacity: 1; }
+
+/* ---------------- a back in depth ----------------
+   A setting's back is three layers — sky, far, near (bake-art.cjs) —
+   and as the card tilts they part: the sky stays, the distance moves a
+   little, the foreground most, and the nearer a layer the more it
+   comes forward. That growth is also what keeps a moving layer's edge
+   from showing: each grows by more than twice the most it moves. At
+   rest they are the one picture. */
+.t-table .md-card--back .md-card__art[data-depth] { transition: transform 200ms cubic-bezier(.2, .7, .3, 1); }
+.t-table .md-card--back[data-tilt] .md-card__art[data-depth='1'] {
+  transform: translate(calc(var(--tx, 0) * -1%), calc(var(--ty, 0) * -.8%)) scale(1.025);
+}
+.t-table .md-card--back[data-tilt] .md-card__art[data-depth='2'] {
+  transform: translate(calc(var(--tx, 0) * -2.4%), calc(var(--ty, 0) * -1.8%)) scale(1.06);
+}
+
+/* ---------------- piles with thickness ----------------
+   The deck shows its edges below and to the right of its top card, as
+   thick as the deck is (`--t-thick`, 0 to 1, set by the board from the
+   count), thinning as it is dealt from. The library's two plates are
+   the edges: moved under the card, striped like stacked card edges. */
+/* The plates are the whole card, bleed and all: drawn the trim's size,
+   as the library draws them, they stay hidden behind the top card's
+   dark margin at any thickness worth showing. */
+.t-table .t-surface__pile--deck .md-pile__shadow {
+  inset: 0;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(135deg,
+      color-mix(in srgb, var(--md-parchment-400) 30%, var(--md-ink-700)) 0 1px,
+      var(--md-ink-800) 1px 3px);
+  border-color: var(--md-ink-600);
+  transition: transform 300ms cubic-bezier(.2, .7, .3, 1);
+}
+.t-table .t-surface__pile--deck .md-pile__shadow--1 {
+  transform: translate(calc(var(--t-thick, 0) * 1.6 * var(--md-u)), calc(var(--t-thick, 0) * 2 * var(--md-u)));
+}
+.t-table .t-surface__pile--deck .md-pile__shadow--2 {
+  transform: translate(calc(var(--t-thick, 0) * 3.2 * var(--md-u)), calc(var(--t-thick, 0) * 4 * var(--md-u)));
+  box-shadow: 0 calc(2 * var(--md-u)) calc(5 * var(--md-u)) rgba(0, 0, 0, .45);
+}
+
+/* The discard is a slightly scattered stack: the two cards seen to land
+   before its top one lie under it, askew. */
+.t-surface__pile--discard { position: relative; isolation: isolate; }
+.t-under {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 50%;
+  pointer-events: none;
+}
+.t-under[data-i='0'] { transform: translateX(-50%) translate(-6%, 2%) rotate(-6deg); }
+.t-under[data-i='1'] { transform: translateX(-50%) translate(7%, 3%) rotate(5deg); filter: brightness(.8); }
+.t-under > .md-card { filter: brightness(.85); }
+
+/* ---------------- the reveal's signatures ----------------
+   feel/4 gave every reveal a flare in its own colour. Each category now
+   also does what it is (StageOverlay, `data-sig` on the turned card):
+     Clear Path  light pours out of the arch towards the route (.t-beam,
+                 drawn by the board, which knows where the route is);
+     Monster     red seeps into the dark (the world) with a growl;
+     Obstacle    it comes down hard, and kicks up dust;
+     Item        it turns slowly, and a glint crosses it;
+     Wanderer    it stands up, to the pose its decision takes.       */
+
+/* An Obstacle's face lands hard: a touch big as it comes round, then
+   down past rest and back. */
+.t-fly[data-sig='obstacle'] .t-flip__face--front > .md-card {
+  animation: tSlam 360ms cubic-bezier(.55, 0, .7, .4) var(--slam, 230ms) both;
+}
+@keyframes tSlam {
+  0%   { transform: translateY(-4%) scale(1.08); }
+  70%  { transform: translateY(0) scale(.97); }
+  100% { transform: none; }
+}
+
+/* The dust: puffs along the card's foot, in front of it, billowing out
+   past its edges and a little up. */
+.t-dust {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2%;
+  height: 0;
+  pointer-events: none;
+}
+.t-dust > span {
+  position: absolute;
+  left: calc(50% + var(--k) * 44%);
+  bottom: 0;
+  width: calc((6 + var(--r) * 7) * var(--md-u));
+  height: calc((6 + var(--r) * 7) * var(--md-u));
+  margin: 0 0 calc(-3 * var(--md-u)) calc(-5 * var(--md-u));
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--md-parchment-200) 92%, transparent), color-mix(in srgb, var(--md-parchment-400) 45%, transparent) 42%, transparent 70%);
+  opacity: 0;
+  animation: tDust var(--ms, 700ms) cubic-bezier(.2, .7, .3, 1) var(--at, 480ms) both;
+}
+@keyframes tDust {
+  0%   { opacity: 0;   transform: translate(0, 0) scale(.5); }
+  18%  { opacity: .9; }
+  100% { opacity: 0;   transform: translate(calc(var(--k) * 230%), calc(-40% - var(--r) * 90%)) scale(2.1); }
+}
+
+/* An Item's glint: a narrow streak of light crossing the face once it
+   has come round. */
+.t-glint {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.t-glint::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255, 250, 235, .55) 50%, transparent);
+  transform: translateX(-220%) skewX(-12deg);
+  animation: tGlint var(--ms, 800ms) cubic-bezier(.4, .05, .35, 1) var(--at, 900ms) both;
+}
+@keyframes tGlint {
+  from { transform: translateX(-220%) skewX(-12deg); }
+  to   { transform: translateX(420%) skewX(-12deg); }
+}
+
+/* A Clear Path's light, out of the arch and up to the waypoint it is
+   about to win. The board places it; it grows along its length and
+   goes. Above the card, so it is seen to leave the arch. */
+.t-beam {
+  position: fixed;
+  z-index: 41;
+  height: calc(9 * var(--md-u));
+  margin-top: calc(-4.5 * var(--md-u));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+.t-beam__light {
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--md-cat-path-300) 90%, transparent),
+    color-mix(in srgb, var(--md-cat-path-500) 45%, transparent) 55%,
+    transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 38%, #000 62%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 38%, #000 62%, transparent);
+  clip-path: polygon(0 42%, 100% 0, 100% 100%, 0 58%);
+  opacity: 0;
+  animation: tBeam var(--ms, 1300ms) cubic-bezier(.2, .7, .3, 1) var(--at, 260ms) both;
+}
+@keyframes tBeam {
+  0%   { opacity: 0;  transform: scaleX(0); }
+  15%  { opacity: 1; }
+  50%  { opacity: .9; transform: scaleX(1); }
+  100% { opacity: 0;  transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-table .t-surface__pile .md-pile__stack > .md-card,
+  .t-table .md-card--back .md-card__art[data-depth],
+  .t-table .md-card:not(.md-card--back) > .md-card__trim::after { transition: none; }
+  .t-fly[data-sig] .md-card, .t-dust > span, .t-glint::before, .t-beam__light { animation: none; }
+  .t-dust, .t-glint, .t-beam { display: none; }
 }

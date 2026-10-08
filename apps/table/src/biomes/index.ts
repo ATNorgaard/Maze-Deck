@@ -60,6 +60,7 @@ export function skinOf(biome: Biome): DeckSkin {
 
   const skin: DeckSkin = { motif: biome.motif };
   if (biome.backArt) skin.backArt = biome.backArt;
+  if (biome.backLayers) skin.backLayers = biome.backLayers;
   if (biome.cards) {
     const copy: NonNullable<DeckSkin['copy']> = {};
     for (const key of Object.keys(biome.cards) as CardCategory[]) {

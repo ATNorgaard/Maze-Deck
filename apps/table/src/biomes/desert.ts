@@ -2,6 +2,9 @@ import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
 import backArt from './art/back-desert.svg';
+import backSky from './art/back-desert-sky.svg';
+import backFar from './art/back-desert-far.svg';
+import backNear from './art/back-desert-near.svg';
 
 /** Dune lines instead of doors. Nothing here is hidden; it is only far. */
 export const DESERT: Biome = {
@@ -10,6 +13,7 @@ export const DESERT: Biome = {
   flavour: 'Dune lines instead of doors. Nothing here is hidden; it is only far.',
   motif: 'dune',
   backArt,
+  backLayers: [backSky, backFar, backNear],
   cards: {
     'clear-path': {
       title: 'Caravan Track',

@@ -41,6 +41,15 @@ export interface Overlay {
   turned: boolean;
   /** Set once the card is on its way to the discard. */
   flight: { dx: number; dy: number; s: number } | null;
+  /**
+   * How the real card stood when it was taken — lifted towards the
+   * viewer, tilted under the pointer — against where it rests. The
+   * overlay starts there and settles as it turns, so the pick does not
+   * snap the card flat. Null when it was at rest.
+   */
+  from: { dx: number; dy: number; s: number; rx: number; ry: number } | null;
+  /** How long the turn takes: an Item turns slowly on the new board. */
+  flipMs: number;
 }
 
 /** One card on its way from the deck pile to a slot. */
@@ -116,6 +125,23 @@ function measure(el: HTMLElement): Pick<Overlay, 'rect' | 'box' | 'scale'> {
   return { rect, box, scale: box.w > 0 ? rect.width / box.w : 1 };
 }
 
+/**
+ * How a card stands against where it rests: the lift and the press (its
+ * box's centre and width, which a transform moves) and the tilt (read
+ * back from useTilt's properties, in the stylesheet's degrees).
+ */
+function poseOf(card: HTMLElement | null, rest: DOMRect): Overlay['from'] {
+  if (!card) return null;
+  const live = card.getBoundingClientRect();
+  const tx = Number(card.style.getPropertyValue('--tx')) || 0;
+  const ty = Number(card.style.getPropertyValue('--ty')) || 0;
+  const dx = (live.left + live.width / 2) - (rest.left + rest.width / 2);
+  const dy = (live.top + live.height / 2) - (rest.top + rest.height / 2);
+  const s = rest.width > 0 ? Math.max(0.9, Math.min(1.15, live.width / rest.width)) : 1;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(s - 1) < 0.005 && !tx && !ty) return null;
+  return { dx, dy, s, rx: ty * -7, ry: tx * 8 };
+}
+
 /** Centre to centre, and the size change, from one box to another. */
 function toward(from: DOMRect, to: DOMRect): Pick<Flight, 'dx' | 'dy' | 's'> {
   return {
@@ -151,7 +177,16 @@ function measureSlotCard(river: HTMLElement | null, slot: number): Pick<Overlay,
   return { rect, box, scale };
 }
 
-export function useStage(view: GameView, refs: Refs): Stage {
+export interface StageOptions {
+  /**
+   * The new board's reveal signatures (docs/overhaul.md, phase 6). The
+   * one the stage itself times is the Item's slow turn; the rest are the
+   * overlay's to draw.
+   */
+  signatures?: boolean;
+}
+
+export function useStage(view: GameView, refs: Refs, options: StageOptions = {}): Stage {
   const [presented, setPresented] = React.useState(view);
   const [active, setActive] = React.useState<Beat | null>(null);
   const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
@@ -198,15 +233,18 @@ export function useStage(view: GameView, refs: Refs): Stage {
         if (!m) return 0;
         const wasFaceUp = presentedRef.current.river[beat.slot]?.faceUp === true;
         if (wasFaceUp) return 0;
+        const flipMs = options.signatures && beat.category === 'item' ? MOTION.flipSlow : MOTION.flip;
         setOverlay({
           slot: beat.slot, category: beat.category, ...m, turned: false, flight: null,
+          from: poseOf(slotBox(refs.riverRef.current, beat.slot)?.querySelector<HTMLElement>('article') ?? null, m.rect),
+          flipMs,
         });
         // One frame face down, then turn — otherwise there is nothing
         // to animate away from and it simply appears face up.
         later(40, () => {
           if (ov.current?.slot === beat.slot) setOverlay({ ...ov.current, turned: true });
         });
-        return MOTION.flip;
+        return flipMs;
       }
 
       case 'depart': {
@@ -214,7 +252,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
         if (!current || current.slot !== beat.slot || current.flight) {
           const m = measureSlotCard(refs.riverRef.current, beat.slot);
           if (!m) { setOverlay(null); return 0; }
-          current = { slot: beat.slot, category: beat.category, ...m, turned: true, flight: null };
+          current = { slot: beat.slot, category: beat.category, ...m, turned: true, flight: null, from: null, flipMs: MOTION.flip };
         }
         const to = refs.discardRef.current?.getBoundingClientRect();
         if (!to) { setOverlay(null); return 0; }
@@ -372,7 +410,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
     while (!busy.current) {
       const step = queue.current.shift();
       if (!step) { tick(); return; }
-      cue(step.beat);
+      cue(step.beat, options.signatures);
       const ms = start(step);
       if (ms <= 0) { end(step); present(step.after); continue; }
       busy.current = true;

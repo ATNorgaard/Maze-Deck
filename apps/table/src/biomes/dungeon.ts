@@ -1,6 +1,9 @@
 import { DEFAULT_TABLES } from '../tables';
 import type { Biome } from './types';
 import backArt from './art/back-dungeon.svg';
+import backSky from './art/back-dungeon-sky.svg';
+import backFar from './art/back-dungeon-far.svg';
+import backNear from './art/back-dungeon-near.svg';
 
 /**
  * The deck as printed. Wet stone, three corridors, no map.
@@ -15,6 +18,7 @@ export const DUNGEON: Biome = {
   flavour: 'Wet stone, three corridors, and no map. A Clear Path is a corridor that keeps going.',
   motif: 'fret',
   backArt,
+  backLayers: [backSky, backFar, backNear],
   cards: null,
   tables: DEFAULT_TABLES,
 };

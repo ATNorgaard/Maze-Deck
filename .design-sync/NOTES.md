@@ -60,6 +60,14 @@ under the vignette, frame and seal). It is a plain string field, so it should
 extract like `motif`; the table app hands it Vite asset URLs from
 `apps/table/src/biomes/art/`, produced by `apps/atelier`.
 
+`DeckSkin` then gained `backLayers?: string[]` (2026-10-08, the
+overhaul's phase 6) — the same picture as sky, far and near layers, which
+`CardBack` draws in place of `backArt` as `.md-card__art` images carrying
+`data-depth`. The library never moves them; the table does, as a card
+tilts. A **string array behind an optional field of a named object type**:
+the array is the shape `dtsPropsFor` has had to inline before (`River.slots`),
+so check the emitted `.d.ts` for it on the next sync.
+
 ## Library bugs the previews caught
 
 Both were invisible until a preview showed two states side by side:

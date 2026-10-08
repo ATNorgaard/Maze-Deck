@@ -44,7 +44,11 @@ export type Voice =
   /** Found: a low swell that does not resolve. */
   | 'dread'
   /** A new round: a soft, low bell. */
-  | 'bell';
+  | 'bell'
+  /** A Clear Path's light pouring out: an airy rise. */
+  | 'swell'
+  /** An Item's glint: a small high ring. */
+  | 'glint';
 
 const KEY = 'mazedeck.sound';
 
@@ -192,22 +196,42 @@ const VOICES: Record<Voice, (c: AudioContext, at: number) => void> = {
     tone(c, at, 'sine', 392, 392, 1.1, 0.04, 0.01);
     tone(c, at, 'sine', 587, 587, 0.7, 0.02, 0.01);
   },
+  swell: (c, at) => {
+    tone(c, at, 'sine', 440, 660, 0.9, 0.06, 0.35);
+    tone(c, at + 0.08, 'sine', 660, 990, 0.8, 0.04, 0.3);
+    noise(c, at, 0.7, 0.03, 6000, 2500);
+  },
+  glint: (c, at) => {
+    tone(c, at, 'sine', 1760, 1760, 0.25, 0.06, 0.004);
+    tone(c, at + 0.05, 'sine', 2640, 2640, 0.3, 0.035, 0.004);
+  },
 };
 
 /**
  * What a beat sounds like. Called as the beat starts, so a voice that
  * belongs to its end (the card landing on the discard) is delayed by
  * the beat's own length.
+ *
+ * With the new board's signatures (phase 6) a reveal also sounds like
+ * what turned up, and the Monster's growl moves from its strike to its
+ * reveal, where the red seeps in; the strike that follows is a blow.
  */
-export function cue(beat: Beat): void {
+export function cue(beat: Beat, signatures = false): void {
   if (!enabled) return;
   switch (beat.kind) {
-    case 'reveal': play('flip', 40); break;
+    case 'reveal':
+      play('flip', 40);
+      if (!signatures) break;
+      if (beat.category === 'clear-path') play('swell', MOTION.flip / 2);
+      else if (beat.category === 'monster') play('growl', MOTION.flip / 2);
+      else if (beat.category === 'obstacle') play('slam', Math.round(MOTION.flip * 0.45) + 220);
+      else if (beat.category === 'item') play('glint', MOTION.flipSlow);
+      break;
     case 'depart': play('slide'); play('drop', MOTION.fly - 40); break;
     case 'settle': play('thud'); break;
     case 'discard': play('drop'); break;
     case 'progress': play('tick'); break;
-    case 'strike': play('growl'); break;
+    case 'strike': play(signatures ? 'thud' : 'growl'); break;
     case 'deal':
       beat.slots.forEach((_, i) => play('slide', i * MOTION.dealStagger));
       break;

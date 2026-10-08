@@ -51,7 +51,23 @@ export interface SceneParams {
   fade: number;
   /** `vista` only: width over height, 1.2–12. */
   aspect?: number;
+  /** One depth of the picture alone (see ScenePart). Unset draws it whole. */
+  part?: ScenePart;
 }
+
+/**
+ * One depth of a picture, for a card back drawn in layers that move
+ * against each other as the card tilts (docs/overhaul.md, phase 6).
+ * `sky` is opaque: the sky, its light and its disc. `far` and `near`
+ * are the terrain either side of depth 0.6 on a transparent ground,
+ * with the fade mixed into their colours rather than laid over them,
+ * so it does not fill the gaps between them. The three stacked are the
+ * whole picture. Only the `flat` style draws parts; the others draw the
+ * whole picture whatever `part` says.
+ */
+export type ScenePart = 'sky' | 'far' | 'near';
+
+export const SCENE_PARTS: readonly ScenePart[] = ['sky', 'far', 'near'];
 
 export const DEFAULT_SCENE: Omit<SceneParams, 'seed' | 'style'> = {
   category: 'clear-path', frame: 'arch', px: 2, relief: 1, haze: 0.6, band: true, subject: true, fade: 0,
@@ -421,19 +437,23 @@ function spriteBox(sp: Sprite): { cx: number; cy: number; r: number } {
 
 /* ---------- renderers ------------------------------------------ */
 
-function renderFlat(sc: Scene, id: string): ReactNode {
+function renderFlat(sc: Scene, id: string, ground = true): ReactNode {
   return (
     <>
       <defs>
-        <linearGradient id={`${id}-sky`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={sc.skyTop} />
-          <stop offset="1" stopColor={sc.skyBottom} />
-        </linearGradient>
-        <radialGradient id={`${id}-light`} cx={sc.light.x} cy={sc.light.y} r={sc.light.r} gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor={sc.light.color} stopOpacity="0.55" />
-          <stop offset="0.5" stopColor={sc.light.color} stopOpacity="0.14" />
-          <stop offset="1" stopColor={sc.light.color} stopOpacity="0" />
-        </radialGradient>
+        {ground ? (
+          <>
+            <linearGradient id={`${id}-sky`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={sc.skyTop} />
+              <stop offset="1" stopColor={sc.skyBottom} />
+            </linearGradient>
+            <radialGradient id={`${id}-light`} cx={sc.light.x} cy={sc.light.y} r={sc.light.r} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor={sc.light.color} stopOpacity="0.55" />
+              <stop offset="0.5" stopColor={sc.light.color} stopOpacity="0.14" />
+              <stop offset="1" stopColor={sc.light.color} stopOpacity="0" />
+            </radialGradient>
+          </>
+        ) : null}
         {sc.sprites.map((sp, i) => sp.glow ? (
           <radialGradient key={i} id={`${id}-glow${i}`}>
             <stop offset="0" stopColor={sp.glow} stopOpacity="0.55" />
@@ -441,9 +461,9 @@ function renderFlat(sc: Scene, id: string): ReactNode {
           </radialGradient>
         ) : null)}
       </defs>
-      <rect width={sc.W} height={sc.H} fill={`url(#${id}-sky)`} />
-      <rect width={sc.W} height={sc.H} fill={`url(#${id}-light)`} />
-      {sc.disc ? <circle cx={sc.disc.cx} cy={sc.disc.cy} r={sc.disc.r} fill={sc.disc.color} opacity="0.5" /> : null}
+      {ground ? <rect width={sc.W} height={sc.H} fill={`url(#${id}-sky)`} /> : null}
+      {ground ? <rect width={sc.W} height={sc.H} fill={`url(#${id}-light)`} /> : null}
+      {ground && sc.disc ? <circle cx={sc.disc.cx} cy={sc.disc.cy} r={sc.disc.r} fill={sc.disc.color} opacity="0.5" /> : null}
       {sc.layers.map((l, i) => (
         <g key={i} fill={l.color}>
           <path d={layerPath(l, sc.W, sc.H)} />
@@ -597,15 +617,35 @@ function renderPixel(sc: Scene, px: number, pal: Palette): ReactNode {
 
 /* ---------- the picture ---------------------------------------- */
 
+/**
+ * One depth of a flat picture (see ScenePart). The terrain carries the
+ * fade in its own colours, since a rect laid over a transparent layer
+ * would fill it.
+ */
+function renderFlatPart(sc: Scene, id: string, part: ScenePart, fade: number, ink: string): ReactNode {
+  if (part === 'sky') return renderFlat({ ...sc, layers: [], sprites: [] }, id);
+  const sink = (c: string) => (fade > 0 ? mix(c, ink, fade) : c);
+  const layers = sc.layers
+    .filter((l) => (part === 'far' ? l.depth < 0.6 : l.depth >= 0.6))
+    .map((l) => ({ ...l, color: sink(l.color) }));
+  const sprites = part === 'near' ? sc.sprites.map((sp) => ({ ...sp, color: sink(sp.color) })) : [];
+  return renderFlat({ ...sc, layers, sprites }, id, false);
+}
+
 export function SceneArt({ p, pal, vocab, id }: { p: SceneParams; pal: Palette; vocab: BiomeVocab; id: string }) {
   const sc = buildScene(p, pal, vocab);
+  const part = p.style === 'flat' ? p.part : undefined;
   const body =
     p.style === 'pixel' ? renderPixel(sc, p.px, pal)
     : p.style === 'line' ? renderLine(sc, pal)
     : p.style === 'engraving' ? renderEngraving(sc, pal, id)
+    : part ? renderFlatPart(sc, id, part, p.fade, pal.ink[900])
     : renderFlat(sc, id);
   const bandColor = pal.cat[CAT_KEY[p.category]][300];
-  const fade = p.fade > 0 ? <rect width={sc.W} height={sc.H} fill={pal.ink[900]} opacity={p.fade} /> : null;
+  // A part off the sky is see-through, and carries its fade in its colours.
+  const fade = p.fade > 0 && (!part || part === 'sky')
+    ? <rect width={sc.W} height={sc.H} fill={pal.ink[900]} opacity={p.fade} />
+    : null;
 
   if (p.frame === 'back') {
     return (

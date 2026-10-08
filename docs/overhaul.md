@@ -236,8 +236,8 @@ can be found and reverted alone.
 | 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | **done** — `world/3` |
 | 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | **done** — `world/4` |
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | **done** — `world/5` |
-| 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | next |
-| 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | |
+| 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | **done** — `world/6` |
+| 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | next |
 | 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | |
 | 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | |
 | 10 | Retire the old board, re-measure, record what was decided along the way | S | all | |
@@ -1307,3 +1307,146 @@ blinking, the tower's candles guttering and the tendrils shifting are
 all motion, which no headless frame shows.
 
 **Commit:** `git log --grep world/5`.
+
+### world/6 — cards with weight
+
+**Changed.**
+- **Tilt** (`useTilt.ts`). The card under the pointer tilts towards it,
+  up to 8°, with the point under the pointer pressing away from the
+  viewer. The hook only says where the pointer is over the card: `--tx`
+  and `--ty`, −1 to 1, written straight onto the card element at most
+  once a frame, so the board does not re-render per move. The
+  stylesheet does the rest. It runs on the river and both piles, for a
+  fine pointer only, and never under reduced motion.
+- **A card's pose is now parts.** Whatever lifts a card on the new
+  board — the hover over a path that can be taken, a card a decision is
+  about, a press — sets `--t-lift` and `--t-scale`, and one transform,
+  `--t-pose`, puts them together with the tilt. A lifted card can tilt
+  too, and nothing overwrites anything.
+- **The sheen.** A band of light crosses a face-up card as it tilts: a
+  gradient far larger than the card, moved by a transform inside the
+  trim's rounded clip.
+- **Backs in depth.**
+  - `packages/art` can draw one depth of a picture (`ScenePart`: `sky`,
+    `far`, `near`). The far and near layers are on a transparent ground,
+    with the fade mixed into their colours, since a rect laid over them
+    would fill the gaps.
+  - The atelier's back bench has a *Layer* control.
+  - `bake-art.cjs` bakes each back whole, as before, and as its three
+    layers: 18 new files under `biomes/art/`.
+  - `DeckSkin` in `packages/ui` gained `backLayers?: string[]`
+    (additive). `CardBack` draws the layers, back to front, as
+    `.md-card__art` images carrying `data-depth`. The library never
+    moves them.
+  - As a back tilts, the table moves its layers apart: the sky stays,
+    the distance moves about 1%, the foreground about 2.4%. Each also
+    grows a little, the nearest most.
+- **Piles with thickness.** The deck shows its stacked edges below and
+  to the right of its top card. They are the library's two plates, made
+  the whole card's size, striped, and set out by `--t-thick`, which the
+  board sets from the count, so the deck visibly thins as it is dealt
+  from. The discard shows the two cards seen to land before its top
+  one, lying askew under it (`stage/useDiscardTrail.ts`).
+- **Anticipation.** A path being pressed lifts further, towards the
+  viewer (16px up, ×1.05). It stays lifted while the pick travels to a
+  server (`data-picking`). When the reveal starts, the stage reads how
+  the real card stood — its lift, its scale and its tilt — and the
+  overlay starts there and settles as it turns (`.t-fly__pose`), so the
+  pick no longer snaps the card flat. This part is shared by both
+  boards.
+- **A signature for each category on the reveal**, on top of feel/4's
+  flare. These are on the new board only: `useStage` and `StageOverlay`
+  take `signatures`.
+
+  | Category | What it does |
+  |---|---|
+  | Clear Path | light pours out of the arch up to the route's next waypoint (`.t-beam`, placed by the board), with an airy rise |
+  | Monster | red seeps into the dark ahead of its strike (the world's threat, raised for the hold), with a growl |
+  | Obstacle | its face comes down hard, and dust billows out from under its foot, with a slam |
+  | Item | it turns slowly (900 ms), and a glint crosses it, with a small ring |
+  | Wanderer | it stands up, to the pose the river's raised card takes once its decision is on, so the hand-over is seamless |
+
+  The Monster's growl moved from its strike to its reveal, where the
+  red seeps in. On the new board the strike that follows is a blow.
+- **Scripts.** `capture-weight.cjs` (new) photographs the tilt (a
+  back's corner, a face-up card's corner, the deck), the press and its
+  release, each category's reveal as frames, and the piles. For each
+  signature it also takes one picture with the animation held at its
+  height. `--reduced` checks that nothing tilts.
+
+**Design notes.**
+- **The layers' growth is also their overscan.** Each layer grows by
+  more than twice the most it moves, so its edge never shows. At rest
+  the three are exactly the whole back.
+- **The discard's under-cards are what this screen watched land.** The
+  view names only the top card, so a screen opened mid-crossing shows
+  the top card alone, which is all a table would have seen either.
+- **The signatures stay off the old board**, which keeps feel/4's
+  reveal. The two boards share only the pose carry-over, which removes
+  a snap and adds nothing.
+
+**Broke / retried.**
+- **Vite served a stale `DeckSkin.tsx`.** The provider dropped the
+  layers and the backs had none. Touching the file fixed it. After
+  that, every changed module was checked with `curl` before any picture
+  was trusted, and files written by scripts were missed twice more.
+- **The back's moving layers showed their edges**: a light strip along
+  the top, and a seam at the side. The layers now grow as they move
+  (see the design notes).
+- **The deck had no visible thickness.** The library's plates are the
+  trim's size, and they stayed hidden behind the top card's dark bleed
+  margin at any offset worth drawing.
+- **The dust did not show.** It was drawn behind the card, and too small
+  to clear its edges. It is in front now, larger, and longer.
+- **The glint's skew poked its corner into the card** before its sweep
+  began.
+- **Frames taken on the clock miss moments this short.** The script's
+  own latency put frames wherever it liked. Holding each signature's
+  animation at its height for one picture made it deterministic. The
+  beats run on timers, so holding an animation moves nothing.
+
+**Verified** (headless Chromium, on the GPU).
+- **The layers are the back.** Stacked, they match the whole picture to
+  within 2/255 per channel, with no pixel off by more than 3, in all six
+  settings. The twelve existing pictures re-baked byte-identical.
+- **Tilt.** The cards took 3D transforms under the pointer, the back's
+  layers moved apart (the far layer ~2px, the near ~6px), and the card
+  went back to rest when the pointer left. Under reduced motion nothing
+  tilted.
+- **The press.** Held at ×1.05; the overlay started from that pose and
+  was at rest 450 ms after the release.
+- **Each signature** was photographed at its height
+  (`proof/weight/sig-*-peak.png`) and as frames.
+- **The piles** were photographed: the deck full and nearly spent, and
+  the discard after three cards had landed.
+- **Full crossings.** New board, deep forest: 279 reveal samples over 20
+  reveals, **0px**. Old board, tower: 317 over 21, **0px**. Neither had
+  a console error.
+- **Phase 5's moments** all still play (`capture-score.cjs`), and its
+  reduced-motion pass is clean.
+- **The budget**, GPU, 1600 × 1000, 1×, 4× CPU, against HEAD served from
+  a worktree beside it:
+
+  | | HEAD (`world/5`) | `world/6` |
+  |---|---|---|
+  | Idle, world Full | 0.22–0.25 s | 0.23–0.26 s |
+  | One turn, mean of 12 | 1.27 s | 1.37 s |
+  | One turn, worst frame | 100–117 ms | 100–117 ms |
+  | One turn, frames over 33 ms | 1–2 | 1–3 |
+  | One reveal alone, by category | 0.73–0.97 s | 0.75–1.06 s |
+
+  Idle is unchanged: tilt costs nothing until the pointer is on a card.
+  A turn costs about 0.1 s more at 4× CPU, around 8%, and the frame
+  pacing is the same. The extra is the reveals' own effects, the Clear
+  Path's light and the Obstacle's dust the most (+0.09–0.10 s each).
+- `npm test` in `packages/rules` (73, untouched) and in `apps/table`
+  (19), `npm run typecheck`, and the builds of the table, the atelier
+  and `packages/ui` are clean. `packages/ui`'s emitted `.d.ts` carries
+  `backLayers` inline, which is what the design-sync needs. The bundle
+  grew 3.3 KB gzipped (the six small sky layers are inlined) and the
+  CSS 1.1 KB; the far and near layers ship as twelve asset files.
+
+**Not yet seen by the author.** The tilt and the parallax under a real
+hand, and the signatures at the speed of play.
+
+**Commit:** `git log --grep world/6`.

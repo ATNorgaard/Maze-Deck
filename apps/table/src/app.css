@@ -538,6 +538,14 @@ html, body, #root {
   perspective: 1600px;
 }
 
+/* Between the trip and the turn: how the card stood when it was taken
+   (lifted, tilted) settling to rest as it turns. */
+.t-fly__pose {
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
 .t-flip {
   position: relative;
   width: 100%;
@@ -1435,7 +1443,7 @@ html, body, #root {
   .t-scrim, .t-modal, .t-track, .t-track .md-score__pip,
   .t-deal, .t-deal__lift, .t-flight, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake], .t-table[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
-  .t-fly, .t-flip { transition: none !important; }
+  .t-fly, .t-fly__pose, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }
 }
 

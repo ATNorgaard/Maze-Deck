@@ -50,6 +50,12 @@ export interface Biome {
    */
   backArt?: string;
   /**
+   * The same picture as sky, far and near layers, baked beside it by
+   * scripts/bake-art.cjs, which the table moves in depth as a card
+   * tilts (docs/overhaul.md, phase 6).
+   */
+  backLayers?: string[];
+  /**
    * The cards' copy. `null` keeps the canonical wording — the
    * dungeon is the printed deck, so it does not reword anything.
    */

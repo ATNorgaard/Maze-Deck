@@ -26,10 +26,12 @@ import type { ChronicleEntry } from '../campaign';
 import { MOTION, reducedMotion } from '../stage/motion';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
+import { useDiscardTrail } from '../stage/useDiscardTrail';
 import { useStage } from '../stage/useStage';
 import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import { useTableFit } from '../useTableFit';
+import { useTilt } from '../useTilt';
 import { World } from '../world/World';
 import { WORLD_CHOICES, useWorldChoice } from '../world/settings';
 import type { WorldChoice } from '../world/settings';
@@ -132,13 +134,29 @@ export function TableScreen({
   const discardRef = React.useRef<HTMLDivElement>(null);
   const seatsRef = React.useRef<HTMLDivElement>(null);
   const handRef = React.useRef<HTMLDivElement>(null);
+  const surfaceRef = React.useRef<HTMLDivElement>(null);
 
   const fit = useTableFit(stageRef, sceneRef);
-  const stage = useStage(view, { riverRef, discardRef, deckRef });
+  const stage = useStage(view, { riverRef, discardRef, deckRef }, { signatures: true });
   const shown = stage.presented;
   const deckCount = useTicking(shown.deckCount);
   const discardCount = useTicking(shown.discardCount);
   const act = (action: GameAction) => { stage.flush(); dispatch(action); };
+
+  /* ---------------- cards with weight ----------------
+     (docs/overhaul.md, phase 6.) The card under the pointer tilts, and a
+     path being taken stays lifted towards the viewer until its reveal
+     arrives — at once on one screen, a round trip away when hosted — so
+     the turn starts from the lift (useStage carries the pose over). */
+  useTilt(surfaceRef);
+  const [picking, setPicking] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (picking === null) return undefined;
+    if (view.phase !== 'pick') { setPicking(null); return undefined; }
+    // A refused pick (not this seat's turn) must not leave it hanging.
+    const t = window.setTimeout(() => setPicking(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [picking, view.phase]);
 
   const a = availableFor(view);
   const pending = view.pending;
@@ -274,6 +292,31 @@ export function TableScreen({
   );
 
   const found = stage.active?.kind === 'found' || shown.phase === 'encounter';
+  const seeping = shown.phase === 'reveal' && shown.revealed?.category === 'monster';
+  const discardTrail = useDiscardTrail(shown);
+
+  // A Clear Path's light, out of its arch and up to the waypoint it is
+  // about to win: measured once, as the card turns.
+  const held = stage.overlay;
+  const beamKey = held && held.category === 'clear-path' && held.turned && !held.flight
+    ? `${shown.round}:${shown.turn}:${held.slot}` : null;
+  const [beam, setBeam] = React.useState<{ key: string; x: number; y: number; length: number; angle: number } | null>(null);
+  React.useEffect(() => {
+    if (!beamKey || !held) return undefined;
+    const ways = document.querySelectorAll<HTMLElement>('.t-route__way');
+    const way = ways[Math.min(ways.length - 1, shown.progress)];
+    if (!way) return undefined;
+    const t = way.getBoundingClientRect();
+    // The arch's opening sits a little above the card's middle.
+    const x = held.rect.left + held.rect.width / 2;
+    const y = held.rect.top + held.rect.height * 0.36;
+    const dx = t.left + t.width / 2 - x;
+    const dy = t.top + t.height / 2 - y;
+    setBeam({ key: beamKey, x, y, length: Math.hypot(dx, dy), angle: (Math.atan2(dy, dx) * 180) / Math.PI });
+    const done = window.setTimeout(() => setBeam(null), MOTION.flip / 2 + MOTION.beam + 50);
+    return () => window.clearTimeout(done);
+    // Once per Clear Path turned; the board is read as it stands then.
+  }, [beamKey]);
   // One strike short of being found, the air goes still.
   const near = shown.strikes > 0 && shown.strikes >= shown.rules.encounterAt - 1;
 
@@ -295,7 +338,8 @@ export function TableScreen({
   const focus = shown.phase === 'choice' && choice && choice.kind !== 'boost-target' ? 'river' : FOCUS[shown.phase];
   const worldMood = {
     // Found: the threat light floods past the edge it reaches at two strikes.
-    threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
+    // A Monster's reveal: red seeps into the dark ahead of its strike.
+    threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt) + (seeping ? 0.5 : 0),
     progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
     hush: found || near ? 1 : 0,
     dim: shown.outcome === 'lost' ? 1 : 0,
@@ -404,8 +448,13 @@ export function TableScreen({
         <p className="t-scene__text">{prompt?.text ?? ''}</p>
       </div>
 
-      <div className="t-surface" data-narrow={fit.narrow || undefined} data-fan={fanCards ? true : undefined}>
-        <div className="t-surface__pile t-surface__pile--deck" ref={deckRef}>
+      <div className="t-surface" ref={surfaceRef} data-narrow={fit.narrow || undefined} data-fan={fanCards ? true : undefined}>
+        {/* The pile is as thick as the deck: its stacked edges thin as it is dealt from. */}
+        <div
+          className="t-surface__pile t-surface__pile--deck"
+          ref={deckRef}
+          style={{ '--t-thick': Math.min(shown.deckCount, 26) / 26 } as React.CSSProperties}
+        >
           <DeckPile count={deckCount} size={fit.piles} />
           {/* It's Elementary's chosen card, held up off the deck while its
               slot is chosen. After the pile, so the stage's deal still
@@ -425,6 +474,7 @@ export function TableScreen({
           data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
           data-settled={settling === null ? undefined : String(settling)}
           data-pickable={a.pickSlots.length ? true : undefined}
+          data-picking={picking === null ? undefined : String(picking)}
           data-raised={raisedSlots.length ? raisedSlots.join(' ') : undefined}
           data-dim={fanCards ? true : undefined}
         >
@@ -437,7 +487,7 @@ export function TableScreen({
                 : { category: null, faceDown: false }
             ))}
             {...(a.pickSlots.length
-              ? { onPick: (i: number) => act({ type: 'PICK_SLOT', index: i }) }
+              ? { onPick: (i: number) => { setPicking(i); act({ type: 'PICK_SLOT', index: i }); } }
               : {})}
           />
           {view.phase === 'act' && a.obstacleSlots.length ? (
@@ -513,6 +563,13 @@ export function TableScreen({
             size={fit.piles}
             {...(shown.discardTop ? { top: shown.discardTop } : {})}
           />
+          {/* The two cards seen to land before the top one, scattered under
+              it. After the pile, so the stage measures the top card. */}
+          {discardTrail.slice(1, Math.min(3, shown.discardCount)).map((c, i) => (
+            <div className="t-under" data-i={i} key={`${i}:${c}`} aria-hidden="true">
+              <DeckCard category={c} size={fit.piles} showCount={false} />
+            </div>
+          ))}
         </div>
 
         {/* A new round passes over the table as the turn that wraps lands,
@@ -620,7 +677,17 @@ export function TableScreen({
         </aside>
       ) : null}
 
-      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={fit.river} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={fit.river} signatures />
+      {beam ? (
+        <div
+          className="t-beam"
+          key={beam.key}
+          aria-hidden="true"
+          style={{ left: beam.x, top: beam.y, width: beam.length, transform: `rotate(${beam.angle}deg)` }}
+        >
+          <div className="t-beam__light" style={{ '--ms': `${MOTION.beam}ms`, '--at': `${MOTION.flip / 2}ms` } as React.CSSProperties} />
+        </div>
+      ) : null}
 
       {/* Fixed, so a notice arriving never moves the river (world/0). */}
       {error ? <p className="t-toast" role="alert">{error}</p> : null}

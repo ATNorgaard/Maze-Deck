@@ -9,6 +9,9 @@
 
      node scripts/bake-art.cjs [style]     default: flat
 
+   Each back is baked whole and, in the flat style, as three layers
+   (back-<biome>-sky / -far / -near) that the table moves in depth.
+
    Needs the atelier dev server (`cd apps/atelier && npm run dev`)
    and the Chromium in .ds-sync — see print-deck.mjs for the install
    line. Change a seed here to re-roll a setting; run again; look.
@@ -54,10 +57,15 @@ const q = (o) => Object.entries(o).map(([k, v]) => `${k}=${encodeURIComponent(v)
   };
 
   for (const [biome, r] of Object.entries(RECIPES)) {
-    await bake(
-      q({ bench: 'back', biome, style, seed: r.seed, 'back.mode': 'scene', 'back.subject': 0, 'back.relief': 1, 'back.haze': 0.6, 'back.px': 2.5, ...prefix('back', r.back) }),
-      `back-${biome}.svg`,
-    );
+    // The back whole, then the same picture as three layers — sky, far,
+    // near — for a back that moves in depth as the card tilts
+    // (docs/overhaul.md, phase 6). The layer is always passed, empty for
+    // the whole: the atelier remembers a bench's fields between pages.
+    const back = { bench: 'back', biome, style, seed: r.seed, 'back.mode': 'scene', 'back.subject': 0, 'back.relief': 1, 'back.haze': 0.6, 'back.px': 2.5, ...prefix('back', r.back) };
+    await bake(q({ ...back, 'back.part': '' }), `back-${biome}.svg`);
+    for (const part of style === 'flat' ? ['sky', 'far', 'near'] : []) {
+      await bake(q({ ...back, 'back.part': part }), `back-${biome}-${part}.svg`);
+    }
     await bake(
       q({ bench: 'ground', biome, style, seed: r.seed, 'ground.animate': 1, 'ground.width': 2560, 'ground.height': 1440, ...prefix('ground', r.ground) }),
       `ground-${biome}.svg`,
