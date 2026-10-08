@@ -145,6 +145,27 @@ export type GameAction =
 export type EventKind = 'sys' | 'good' | 'bad' | 'card' | 'muted';
 
 /**
+ * What a log line marks, for the screens that play it out.
+ *
+ * A client sees whole views, and some moments cannot be told apart in
+ * them: a jam and a sweep both empty the river into the discard, and a
+ * reshuffle is a deck count going UP among counts going down. The cue
+ * says what happened, so a board plays it rather than guessing at it
+ * from counts. Mechanically inert: nothing in the engine reads it.
+ */
+export type Cue =
+  /** Too many blockers at once: the river swept, a Monster fed to the discard. */
+  | 'jam'
+  /** The deck ran dry and the discard was shuffled back in. */
+  | 'reshuffle'
+  /** Strikes reached the limit. The encounter begins. */
+  | 'found'
+  /** The run ends with the party through. */
+  | 'through'
+  /** The run ends with the party lost. */
+  | 'lost';
+
+/**
  * One line of the session log.
  *
  * `visibility` is the whole hidden-information model: 'gm' lines
@@ -156,6 +177,8 @@ export interface GameEvent {
   kind: EventKind;
   visibility: 'all' | 'gm';
   text: string;
+  /** Set on the line that marks a moment a board plays (see Cue). */
+  cue?: Cue;
 }
 
 export type Outcome = 'through' | 'lost';

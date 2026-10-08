@@ -35,6 +35,30 @@ export interface WorldColors {
   threat: Rgb;
 }
 
+/**
+ * What the dark brings with it in this setting (docs/overhaul.md, phase
+ * 5): shapes at the edge in the setting's own idiom, all of them nothing
+ * at no threat and more of them as it rises.
+ */
+export interface Edge {
+  /** Pairs of eyes in the dark: how many at most, how big, how low they keep (0 anywhere, 1 the floor). */
+  eyes: { count: number; size: number; low: number; color: Rgb };
+  /** How far the dark's edge reaches in, in tendrils rather than a ring. */
+  reach: number;
+  /** Frost creeping in from the edge instead of the dark. */
+  rime: number;
+  /** A wall of blown sand closing in. */
+  storm: number;
+  /** The colour of the rime or the storm. */
+  color: Rgb;
+  /** The light guttering, like a flame about to go. */
+  gutter: number;
+}
+
+export const NO_EDGE: Edge = {
+  eyes: { count: 0, size: 1, low: 0, color: [0, 0, 0] }, reach: 1, rime: 0, storm: 0, color: [0, 0, 0], gutter: 0,
+};
+
 /** What the table wants the world to look like. The renderer eases towards it. */
 export interface Mood {
   /** Where the phase is, in 0..1 of the viewport (y down), or null. */
@@ -43,6 +67,8 @@ export interface Mood {
   threat: number;
   /** 0..1: Clear Paths against the target. */
   progress: number;
+  /** 0..1: one strike short of being found, the air goes still. */
+  hush: number;
   /** The light going out: the run lost. */
   dim: number;
   /** Gold over everything: the party through. */
@@ -67,8 +93,13 @@ uniform float u_time;
 uniform vec3 u_ink0, u_ink1, u_ink2, u_parch, u_light, u_threatC, u_flashC;
 uniform vec3 u_pool;      // x, y (0..1, y down), radius as a fraction of the longer side
 uniform vec2 u_focus;     // 0..1, y down
-uniform float u_focusAmt, u_flash, u_threat, u_dim, u_bloom, u_grain, u_fog, u_vignette;
+uniform float u_focusAmt, u_flash, u_threat, u_dim, u_bloom, u_grain, u_fog, u_vignette, u_progress;
 uniform vec2 u_par;       // parallax, px
+// The setting's idiom for the dark (Edge): eyes = count, size, how low; then
+// reach, rime, storm and gutter, and the colours of the eyes and the edge.
+uniform vec3 u_eyes;
+uniform vec3 u_eyeC, u_edgeC;
+uniform float u_reach, u_rime, u_storm, u_gutter;
 out vec4 o;
 
 float hash(vec2 p) {
@@ -97,27 +128,38 @@ void main() {
   // The ink, a shade lighter at the top where the light is.
   vec3 col = mix(u_ink1, u_ink0, smoothstep(0.0, 0.9, uv.y));
 
-  // Fog: two slow layers of noise drifting at different paces.
+  // How close the dark is, 0..1. Past 1 (found) only the vignette floods.
+  float th = clamp(u_threat, 0.0, 1.0);
+
+  // The light as the dark sees it: cooler and redder with every strike.
+  vec3 grey = vec3(dot(u_light, vec3(0.299, 0.587, 0.114)));
+  vec3 light = mix(u_light, mix(grey * vec3(0.78, 0.86, 1.0), u_threatC, 0.45), th * 0.8);
+
+  // Fog: two slow layers of noise drifting at different paces. It thins
+  // as the party gets on: the way opening up.
   float t = u_time;
   vec2 q = (p + par * 0.6) * 1.4;
   float f1 = fbm(q + vec2(t * 0.011, t * 0.004));
   float f2 = fbm(q * 2.2 - vec2(t * 0.019, -t * 0.005) + 7.3);
   float fog = smoothstep(0.42, 0.95, f1 * 0.7 + f2 * 0.3);
-  col = mix(col, u_ink2, fog * u_fog);
+  col = mix(col, u_ink2, fog * u_fog * (1.0 - 0.3 * u_progress));
 
   // The pool of the setting's light, as the grounds drew it: 0.15 at
-  // the centre, 0.045 at 45%, nothing at the rim. It breathes.
+  // the centre, 0.045 at 45%, nothing at the rim. It breathes, it widens
+  // a little with the ground gained, and where the setting burns flames
+  // it gutters as the dark comes.
   vec2 pc = vec2(u_pool.x * aspect, u_pool.y) + par;
-  float r = u_pool.z * max(aspect, 1.0) * (1.0 + 0.06 * sin(t * 0.571));
+  float r = u_pool.z * max(aspect, 1.0) * (1.0 + 0.06 * sin(t * 0.571)) * (1.0 + 0.12 * u_progress);
   float d = length(p - pc) / r;
   float pool = mix(0.15, 0.045, smoothstep(0.0, 0.45, d)) * (1.0 - smoothstep(0.45, 1.0, d));
   pool *= 1.0 + 0.1 * sin(t * 0.898) + 0.6 * u_bloom;
-  col = mix(col, u_light, pool * (1.0 - u_dim));
+  pool *= 1.0 - u_gutter * th * (0.35 * noise(vec2(t * 6.0, 1.3)) + 0.25 * noise(vec2(t * 15.0, 4.1)));
+  col = mix(col, light, pool * (1.0 - u_dim));
 
   // Where the phase is: a low light leaning there, felt not seen.
   vec2 fc = vec2(u_focus.x * aspect, u_focus.y);
   float fd = length(p - fc);
-  col = mix(col, u_light, u_focusAmt * 0.05 * exp(-fd * fd * 6.0) * (1.0 - u_dim));
+  col = mix(col, light, u_focusAmt * 0.05 * exp(-fd * fd * 6.0) * (1.0 - u_dim));
 
   // A card turned: its colour washes out from the river, and goes.
   col = mix(col, u_flashC, u_flash * 0.16 * exp(-fd * fd * 3.0));
@@ -125,11 +167,60 @@ void main() {
   // Grain, fixed to the page like the paper it stands for.
   col = mix(col, u_parch, (hash(floor(gl_FragCoord.xy)) - 0.5) * u_grain);
 
-  // The vignette. Threat draws it in and warms its edge.
-  float vd = length((uv - 0.5) / 0.7);
-  float inner = 0.45 - 0.18 * u_threat;
-  float vig = smoothstep(inner, 1.0, vd) * (u_vignette + 0.3 * u_threat);
-  col = mix(col, mix(u_ink0 * 0.55, u_threatC * 0.32, u_threat * 0.6), clamp(vig, 0.0, 1.0));
+  // The vignette. Threat draws it in and warms its edge, and it does not
+  // close evenly: it reaches in, in tendrils that shift slowly.
+  // Everything the dark adds is skipped outright before the first strike:
+  // the branches are on uniforms, so every pixel takes the same one.
+  vec2 off = uv - 0.5;
+  float vd = length(off / 0.7);
+  if (th > 0.0) {
+    vec2 dir = off / max(length(off), 1e-4);
+    float rag = fbm(dir * 2.6 + vec2(vd * 2.0 - t * 0.025, t * 0.011));
+    vd += (rag - 0.5) * 0.42 * u_reach * th;
+  }
+  float inner = max(0.1, 0.45 - 0.26 * u_threat);
+  float vig = smoothstep(inner, 1.0, vd) * (u_vignette + 0.42 * u_threat);
+  col = mix(col, mix(u_ink0 * 0.55, u_threatC * 0.36, min(1.0, u_threat * 0.7)), clamp(vig, 0.0, 1.0));
+
+  // The setting's own way of closing in. Frost creeping over the edge,
+  // crystalline; or a wall of blown sand, streaked and moving.
+  float edge = smoothstep(inner, 1.0, vd) * th;
+  if (u_rime * th > 0.0) {
+    float frost = smoothstep(0.45, 0.8, fbm(uv * vec2(aspect, 1.0) * 16.0 + 3.1));
+    col = mix(col, u_edgeC, edge * u_rime * 0.55 * (0.35 + 0.65 * frost));
+  }
+  if (u_storm * th > 0.0) {
+    float sand = fbm(vec2(p.x * 1.6 - t * 0.16, p.y * 10.0));
+    col = mix(col, u_edgeC, edge * u_storm * (0.25 + 0.45 * sand));
+  }
+
+  // Eyes in the dark: pairs that come and go, and blink, near the edge.
+  // More of them as the threat rises; none at all before the first strike.
+  float eyeA = 0.0;
+  for (int i = 0; i < 12; i++) {
+    if (th <= 0.0) break;
+    float fi = float(i);
+    if (fi >= u_eyes.x) break;
+    float h1 = hash(vec2(fi, 3.7)), h2 = hash(vec2(fi, 9.1)), h3 = hash(vec2(fi, 17.3));
+    float a = h1 * 6.2831853;
+    vec2 ring = vec2(cos(a), sin(a));
+    // Out at the sides, where the table is not; u_eyes.z keeps them to the floor.
+    ring.x = sign(ring.x) * (0.82 + 0.18 * abs(ring.x));
+    ring.y = mix(ring.y, abs(ring.y) * 0.8 + 0.2, u_eyes.z);
+    vec2 c = 0.5 + ring * vec2(0.47, 0.44) * (0.86 + 0.12 * h2);
+    float shown = smoothstep(0.35, 0.75, 0.5 + 0.5 * sin(t * (0.06 + 0.05 * h3) + h2 * 6.2831853));
+    shown *= smoothstep(h3 * 0.5, h3 * 0.5 + 0.25, th);
+    float open = step(0.05, fract(t * (0.11 + 0.09 * h1) + h3));
+    vec2 dd = (uv - c) * vec2(aspect, 1.0);
+    float er = 0.0032 * u_eyes.y;
+    float es = 0.0095 * u_eyes.y;
+    vec2 e1 = (dd - vec2(es, 0.0)) * vec2(1.0, 1.8);
+    vec2 e2 = (dd + vec2(es, 0.0)) * vec2(1.0, 1.8);
+    float g = exp(-dot(e1, e1) / (er * er)) + exp(-dot(e2, e2) / (er * er));
+    g += 0.18 * exp(-dot(dd, dd) / (er * er * 50.0));
+    eyeA += g * shown * open;
+  }
+  col = mix(col, u_eyeC, clamp(eyeA, 0.0, 1.0) * smoothstep(0.0, 0.25, vig) * (1.0 - u_dim));
 
   // Through: gold rises over everything. Lost: the light goes out.
   col = mix(col, u_light, u_bloom * 0.22 * exp(-dot(p - pc, p - pc) * 1.2));
@@ -259,13 +350,24 @@ export class WorldRenderer {
   private kind = 0;
   private pool: [number, number, number] = [0.5, 0.08, 0.55];
   private colors: WorldColors | null = null;
+  private edge: Edge = NO_EDGE;
   private scale = 1;
   /** The constants need sending again (see `constants`). */
   private dirty = true;
 
   /* The mood as drawn, easing towards the mood as asked for. */
-  private now = { fx: 0.5, fy: 0.55, focusAmt: 0, threat: 0, progress: 0, dim: 0, bloom: 0, px: 0, py: 0, flash: 0 };
+  private now = {
+    fx: 0.5, fy: 0.55, focusAmt: 0, threat: 0, progress: 0, dim: 0, bloom: 0, px: 0, py: 0, flash: 0,
+    /** How fast the air moves: slows as the party nears being found. */
+    air: 1,
+  };
   private flashColor: Rgb = [0, 0, 0];
+  /**
+   * The air's own clock. Every particle's path is a function of time, so
+   * slowing the air means slowing the time it is given — run on its own
+   * clock, it slows without a jump.
+   */
+  private airTime = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
@@ -277,7 +379,8 @@ export class WorldRenderer {
     this.ground = program(gl, GROUND_VS, GROUND_FS);
     this.air = program(gl, AIR_VS, AIR_FS);
     for (const n of ['u_res', 'u_time', 'u_ink0', 'u_ink1', 'u_ink2', 'u_parch', 'u_light', 'u_threatC', 'u_flashC',
-      'u_pool', 'u_focus', 'u_focusAmt', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_grain', 'u_fog', 'u_vignette', 'u_par']) {
+      'u_pool', 'u_focus', 'u_focusAmt', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_grain', 'u_fog', 'u_vignette', 'u_par',
+      'u_progress', 'u_eyes', 'u_eyeC', 'u_edgeC', 'u_reach', 'u_rime', 'u_storm', 'u_gutter']) {
       this.u[n] = gl.getUniformLocation(this.ground, n);
     }
     for (const n of ['u_time', 'u_scale', 'u_kind', 'u_res', 'u_pool', 'u_par', 'u_c0', 'u_c1', 'u_fade']) {
@@ -307,9 +410,10 @@ export class WorldRenderer {
     return /swiftshader|llvmpipe|software/i.test(name);
   }
 
-  /** The setting: its colours, what is in its air, where its light hangs. */
-  setting(id: string, colors: WorldColors, particle: Particle, poolY: number, count: number): void {
+  /** The setting: its colours, what is in its air, where its light hangs, how its dark comes. */
+  setting(id: string, colors: WorldColors, particle: Particle, poolY: number, count: number, edge: Edge = NO_EDGE): void {
     this.colors = colors;
+    this.edge = edge;
     this.kind = KINDS[particle];
     this.pool = [0.5, poolY, 0.55];
     const r = seeded(`${id}:air`);
@@ -356,6 +460,8 @@ export class WorldRenderer {
     n.px = ease(n.px, mood.parallax.x, dt, 0.5);
     n.py = ease(n.py, mood.parallax.y, dt, 0.5);
     n.flash = Number.isFinite(dt) ? n.flash * Math.exp(-dt / 0.55) : 0;
+    n.air = ease(n.air, mood.hush > 0 ? 0.3 : 1, dt, 1.6);
+    this.airTime = Number.isFinite(dt) ? this.airTime + dt * n.air : time;
 
     const gl = this.gl;
     const u = this.u;
@@ -369,6 +475,7 @@ export class WorldRenderer {
     gl.uniform1f(u.u_focusAmt!, n.focusAmt);
     gl.uniform1f(u.u_flash!, n.flash);
     gl.uniform1f(u.u_threat!, n.threat);
+    gl.uniform1f(u.u_progress!, n.progress);
     gl.uniform1f(u.u_dim!, n.dim);
     gl.uniform1f(u.u_bloom!, n.bloom);
     gl.uniform2f(u.u_par!, n.px * this.scale, n.py * this.scale);
@@ -377,7 +484,7 @@ export class WorldRenderer {
     if (!air || this.count === 0) return;
     gl.enable(gl.BLEND);
     gl.useProgram(this.air);
-    gl.uniform1f(a.u_time!, time);
+    gl.uniform1f(a.u_time!, this.airTime);
     gl.uniform2f(a.u_par!, n.px * this.scale, n.py * this.scale);
     gl.uniform1f(a.u_fade!, 1 - 0.7 * n.dim);
     gl.bindVertexArray(this.vao);
@@ -411,6 +518,14 @@ export class WorldRenderer {
     gl.uniform1f(u.u_grain!, 0.05);
     gl.uniform1f(u.u_fog!, 0.5);
     gl.uniform1f(u.u_vignette!, 0.55);
+    const e = this.edge;
+    gl.uniform3f(u.u_eyes!, e.eyes.count, e.eyes.size, e.eyes.low);
+    gl.uniform3fv(u.u_eyeC!, e.eyes.color);
+    gl.uniform3fv(u.u_edgeC!, e.color);
+    gl.uniform1f(u.u_reach!, e.reach);
+    gl.uniform1f(u.u_rime!, e.rime);
+    gl.uniform1f(u.u_storm!, e.storm);
+    gl.uniform1f(u.u_gutter!, e.gutter);
 
     gl.useProgram(this.air);
     gl.uniform1f(a.u_scale!, this.scale);

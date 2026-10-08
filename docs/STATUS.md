@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-10-07 (the overhaul planned and its phase 0 done —
+**Last updated:** 2026-10-08 (the overhaul through its phase 5 —
 see [overhaul.md](overhaul.md))
 
 > **The overhaul is the work now.** [overhaul.md](overhaul.md) is the plan
@@ -29,7 +29,7 @@ devices, with the GM's board and the players' phones talking to a server that
 never tells any of them what is in the deck.**
 
 ```bash
-cd packages/rules && npm test            # 44 tests, ~10s, no browser needed
+cd packages/rules && npm test            # 73 tests, ~12s, no browser needed
 cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev             # http://localhost:5180
 cd apps/table && npm run build           # tsc --noEmit && vite build
@@ -38,7 +38,7 @@ cd packages/ui && npm run build          # tsup + the CSS flattening step
 
 - **`packages/ui`** — the component layer, unchanged except for the canonical
   deck data. Builds; design-sync converter runs clean at 13/13.
-- **`packages/rules`** — the engine. Pure, seeded, 44 tests.
+- **`packages/rules`** — the engine. Pure, seeded, 73 tests.
   `createGame` → `apply(state, action)` → `available(state)`.
 - **`apps/table`** — the GM's screen. Vite + React, both packages aliased to
   **source** (no workspace root; hoisting breaks design-sync).
@@ -286,17 +286,30 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 5](overhaul.md#5-the-world-keeps-score): the
-world keeps score.**
-- The route and the dark.
-- Round marks.
-- The jam and the reshuffle as events, through D2's `cue` on
-  `GameEvent` — the one engine change in the plan.
+**[The overhaul's phase 6](overhaul.md#6-cards-with-weight): cards with
+weight.**
+- Pointer tilt and a sheen on face-up cards.
+- The backs' art in depth.
+- Piles with thickness.
+- A signature for each category on the reveal.
 
-Phase 4 (`world/4`) put every decision on the table: the Wanderer, the
-strike, the scout, the swap and the boost are made in place, the roll is
-restaged, and the encounter is a takeover. Phases 1–4 still want the
-author's eyes, moving, on a real screen (`cd apps/table && npm run dev`).
+Phase 5 (`world/5`) made the world keep score:
+- escape is a route across the top rail, with each Clear Path's scene
+  pinned on it as a landmark and the vista stepping into the scene;
+- every strike draws the dark in, with each setting's own shapes at the
+  edge, and one strike short the air slows;
+- a new round passes over the river;
+- the jam, the reshuffle and being found are beats of their own, read
+  off the `cue` the engine now puts on the log (DECISIONS O2, the
+  plan's one engine change).
+
+`node scripts/capture-score.cjs` stages each of those moments and
+photographs it, because a walk only meets a jam when the deck deals one.
+
+Phases 1–5 still want the author's eyes, moving, on a real screen
+(`cd apps/table && npm run dev`). Phase 5's dark is mostly motion — eyes
+blinking, candles guttering, the air slowing — that no headless frame
+shows.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
@@ -307,9 +320,11 @@ far: the atelier's art (`art: …`), phase 0 (`world/0`), phase 1
 away in the GM drawer), phase 2 (`world/2` — the vista: every scene
 the GM reads out has a picture, drawn live by `packages/art`), phase 3
 (`world/3` — the world layer: one WebGL2 canvas behind the table, with
-an *Atmosphere* setting in the GM drawer whose *Off* is the old ground)
-and phase 4 (`world/4` — decisions made on the table, not in dialogs).
-Production serves `world/3`; `world/4` is on the branch only.
+an *Atmosphere* setting in the GM drawer whose *Off* is the old ground),
+phase 4 (`world/4` — decisions made on the table, not in dialogs) and
+phase 5 (`world/5` — the route, the dark, round marks, the jam and the
+reshuffle). Production serves `world/3`; `world/4` and `world/5` are on
+the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

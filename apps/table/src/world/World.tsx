@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { hexToRgb, readPalette, vocabOf } from '@maze-deck/art';
+import { hexToRgb, mix, readPalette, vocabOf } from '@maze-deck/art';
 import type { Palette } from '@maze-deck/art';
 import type { CardCategory } from '@maze-deck/rules';
 import type { Biome } from '../biomes';
 import { reducedMotion } from '../stage/motion';
-import { WorldRenderer } from './renderer';
-import type { Mood, Rgb, WorldColors } from './renderer';
+import { NO_EDGE, WorldRenderer } from './renderer';
+import type { Edge, Mood, Rgb, WorldColors } from './renderer';
 import { startingTier, useWorldChoice } from './settings';
 import type { Tier } from './settings';
 
@@ -44,6 +44,40 @@ function colorsOf(pal: Palette, light: keyof Palette['cat']): WorldColors {
 
 /** Where each setting hangs its light, as its ground did (bake-art.cjs). */
 const POOL_Y: Partial<Record<string, number>> = { desert: 0.2 };
+
+/**
+ * How the dark comes in each setting (docs/overhaul.md, phase 5). Every
+ * one draws in and reddens; each adds its own shapes at the edge, and
+ * none of them shows before the first strike.
+ */
+function edgeOf(id: string, pal: Palette): Edge {
+  const eyes = (count: number, size: number, low: number, color: string) => ({ count, size, low, color: rgb(color) });
+  switch (id) {
+    // Something watching from between the pillars; the torches gutter.
+    case 'dungeon':
+      return { ...NO_EDGE, eyes: eyes(5, 1, 0.35, pal.cat.mons[300]), gutter: 0.6 };
+    // A long climb with candles on it, and they gutter. One or two things above.
+    case 'tower':
+      return { ...NO_EDGE, eyes: eyes(2, 0.9, 0, pal.cat.item[300]), reach: 0.8, gutter: 1 };
+    // The dark reaches in like roots, full of eyes.
+    case 'deep-forest':
+      return { ...NO_EDGE, eyes: eyes(8, 0.9, 0.25, pal.cat.path[300]), reach: 1.6 };
+    // A wall of sand closing in.
+    case 'desert':
+      return { ...NO_EDGE, reach: 0.7, storm: 1, color: rgb(mix(pal.parchment[400], pal.cat.path[700], 0.5)) };
+    // Small eyes, low down, many of them.
+    case 'undercity':
+      return { ...NO_EDGE, eyes: eyes(11, 0.55, 0.9, pal.cat.mons[500]), reach: 1.1 };
+    // Frost creeping over the edge, and something pale keeping pace.
+    case 'frozen-pass':
+      return {
+        ...NO_EDGE, eyes: eyes(3, 1.15, 0.5, pal.parchment[100]), rime: 1,
+        color: rgb(mix(pal.parchment[100], pal.cat.wand[300], 0.35)),
+      };
+    default:
+      return { ...NO_EDGE, eyes: eyes(4, 1, 0.3, pal.cat.mons[300]) };
+  }
+}
 
 /** Device pixels per CSS pixel, by tier. Fog is soft; it does not need the full screen. */
 const SCALE: Record<Tier, number> = { high: 1.25, low: 0.5, still: 0.75 };
@@ -138,7 +172,7 @@ export function World({ biome, mood, focus, flash }: Props) {
     const vocab = vocabOf(biome.id);
     const area = Math.sqrt((window.innerWidth * window.innerHeight) / (1920 * 1080));
     r.setting(biome.id, colorsOf(pal, vocab.light), vocab.particle, POOL_Y[biome.id] ?? 0.08,
-      Math.round(AIR[tier] * Math.max(0.5, Math.min(1.6, area))));
+      Math.round(AIR[tier] * Math.max(0.5, Math.min(1.6, area))), edgeOf(biome.id, pal));
 
     const size = () => r.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight,
       Math.min(window.devicePixelRatio || 1, 1.5) * SCALE[tier]);
@@ -226,7 +260,7 @@ export function World({ biome, mood, focus, flash }: Props) {
 
   // Still: draw again when the mood changes, not on every render of the
   // table — a turn renders it dozens of times.
-  const stillKey = [mood.threat, mood.progress, mood.dim, mood.bloom, focus?.name ?? '-'].join('|');
+  const stillKey = [mood.threat, mood.progress, mood.hush, mood.dim, mood.bloom, focus?.name ?? '-'].join('|');
   React.useEffect(() => {
     if (tier === 'still') drawStill.current();
   }, [tier, stillKey]);

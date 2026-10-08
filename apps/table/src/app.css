@@ -630,6 +630,39 @@ html, body, #root {
   100% { transform: translateY(0); }
 }
 
+/* ---------------- several cards at once ----------------
+   The stage's flights (useStage): a jam sweeping the river to the
+   discard, the Monster it brings in from beyond the edge, the discard
+   gathered back onto the deck. Fixed where each card started and
+   driven by the same custom properties as the deal, centre to centre.
+   A card going onto a pile fades as it lands, as the held card does. */
+.t-flight {
+  position: fixed;
+  z-index: 39;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: tFlight var(--ms) cubic-bezier(.4, .05, .35, 1) both;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .45));
+}
+.t-flight[data-fade] { animation-name: tFlightFade; }
+/* Brought in from outside: it comes round as it arrives, and lands. */
+.t-flight[data-feed] { animation: tFeed var(--ms) cubic-bezier(.2, .7, .3, 1) both; }
+
+@keyframes tFlight {
+  from { transform: none; }
+  to   { transform: translate(var(--dx), var(--dy)) scale(var(--s)); }
+}
+@keyframes tFlightFade {
+  from { transform: none; opacity: 1; }
+  70%  { opacity: .85; }
+  to   { transform: translate(var(--dx), var(--dy)) scale(var(--s)); opacity: .08; }
+}
+@keyframes tFeed {
+  from { transform: rotate(18deg); opacity: 0; }
+  25%  { opacity: 1; }
+  to   { transform: translate(var(--dx), var(--dy)) rotate(0deg) scale(var(--s)); opacity: 1; }
+}
+
 /* A card landing on the discard: a touch too big, then down. The
    wrapper is keyed on the count so each new top card replays it. */
 .t-drop { animation: tDrop 260ms cubic-bezier(.34, 1.45, .64, 1) both; }
@@ -1400,7 +1433,7 @@ html, body, #root {
   .t-verdict[data-verdict] { animation: none; }
   .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
   .t-scrim, .t-modal, .t-track, .t-track .md-score__pip,
-  .t-deal, .t-deal__lift, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake], .t-table[data-shake],
+  .t-deal, .t-deal__lift, .t-flight, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake], .t-table[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
   .t-fly, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }

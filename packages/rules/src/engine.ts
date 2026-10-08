@@ -18,7 +18,7 @@ import {
 import type { AbilityKey, AbilityScore, CardCategory } from '../../ui/src/types.js';
 import { d, seedFrom, shuffle } from './rng.js';
 import type {
-  Choice, ChoicePayload, GameAction, GameEvent, GameState,
+  Choice, ChoicePayload, Cue, GameAction, GameEvent, GameState,
   PendingCheck, RunConfig, Seat, Slot,
 } from './types.js';
 
@@ -109,7 +109,7 @@ function draw(g: GameState, events: GameEvent[]): CardCategory | null {
   if (g.deck.length === 0 && g.discard.length > 0) {
     g.deck = shuffle(g.rng, g.discard.slice());
     g.discard = [];
-    push(g, events, 'muted', 'all', 'The discard is shuffled back into the deck.');
+    push(g, events, 'muted', 'all', 'The discard is shuffled back into the deck.', 'reshuffle');
   }
   return g.deck.pop() ?? null;
 }
@@ -136,8 +136,11 @@ function push(
   kind: GameEvent['kind'],
   visibility: GameEvent['visibility'],
   text: string,
+  cue?: Cue,
 ): void {
   const e: GameEvent = { n: g.log.length + 1, kind, visibility, text };
+  // Only on the lines that mark something, so a stored log stays as it was.
+  if (cue) e.cue = cue;
   g.log.push(e);
   events.push(e);
 }
@@ -485,7 +488,7 @@ function afterPick(g: GameState, events: GameEvent[]): void {
     g.reserveIssued += 1;
     refill(g, events);
     push(g, events, 'bad', 'all',
-      `${jammed} paths blocked at once. The party doubles back — and something takes notice.`);
+      `${jammed} paths blocked at once. The party doubles back — and something takes notice.`, 'jam');
   }
 
   if (g.progress >= g.config.escapeTarget) {
@@ -493,7 +496,7 @@ function afterPick(g: GameState, events: GameEvent[]): void {
     g.phase = 'over';
     g.pending = null;
     push(g, events, 'good', 'all',
-      `${g.progress} Clear Paths. The party is through, in ${g.round} rounds.`);
+      `${g.progress} Clear Paths. The party is through, in ${g.round} rounds.`, 'through');
     return;
   }
 
@@ -501,7 +504,7 @@ function afterPick(g: GameState, events: GameEvent[]): void {
     g.phase = 'encounter';
     g.pending = null;
     push(g, events, 'bad', 'all',
-      'The party is found. Roll initiative — this one is yours to run.');
+      'The party is found. Roll initiative — this one is yours to run.', 'found');
     return;
   }
 
@@ -513,7 +516,7 @@ function afterPick(g: GameState, events: GameEvent[]): void {
     g.phase = 'over';
     g.pending = null;
     push(g, events, 'bad', 'all',
-      'There is nothing left to draw. The maze has run out of ways on.');
+      'There is nothing left to draw. The maze has run out of ways on.', 'lost');
     return;
   }
 
@@ -756,7 +759,7 @@ export function apply(state: GameState, action: GameAction): ApplyResult {
       } else if (action.endRun) {
         g.outcome = 'lost';
         g.phase = 'over';
-        push(g, events, 'bad', 'all', 'The maze keeps them.');
+        push(g, events, 'bad', 'all', 'The maze keeps them.', 'lost');
         break;
       } else {
         push(g, events, 'bad', 'all', 'They get away, and keep moving.');
@@ -779,7 +782,7 @@ export function apply(state: GameState, action: GameAction): ApplyResult {
       g.outcome = g.progress >= g.config.escapeTarget ? 'through' : 'lost';
       g.phase = 'over';
       g.pending = null;
-      push(g, events, 'muted', 'all', 'The GM closes the run.');
+      push(g, events, 'muted', 'all', 'The GM closes the run.', g.outcome);
       break;
     }
   }

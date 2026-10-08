@@ -15,13 +15,15 @@ import { Modal } from '../components/Modal';
 import { ObstacleWork } from '../components/ObstacleWork';
 import type { Suggestion } from '../components/ObstacleWork';
 import { RollStage } from '../components/RollStage';
+import { Route } from '../components/Route';
 import { SeatBaton } from '../components/SeatBaton';
 import { SlotLayer } from '../components/SlotLayer';
 import { SoundToggle } from '../components/SoundToggle';
 import { Vista } from '../components/Vista';
 import { BIOMES, isBiomeId } from '../biomes';
 import type { Biome, BiomeId } from '../biomes';
-import { reducedMotion } from '../stage/motion';
+import type { ChronicleEntry } from '../campaign';
+import { MOTION, reducedMotion } from '../stage/motion';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
 import { useStage } from '../stage/useStage';
@@ -43,6 +45,8 @@ interface Props {
   runName: string;
   /** The line drawn for the card in front of the table, if any. */
   prompt: DrawnPrompt | null;
+  /** Every scene drawn this crossing; empty on a player's preview. */
+  scenes: ChronicleEntry[];
   /** Previewing what a player's own screen would carry. */
   asPlayer: boolean;
   onTogglePlayerView: () => void;
@@ -118,7 +122,7 @@ function askFor(choice: Choice | null, swapPick: number | null): { title: string
  * centred dialogs; phase 4 brings them onto the table.
  */
 export function TableScreen({
-  view, biome, dispatch, onExit, runName, prompt, asPlayer, onTogglePlayerView,
+  view, biome, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
   hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard,
 }: Props) {
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -256,6 +260,34 @@ export function TableScreen({
 
   const ticker = view.log.filter((e) => e.visibility === 'all').slice(-2).reverse();
 
+  /* ---------------- the world keeps score ----------------
+     (docs/overhaul.md, phase 5.) The route across the top rail, the dark
+     drawing in with every strike, a new round passing over the table, and
+     the party found: the dark closes in for a beat before the fight takes
+     the screen. All of it read off the PRESENTED view, so each lands with
+     its beat. */
+  const landmarks = React.useMemo(
+    () => Array.from({ length: view.rules.escapeTarget }, (_, i) => (
+      scenes.find((e) => e.category === 'clear-path' && e.progress === i) ?? null
+    )),
+    [scenes, view.rules.escapeTarget],
+  );
+
+  const found = stage.active?.kind === 'found' || shown.phase === 'encounter';
+  // One strike short of being found, the air goes still.
+  const near = shown.strikes > 0 && shown.strikes >= shown.rules.encounterAt - 1;
+
+  const [roundMark, setRoundMark] = React.useState<number | null>(null);
+  const markedRound = React.useRef(shown.round);
+  React.useEffect(() => {
+    const was = markedRound.current;
+    markedRound.current = shown.round;
+    if (shown.round <= was) return undefined;
+    setRoundMark(shown.round);
+    const t = window.setTimeout(() => setRoundMark(null), MOTION.round);
+    return () => window.clearTimeout(t);
+  }, [shown.round]);
+
   /* ---------------- the world ----------------
      Read off the PRESENTED view, like everything else that is drawn, so
      the light moves when the beat lands and not when the truth does. */
@@ -263,8 +295,9 @@ export function TableScreen({
   const focus = shown.phase === 'choice' && choice && choice.kind !== 'boost-target' ? 'river' : FOCUS[shown.phase];
   const worldMood = {
     // Found: the threat light floods past the edge it reaches at two strikes.
-    threat: shown.phase === 'encounter' ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
+    threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
     progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
+    hush: found || near ? 1 : 0,
     dim: shown.outcome === 'lost' ? 1 : 0,
     bloom: shown.outcome === 'through' ? 1 : 0,
   };
@@ -276,6 +309,14 @@ export function TableScreen({
     if (revealKey && revealed) setWorldFlash({ key: `r:${revealKey}`, category: revealed.category });
     // Once per card turned.
   }, [revealKey]);
+  // A jam: the blocked river flares, then whatever took notice arrives.
+  const washes = React.useRef(0);
+  React.useEffect(() => {
+    const k = stage.active?.kind;
+    if (k !== 'jam' && k !== 'feed') return;
+    washes.current += 1;
+    setWorldFlash({ key: `w:${washes.current}`, category: k === 'jam' ? 'obstacle' : 'monster' });
+  }, [stage.active]);
   const onLanded = (verdict: boolean | null) => {
     if (verdict === null || !check) return;
     // The roll's colours: success in the Obstacle's green, failure in the Monster's red.
@@ -287,7 +328,8 @@ export function TableScreen({
   return (
     <div
       className="t-table"
-      data-shake={stage.active?.kind === 'strike' || undefined}
+      data-shake={stage.active?.kind === 'strike' || stage.active?.kind === 'jam' || undefined}
+      data-found={found || undefined}
       data-outcome={shown.outcome ?? undefined}
       data-focus={focus ?? undefined}
       data-chronicle={chronicle || undefined}
@@ -309,11 +351,12 @@ export function TableScreen({
         </div>
 
         <div className="t-tracks t-top__tracks">
-          {/* Keyed on the value, as on the old board: a pip filling
+          {/* Escape is the route, from the threshold to the far side, with
+              a landmark for every Clear Path gained. Threat stays the pips,
+              the plain readout; the dark round the table is its picture.
+              Keyed on the value, as on the old board: a pip filling
               remounts the track and its glow and pop play on mount. */}
-          <div className="t-track" key={`e${shown.progress}`}>
-            <ScoreTrack value={shown.progress} total={shown.rules.escapeTarget} />
-          </div>
+          <Route biome={biome} value={shown.progress} total={shown.rules.escapeTarget} landmarks={landmarks} />
           <div className="t-track" key={`t${shown.strikes}`}>
             <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
           </div>
@@ -338,7 +381,10 @@ export function TableScreen({
           vista takes whatever height it leaves — on a big screen a
           landscape, on a small laptop nothing at all. */}
       <div className="t-stage" ref={stageRef}>
-      <Vista biome={biome} prompt={prompt} />
+      <Vista biome={biome} prompt={prompt} step={shown.progress} />
+
+      {/* A new round, announced; it is drawn passing over the river. */}
+      <p className="t-sr" role="status">{roundMark !== null ? `Round ${roundMark} begins.` : ''}</p>
 
       {/* Reserved from the first turn, as on the old board since world/0,
           so a scene arriving mid-flip moves nothing. Empty on a player
@@ -469,6 +515,19 @@ export function TableScreen({
           />
         </div>
 
+        {/* A new round passes over the table as the turn that wraps lands,
+            and goes on its own. Over the river, which nobody is choosing
+            from as a turn begins, rather than over the scene being read. */}
+        {roundMark !== null ? (
+          <div className="t-roundmark" key={`round${roundMark}`} aria-hidden="true">
+            <div className="t-roundmark__band">
+              <span className="t-roundmark__rule" />
+              <span className="t-roundmark__text">Round {roundMark}</span>
+              <span className="t-roundmark__rule" />
+            </div>
+          </div>
+        ) : null}
+
         {fanCards && choice ? (
           <CardFan
             key={choiceKey}
@@ -561,7 +620,7 @@ export function TableScreen({
         </aside>
       ) : null}
 
-      <StageOverlay overlay={stage.overlay} deals={stage.deals} size={fit.river} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={fit.river} />
 
       {/* Fixed, so a notice arriving never moves the river (world/0). */}
       {error ? <p className="t-toast" role="alert">{error}</p> : null}
@@ -587,7 +646,8 @@ export function TableScreen({
         </Modal>
       ) : null}
 
-      {view.phase === 'encounter' ? (
+      {/* Once the dark has closed in: the found beat plays first. */}
+      {view.phase === 'encounter' && shown.phase === 'encounter' ? (
         <Encounter
           monster={biome.cards?.monster.title ?? getCategory('monster').title}
           onResolve={(outcome) => dispatch(

@@ -882,3 +882,232 @@
   .t-found, .t-found__content, .t-held, .t-rollstage__card { animation: none; }
   .t-ask, .t-fan__card, .t-river, .t-rollstage:has(.t-roll[data-landed]) .t-gauge__fill { transition: none; }
 }
+
+/* ============================================================
+   The world keeps score (docs/overhaul.md, phase 5).
+   ============================================================ */
+
+/* ---------------- the route ----------------
+   Escape progress as a way across the top rail (components/Route):
+   the threshold, a waypoint for each Clear Path, the far side. A
+   landmark stands on the line like a doorway on a road, and the
+   party's light rides the line. Quiet at rest; gaining ground is the
+   moment, and only briefly. */
+.t-route {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(2 * var(--md-u));
+  width: clamp(calc(70 * var(--md-u)), 34vw, calc(150 * var(--md-u)));
+}
+
+.t-route__end {
+  flex: none;
+  font-family: var(--md-font-ui);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--md-parchment-400);
+  /* Level with the line. */
+  padding-bottom: calc(.6 * var(--md-u));
+}
+.t-route[data-through] .t-route__end:last-child { color: var(--md-cat-path-300); }
+
+/* The line's own box. Its width is a container, so the party's light can
+   travel along it by a transform alone (cqw), never by `left`. */
+.t-route__path {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(9 * var(--md-u));
+  /* Room for the far side's doorway past the end of the line. */
+  margin-right: calc(3.4 * var(--md-u));
+  container-type: inline-size;
+}
+
+.t-route__line,
+.t-route__lit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(1 * var(--md-u));
+  height: 1px;
+}
+.t-route__line { background: color-mix(in srgb, var(--md-parchment-400) 40%, transparent); }
+.t-route__lit {
+  height: 2px;
+  margin-bottom: -.5px;
+  background: var(--md-cat-path-500);
+  box-shadow: 0 0 6px var(--md-cat-path-glow);
+  transform-origin: left center;
+  transform: scaleX(var(--p));
+  transition: transform 760ms cubic-bezier(.2, .7, .3, 1);
+}
+
+/* A waypoint not yet reached: a small ring on the line. */
+.t-route__way {
+  position: absolute;
+  left: calc(var(--x) * 100%);
+  bottom: calc(1 * var(--md-u));
+  width: calc(1.8 * var(--md-u));
+  height: calc(1.8 * var(--md-u));
+  margin: 0 0 calc(-.9 * var(--md-u)) calc(-.9 * var(--md-u));
+  border: 1px solid color-mix(in srgb, var(--md-parchment-400) 55%, transparent);
+  border-radius: 50%;
+  background: var(--md-ink-900);
+  transform-origin: 50% 100%;
+}
+.t-route__way[data-reached] { border-color: var(--md-cat-path-300); background: var(--md-cat-path-500); }
+
+/* The far side: a doorway's outline, waiting at the end of the road. */
+.t-route__way[data-far]:not([data-mark]) {
+  width: calc(2.8 * var(--md-u));
+  height: calc(3.6 * var(--md-u));
+  margin: 0 0 0 calc(-1.4 * var(--md-u));
+  border-radius: calc(1.4 * var(--md-u)) calc(1.4 * var(--md-u)) 0 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+/* A landmark: the doorway of the scene that gained it, standing on the
+   line. The arch's art box is 120 x 140 and the arch stops 8 short of its
+   foot, so it is let down by that much to stand on the line. */
+.t-route__way[data-mark] {
+  width: calc(6.4 * var(--md-u));
+  height: calc(7.47 * var(--md-u));
+  margin: 0 0 calc(-.43 * var(--md-u)) calc(-3.2 * var(--md-u));
+  border: 0;
+  border-radius: 0;
+  background: none;
+  filter: drop-shadow(0 0 calc(1 * var(--md-u)) var(--md-cat-path-glow));
+}
+.t-route__way[data-mark] > svg { display: block; width: 100%; height: 100%; }
+
+/* Arriving: the landmark rises out of the line, and a ring of light goes
+   out from it. */
+.t-route__way[data-fresh] { animation: tRouteArrive 700ms cubic-bezier(.34, 1.45, .64, 1) both; }
+.t-route__way[data-fresh]::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(8 * var(--md-u));
+  height: calc(8 * var(--md-u));
+  border: 2px solid var(--md-cat-path-300);
+  border-radius: 50%;
+  transform: translate(-50%, 50%) scale(.2);
+  opacity: .9;
+  animation: tRouteRing 900ms ease-out 180ms both;
+}
+@keyframes tRouteArrive {
+  from { transform: translateY(40%) scale(.3); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes tRouteRing {
+  to { transform: translate(-50%, 50%) scale(1.8); opacity: 0; }
+}
+
+/* The party: a light on the line, at the last waypoint gained. */
+.t-route__party {
+  position: absolute;
+  left: 0;
+  bottom: calc(1 * var(--md-u));
+  width: 0;
+  height: 0;
+  transform: translateX(calc(var(--p) * 100cqw));
+  transition: transform 760ms cubic-bezier(.2, .7, .3, 1);
+}
+.t-route__light {
+  position: absolute;
+  left: calc(-.8 * var(--md-u));
+  top: calc(-.8 * var(--md-u));
+  width: calc(1.6 * var(--md-u));
+  height: calc(1.6 * var(--md-u));
+  border-radius: 50%;
+  background: var(--md-parchment-100);
+  box-shadow: 0 0 0 2px var(--md-cat-path-500), 0 0 12px 3px var(--md-cat-path-glow);
+}
+
+/* Narrower than a laptop, the run's name and the tools share the first
+   row and the route takes the second, whole. */
+@media (max-width: 1100px) {
+  .t-top { grid-template-columns: minmax(0, 1fr) auto; }
+  .t-top__tracks { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  .t-route { width: min(100%, calc(150 * var(--md-u))); }
+}
+
+/* ---------------- the vista steps forward ----------------
+   A transform on the picture only (Vista), into the doorway at its foot. */
+.t-vista { overflow: hidden; }
+.t-vista__layer { transform-origin: 50% 88%; }
+
+/* ---------------- a new round ----------------
+   Passes over the river as the turn that wraps lands, and goes. On a
+   ground of its own, so it reads over the cards. */
+.t-stage { position: relative; }
+
+.t-roundmark {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: tRoundPass 2000ms cubic-bezier(.2, .7, .3, 1) both;
+}
+.t-roundmark__band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(4 * var(--md-u));
+  width: min(100%, calc(220 * var(--md-u)));
+  padding: calc(6 * var(--md-u)) 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--md-ink-900) 82%, transparent), transparent);
+}
+.t-roundmark__text {
+  font-family: var(--md-font-display);
+  font-size: clamp(32px, 4.4vw, 64px);
+  line-height: 1;
+  letter-spacing: .12em;
+  white-space: nowrap;
+  color: var(--md-parchment-100);
+  text-shadow: 0 0 calc(8 * var(--md-u)) var(--md-cat-path-glow), 0 2px 12px rgba(0, 0, 0, .6);
+}
+.t-roundmark__rule {
+  flex: 0 1 calc(40 * var(--md-u));
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--md-cat-path-300));
+}
+.t-roundmark__rule:last-child { background: linear-gradient(270deg, transparent, var(--md-cat-path-300)); }
+@keyframes tRoundPass {
+  0%   { opacity: 0; transform: translateX(-5%); }
+  18%  { opacity: 1; transform: translateX(-1%); }
+  72%  { opacity: 1; transform: translateX(1%); }
+  100% { opacity: 0; transform: translateX(5%); }
+}
+
+/* ---------------- found ----------------
+   The dark closes in over the whole board for a beat before the fight
+   takes the screen, and stays under the takeover while it runs. The
+   world draws the same thing behind; this is the part that covers the
+   table's own edges. */
+.t-table::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 70% at 50% 42%, transparent 28%,
+    color-mix(in srgb, var(--md-cat-mons-700) 35%, transparent) 62%,
+    color-mix(in srgb, var(--md-ink-900) 94%, transparent) 100%);
+  opacity: 0;
+  transition: opacity 1.2s ease-in;
+}
+.t-table[data-found]::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-route__lit, .t-route__party, .t-table::before { transition: none; }
+  .t-route__way[data-fresh], .t-route__way[data-fresh]::after, .t-roundmark { animation: none; }
+}

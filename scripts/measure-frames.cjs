@@ -28,12 +28,14 @@
                              session. Phase 0's baseline was the old one.
        --world=auto          the new board's world layer: auto, high, low,
                              still or off (phase 3). `off` is the old ground.
+       --rows=idle,strike,floor,turn   which rows to measure (all by default)
        --gpu                 draw WebGL on this machine's GPU. Without it
                              headless Chromium uses SwiftShader, software
                              GL, and a canvas's main-thread time is mostly
                              waiting on a CPU pretending to be a GPU.
 
-   Rows, per setting: idle as configured; idle with nothing behind the
+   Rows, per setting: idle as configured; idle at one strike, with the
+   dark drawn in (phase 5); idle with nothing behind the
    table at all (world off, old ground stilled) — the floor anything
    ambient is measured against; and one turn as configured.
 
@@ -63,10 +65,11 @@ const windowMs = Number(flag('window', '4000'));
 const board = flag('board', 'table');
 const world = flag('world', 'auto');
 const gpu = args.includes('--gpu');
+const rows = flag('rows', 'idle,strike,floor,turn').split(',');
 
 const STILL = '.t-app::before { background: var(--md-ink-900) !important; animation: none !important; }';
 
-async function open(browser, biome, worldChoice = world) {
+async function open(browser, biome, worldChoice = world, strikes = 0) {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
   await page.goto(url);
   await page.evaluate(([b, w]) => {
@@ -83,6 +86,16 @@ async function open(browser, biome, worldChoice = world) {
   await page.waitForTimeout(300);
   await page.getByRole('button', { name: /Start the crossing/ }).first().click();
   await page.waitForTimeout(1500);
+  if (strikes > 0) {
+    // The saved run, with strikes on it, so the dark is drawn (phase 5).
+    await page.evaluate((n) => {
+      const c = JSON.parse(localStorage.getItem('mazedeck.campaign.v1'));
+      c.run.strikes = n;
+      localStorage.setItem('mazedeck.campaign.v1', JSON.stringify(c));
+    }, strikes);
+    await page.reload();
+    await page.waitForTimeout(1500);
+  }
   return page;
 }
 
@@ -134,20 +147,34 @@ const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFix
   console.log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
   console.log('|---|---|---|---|---|---|---|');
   for (const biome of biomes) {
-    let page = await open(browser, biome);
-    const tier = await page.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'off');
-    console.log(row(`${biome}, idle (world ${tier})`, await measure(page, windowMs)));
-    await page.close();
+    let page;
+    if (rows.includes('idle')) {
+      page = await open(browser, biome);
+      const tier = await page.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'off');
+      console.log(row(`${biome}, idle (world ${tier})`, await measure(page, windowMs)));
+      await page.close();
+    }
 
-    page = await open(browser, biome, 'off');
-    await page.addStyleTag({ content: STILL });
-    await page.waitForTimeout(300);
-    console.log(row(`${biome}, idle, nothing behind`, await measure(page, windowMs)));
-    await page.close();
+    // One strike: the dark drawn in, its shapes at the edge, the air slowed.
+    if (rows.includes('strike')) {
+      page = await open(browser, biome, world, 1);
+      console.log(row(`${biome}, idle at one strike`, await measure(page, windowMs)));
+      await page.close();
+    }
 
-    page = await open(browser, biome);
-    console.log(row(`${biome}, one turn`, await measure(page, windowMs + 2000, () => playTurn(page))));
-    await page.close();
+    if (rows.includes('floor')) {
+      page = await open(browser, biome, 'off');
+      await page.addStyleTag({ content: STILL });
+      await page.waitForTimeout(300);
+      console.log(row(`${biome}, idle, nothing behind`, await measure(page, windowMs)));
+      await page.close();
+    }
+
+    if (rows.includes('turn')) {
+      page = await open(browser, biome);
+      console.log(row(`${biome}, one turn`, await measure(page, windowMs + 2000, () => playTurn(page))));
+      await page.close();
+    }
   }
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -2,12 +2,49 @@ import type * as React from 'react';
 import { CardBack, CATEGORY_CLASS, DeckCard } from '@maze-deck/ui';
 import type { CardSize } from '@maze-deck/ui';
 import { MOTION } from './motion';
-import type { Deal, Overlay } from './useStage';
+import type { Deal, Flight, Overlay } from './useStage';
 
 interface Props {
   overlay: Overlay | null;
   deals: Deal[];
+  /** Cards in a beat that moves several at once. */
+  flights?: Flight[];
   size: CardSize;
+}
+
+/**
+ * A card in a beat that moves several at once: a jam's sweep, the
+ * Monster it brings in, the discard gathered back to the deck. One
+ * keyframe rule serves them all, driven by custom properties.
+ */
+function FlyingCard({ flight, size }: { flight: Flight; size: CardSize }) {
+  const style = {
+    left: flight.rect.left,
+    top: flight.rect.top,
+    width: flight.rect.width,
+    height: flight.rect.height,
+    '--dx': `${flight.dx}px`,
+    '--dy': `${flight.dy}px`,
+    '--s': flight.s,
+    '--ms': `${flight.ms}ms`,
+    animationDelay: `${flight.delay}ms`,
+  } as React.CSSProperties;
+  const drawn = flight.size ?? size;
+  return (
+    <div
+      className="t-flight"
+      data-fade={flight.fade || undefined}
+      data-feed={flight.key === 'feed' || undefined}
+      aria-hidden="true"
+      style={style}
+    >
+      <div style={{ width: flight.box.w, height: flight.box.h, transform: `scale(${flight.scale})`, transformOrigin: 'top left' }}>
+        {flight.face
+          ? <DeckCard category={flight.face} size={drawn} showCount={false} />
+          : <CardBack size={drawn} />}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -52,10 +89,11 @@ function DealtCard({ deal }: { deal: Deal }) {
  * down to match what an ancestor (ScaleToFit on a phone) did to the
  * real one.
  */
-export function StageOverlay({ overlay, deals, size }: Props) {
+export function StageOverlay({ overlay, deals, flights = [], size }: Props) {
   return (
     <>
       {deals.map((d) => <DealtCard key={d.slot} deal={d} />)}
+      {flights.map((f) => <FlyingCard key={f.key} flight={f} size={size} />)}
       {overlay ? <HeldCard overlay={overlay} size={size} /> : null}
     </>
   );

@@ -2,12 +2,12 @@ import * as React from 'react';
 import { MazeDeckProvider } from '@maze-deck/ui';
 import { createGame, isJoinCode, makeJoinCode, normaliseJoinCode } from '@maze-deck/rules';
 import type {
-  CardCategory, GameAction, GameState, SeatOffer, Viewer,
+  GameAction, GameState, SeatOffer, Viewer,
 } from '@maze-deck/rules';
 import { biomeOf, skinOf } from './biomes';
 import type { BiomeId } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
-import type { Campaign } from './campaign';
+import type { Campaign, ChronicleEntry } from './campaign';
 import { loadIdentity, rememberSeat } from './player';
 import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
@@ -35,6 +35,9 @@ const BOARD_KEY = 'mazedeck.board';
 function loadBoard(): Board {
   try { return window.localStorage.getItem(BOARD_KEY) === 'session' ? 'session' : 'table'; } catch { return 'table'; }
 }
+
+/** A player's preview carries no narration: the scenes are the GM's. */
+const NO_SCENES: ChronicleEntry[] = [];
 
 /** `#/join/ABC234` so a GM can paste a link instead of reading letters out. */
 function codeFromHash(): string | null {
@@ -110,20 +113,33 @@ export function App() {
 
   /* ---------------- the scenario prompt ---------------- */
 
-  const revealed = snapshot?.view?.revealed ?? null;
-  const revealKey = revealed ? `${revealed.slot}:${revealed.category}` : '';
+  // One draw per reveal, and every draw kept for the run in the chronicle:
+  // a Clear Path's scene stands on the route as its landmark. A reveal
+  // already drawn for (the page reloaded mid-reveal) is read back, not
+  // drawn again.
+  const shownView = snapshot?.view ?? null;
+  const revealed = shownView?.revealed ?? null;
+  const pickLine = shownView?.log[shownView.log.length - 1]?.n ?? 0;
+  const revealKey = revealed ? `${pickLine}:${revealed.slot}` : '';
   React.useEffect(() => {
-    if (!revealKey) return;
-    const category = revealKey.split(':')[1] as CardCategory;
+    if (!revealKey || !revealed || !shownView) return;
+    const { category } = revealed;
+    const round = shownView.round;
+    const progress = shownView.progress;
+    const seatId = shownView.order[shownView.turn % Math.max(1, shownView.order.length)] ?? null;
     setCampaign((prev) => {
+      const known = prev.chronicle.find((e) => e.key === revealKey);
+      if (known) return prev.prompt?.entryId === known.entryId ? prev : { ...prev, prompt: known };
       const drawn = drawPrompt(tablesFor(prev), category, prev.lastPrompt[category]);
       if (!drawn) return prev;
       return {
         ...prev,
         prompt: drawn,
+        chronicle: [...prev.chronicle, { ...drawn, key: revealKey, round, seatId, progress }],
         lastPrompt: { ...prev.lastPrompt, [category]: drawn.entryId },
       };
     });
+    // Once per reveal; the view is read as it stands then.
   }, [revealKey]);
 
   /* ---------------- a player, joining ---------------- */
@@ -160,7 +176,7 @@ export function App() {
 
   const host = React.useCallback(() => {
     const code = campaign.hostCode || makeJoinCode();
-    setCampaign((prev) => ({ ...prev, hostCode: code, prompt: null, lastPrompt: {} }));
+    setCampaign((prev) => ({ ...prev, hostCode: code, prompt: null, chronicle: [], lastPrompt: {} }));
     attach(new RemoteSession({
       code,
       playerId: identity.current.playerId,
@@ -193,7 +209,7 @@ export function App() {
     setCampaign((prev) => {
       const state = createGame(runConfigFor(prev, newId()));
       ensureLocal(state);
-      return { ...prev, run: state, prompt: null, lastPrompt: {} };
+      return { ...prev, run: state, prompt: null, chronicle: [], lastPrompt: {} };
     });
     setAsPlayer(false);
     setScreen('session');
@@ -252,6 +268,7 @@ export function App() {
             error={snapshot?.error ?? null}
             runName={campaign.runName}
             prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
+            scenes={view.viewer.role === 'gm' ? campaign.chronicle : NO_SCENES}
             asPlayer={asPlayer}
             onTogglePlayerView={togglePlayerView}
             {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}

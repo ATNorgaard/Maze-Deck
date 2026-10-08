@@ -235,8 +235,8 @@ can be found and reverted alone.
 | 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | **done** — `world/2` |
 | 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | **done** — `world/3` |
 | 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | **done** — `world/4` |
-| 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | next |
-| 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | |
+| 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | **done** — `world/5` |
+| 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | next |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | |
 | 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | |
 | 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | |
@@ -1125,3 +1125,185 @@ the dialog's frosted scrim, and a headless frame cannot show how much of
 it comes through.
 
 **Commit:** `git log --grep world/4`.
+
+### world/5 — the world keeps score
+
+**Changed.**
+- **The cue (D2, DECISIONS O2), the plan's one engine change.**
+  `GameEvent` has an optional `cue` — `jam`, `reshuffle`, `found`,
+  `through` or `lost` — on the one log line that marks the moment. It is
+  mechanically inert, and it is set only where it marks something, so a
+  stored log reads exactly as before. No existing rules test changed.
+  `test/cues.test.ts` adds one test per cue, and two that keep them
+  honest: every cued line is public (a player's view carries the same
+  ones), and no other line carries one. 73 tests.
+- **The beats read the cues** on the lines new since the last view
+  (`stage/beats.ts`):
+  - `jam` — the third blocker lands; then every card in the river goes
+    to the discard together, a card the table never saw going as a
+    back; then `feed`, the Monster from outside the deck, brought in
+    from beyond the right edge onto the discard; then the deal.
+  - `reshuffle` — the discard gathered back onto the deck, five cards
+    seen to go for the pile, just before the deal that needed it.
+    Around a jam it can fall either side of the sweep, and the
+    discard's count at the end says which.
+  - `found` — the strike lands, then a 1.5 s beat in which the dark
+    closes in, then the encounter.
+  - `turn` carries the new `round` when it wraps the table.
+  - While a jam or a reshuffle plays, each card is counted onto the
+    discard as it lands, rather than the pile jumping to its final
+    count with the first — which, after a reshuffle, is empty.
+- **The stage has `flights`**: several cards in the air in one beat.
+  `StageOverlay` draws them on all three screens, so the old board and
+  a player's phone get the jam and the reshuffle too.
+- **The route** (`components/Route.tsx`) replaces the escape pips in
+  the top rail: the threshold, a waypoint for each Clear Path, the far
+  side. Each one gained pins a landmark — the card's own doorway with
+  that scene inside it, seeded by the entry, so it is the vista's scene
+  in the card's frame — and the party's light rides the line to it. The
+  light travels by a transform in container units (`cqw`), never by
+  `left`. Arriving, the landmark rises out of the line and a ring of
+  light goes out from it. It is a meter to assistive tech, as the pips
+  were. Threat stays the pips: the plain readout.
+- **The chronicle.** `campaign.chronicle` keeps every scene drawn this
+  crossing, with its round, its seat and the ground already gained. It
+  is app state beside `prompt`, cleared with each crossing. The route's
+  landmarks are read from it, and phase 7's storyboard will be. It is
+  keyed by the pick's log line, because an encounter starts the turns
+  again inside the same round.
+- **The vista steps forward** when ground is gained: the picture scales
+  8% into the doorway at its foot over 1.8 s, and holds until the next
+  scene replaces it. A transform on the picture, never on the table.
+- **The dark** (`world/renderer.ts`, `world/World.tsx`). With each
+  strike the vignette draws in further and reaches in, in slow
+  tendrils rather than a ring; the light cools and reddens; and each
+  setting brings its own shapes to the edge. One strike short of being
+  found, the air slows to 30%: it runs on its own clock, so it slows
+  without a jump. Ground gained thins the fog and widens the pool a
+  little. All of it is behind branches on uniforms, so a board with no
+  strikes skips it outright.
+
+  | Setting | What comes to the edge |
+  |---|---|
+  | Dungeon | eyes between the pillars, red-amber; the torchlight gutters |
+  | Tower | the candles gutter; a pair of eyes above |
+  | Deep forest | the dark reaching in like roots, full of gold eyes |
+  | Desert | a wall of blown sand closing in |
+  | Undercity | small red eyes, low down, many of them |
+  | Frozen pass | frost creeping over the edge; pale eyes keeping pace |
+- **Found.** For the found beat and the encounter, a dark layer
+  (`.t-table::before`) fades in over the board's own edges while the
+  world's threat floods past its two-strike edge. The takeover waits
+  for the beat: it opens on the *presented* phase.
+- **Round marks.** *Round 2* passes over the river for two seconds as
+  the turn that wraps lands, with a low bell, and is announced through
+  a status region.
+- **Sound** (`stage/sound.ts`): a slam for the jam, a riffle for the
+  reshuffle, a low swell for being found, a bell for the round. All
+  synthesised, all silent unless sound is on.
+- **Scripts.**
+  - `capture-score.cjs` (new) stages each moment — the route, the
+    round, the jam, the reshuffle, being found, the dark — by
+    rewriting the saved run so it is one pick away, then photographs it
+    as it plays and fails if a moment never appears. `--reduced` checks
+    that nothing moves under reduced motion; `--board=session` runs it
+    on the old board.
+  - `measure-frames.cjs` has an *idle at one strike* row and `--rows`.
+  - Both capture scripts now print React's warnings with their
+    arguments filled in. The key in a duplicate-key warning was being
+    cut off.
+
+**Design notes.**
+- **The round mark passes over the river, not the caption.** Over the
+  caption it struck through the scene being read. Nobody is choosing
+  from the river as a turn begins, and the mark is gone in two seconds.
+- **The dark is quiet at one strike and loud only when found.** One
+  strike darkens and reddens the edges and lets an eye open now and
+  then; the persistent picture stays a mood, which is feel/9b's lesson.
+  The found beat is the moment that gets to be loud.
+- **The eyes keep to the sides**, where the table is not, and low where
+  a setting's idiom says so.
+- **The jam sweeps what the table can see.** A card the engine dealt
+  face down into the jam's own refill, and swept at once, is not drawn
+  arriving and leaving: its slot shows empty, and the deal fills it.
+
+**Departures from the plan, and why.**
+- **"The vista's horizon steps forward" is the picture stepping into
+  the scene.** After the first card the vista always shows the latest
+  scene, never the horizon at rest, so a horizon that advanced would
+  almost never be seen.
+- **The route's landmarks are the card's doorway, not a crop of the
+  vista.** At 24px a doorway with a lit scene inside reads; a strip of
+  landscape does not. Same seed and subject as the vista's picture.
+- **`found` is a beat; `through` and `lost` are only cues so far.** The
+  ending's beats still come from `useEnding`. The cues are there for
+  phase 7.
+
+**Found on the way.**
+- **Scout Ahead re-dealt the whole river.** Three cards leaving the deck
+  with no slot to show for them looked like a sweep to `plan()`'s
+  deck-count reasoning, so every scout dealt the river again, face down
+  over face down. Cards a decision holds off the table now explain
+  themselves (test added).
+- **A reload mid-reveal drew a new scene** for the same card. It is now
+  read back from the chronicle.
+
+**Broke / retried.**
+- **The Monster never flew in onto an empty discard.** The feed beat
+  starts in the same tick the jam's cards land, before React has drawn
+  them on the pile, so there was no card there to measure. It measures
+  the pile's empty place, which is the same size.
+- **A reshuffle hid the card that left.** The discard ends empty, so the
+  discard's growth said nothing had gone to it. With a reshuffle in
+  play, one card gone is one card discarded, and of several only the
+  one just taken is taken to have left.
+- **A duplicate React key, in some crossings.** The round mark and the
+  discard pile are siblings, keyed by the round and by the pile's count:
+  in Round 2 with two cards in the discard, both were `2`. The mark's
+  key is prefixed, and capture-score's round scene now stages exactly
+  that case. Reproduced with the old key; gone with the new.
+- **A backtick in a GLSL comment** closed the shader's template string.
+- **The browser pane runs no layout observers while hidden**, so the
+  vista could not be measured there. It was measured through
+  capture-score instead: the stepped picture stays inside the vista's
+  box, under its faded edges.
+
+**Verified** (headless Chromium).
+- **capture-score, GPU, 1600 × 1000, dungeon.** Every staged moment
+  appeared, with no console errors: the route's arrival and the vista's
+  step; the round; the jam at 2.2 s and its Monster at 2.9 s; the
+  reshuffle; found at 3.3 s and the encounter 1.5 s after it.
+- **The dark in every setting**, at one strike and when found,
+  photographed on the GPU (`proof/score-<setting>`).
+- **Reduced motion.** Nothing flies, the round is marked without
+  moving, and the encounter opens with the truth (1.9 s, at the reveal
+  timer) rather than after the dark.
+- **The old board.** The jam and the reshuffle fly there too. A full
+  crossing in the desert: 182 reveal samples over 16 reveals, **0px**.
+- **The new board.** A full crossing on the frozen pass: 169 over 15,
+  **0px**.
+- **The route at 1024 × 768, 1366 × 768 and 600 × 900.** Narrower than
+  1100px it takes a row of its own under the run's name.
+- **The budget**, GPU, 1600 × 1000, 1×, 4× CPU, against HEAD served from
+  a worktree beside it, so both columns come from the same session:
+
+  | | HEAD (`world/4`) | `world/5` |
+  |---|---|---|
+  | Idle, world Full | 0.30–0.33 s | 0.29–0.34 s |
+  | Idle at one strike | — | 0.29–0.37 s |
+  | Nothing behind | 0.17–0.18 s | 0.17–0.18 s |
+  | One turn, mean of 9 | 2.34 s | 2.43 s |
+
+  The dark costs the main thread nothing: idle at one strike is idle.
+  The turns differ by 4%, inside the ±0.25 s their runs scatter by.
+  Turns run higher than phase 3 measured (1.6–1.7 s), but HEAD shows
+  the same rise, so it predates this phase.
+- `npm test` in `packages/rules` (73) and in `apps/table` (19),
+  `npm run typecheck`, `npm run build` and the API's typecheck are
+  clean. The bundle grew 4.3 KB gzipped, and the CSS 1.0 KB.
+
+**Not yet seen by the author.** The air slowing, the eyes opening and
+blinking, the tower's candles guttering and the tendrils shifting are
+all motion, which no headless frame shows.
+
+**Commit:** `git log --grep world/5`.

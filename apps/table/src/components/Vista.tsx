@@ -10,6 +10,8 @@ interface Props {
   biome: Biome;
   /** The scene the GM is reading out, or null before the first card turns. */
   prompt: DrawnPrompt | null;
+  /** Clear Paths gained, as presented. Each one steps the picture forward. */
+  step?: number;
 }
 
 /** A setting at rest is lit by its own light, like its ground and its backs. */
@@ -73,8 +75,12 @@ SceneLayer.displayName = 'SceneLayer';
  *
  * When the scene changes the new picture fades in over the old, which
  * goes once it is covered. Opacity only; reduced motion cuts.
+ *
+ * When ground is gained the picture steps forward, into the doorway it
+ * shows, and stays there until the next scene replaces it (phase 5): the
+ * party went through. A transform on the picture, never on the table.
  */
-export function Vista({ biome, prompt }: Props) {
+export function Vista({ biome, prompt, step = 0 }: Props) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [box, setBox] = React.useState<{ aspect: number; shown: boolean }>({ aspect: 4, shown: false });
   const [pal, setPal] = React.useState<Palette>(FALLBACK_PALETTE);
@@ -120,6 +126,20 @@ export function Vista({ biome, prompt }: Props) {
     const t = window.setTimeout(() => setLayers((l) => l.slice(-1)), reducedMotion() ? 0 : MOTION.vista + 60);
     return () => window.clearTimeout(t);
   }, [layers]);
+
+  // Ground gained: the picture showing steps forward and holds. The next
+  // scene is a new layer, so it comes in at rest.
+  const stepped = React.useRef(step);
+  React.useEffect(() => {
+    const was = stepped.current;
+    stepped.current = step;
+    if (step <= was || reducedMotion()) return;
+    const layer = ref.current?.querySelector<HTMLElement>('.t-vista__layer:last-child');
+    layer?.animate(
+      [{ transform: 'none' }, { transform: 'scale(1.08)' }],
+      { duration: MOTION.step, easing: MOTION.settle, fill: 'forwards' },
+    );
+  }, [step]);
 
   return (
     <div

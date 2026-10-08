@@ -39,6 +39,21 @@ export const MOTION = {
   baton: 320,
   /** A new scene's picture fading in over the last (the vista). */
   vista: 900,
+  /** A jam: the river's cards leaving together, a beat apart. */
+  sweepStagger: 70,
+  /** The jam's Monster, brought in from beyond the edge onto the discard. */
+  feed: 760,
+  /** One card of the discard gathered back onto the deck, and the gap between them. */
+  gather: 520,
+  gatherStagger: 90,
+  /** Found: the dark closing in before the fight is handed over. */
+  found: 1500,
+  /** A new round's mark passing over the table. */
+  round: 2000,
+  /** The route: the party moving on to the next waypoint. */
+  route: 760,
+  /** The vista stepping forward into the scene when ground is gained. */
+  step: 1800,
 
   /* easings */
   settle: 'cubic-bezier(.2, .7, .3, 1)',

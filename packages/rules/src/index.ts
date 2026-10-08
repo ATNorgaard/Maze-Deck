@@ -31,6 +31,7 @@ export type {
   CardCategory,
   Choice,
   ChoicePayload,
+  Cue,
   EventKind,
   ExpansionCategory,
   GameAction,

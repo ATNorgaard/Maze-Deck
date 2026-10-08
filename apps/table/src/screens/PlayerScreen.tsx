@@ -242,7 +242,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, onLeave 
       {/* Outside ScaleToFit on purpose: the overlay is position: fixed,
           and a transformed ancestor would make it fixed to the wrong
           thing. */}
-      <StageOverlay overlay={stage.overlay} deals={stage.deals} size={riverSize} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={riverSize} />
 
       {myChoice && pending?.kind === 'choice' ? (
         <Modal label="Your decision">

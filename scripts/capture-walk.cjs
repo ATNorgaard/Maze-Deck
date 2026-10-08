@@ -104,7 +104,17 @@ const state = (page) => page.evaluate(() => ({
   const page = await browser.newPage({ viewport: { width: W, height: H } });
   let crashed = false;
   page.on('crash', () => { crashed = true; log('!! the renderer crashed'); });
-  page.on('console', (m) => { if (m.type() === 'error') log(`console: ${m.text().slice(0, 200)}`); });
+  // React warns with a format string and its arguments apart; put them
+  // together, and keep the top of the component stack, which says where
+  // the warning came from.
+  page.on('console', async (m) => {
+    if (m.type() !== 'error') return;
+    const parts = await Promise.all(m.args().map((a) => a.jsonValue().catch(() => '?')));
+    let text = String(parts.shift() ?? m.text());
+    while (text.includes('%s') && parts.length) text = text.replace('%s', String(parts.shift()));
+    const stack = parts.map(String).join(' ').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 4).join(' < ');
+    log(`console: ${text.slice(0, 160)}${stack ? ` [${stack.slice(0, 240)}]` : ''}`);
+  });
   page.on('pageerror', (e) => log(`pageerror: ${e.message}`));
 
   let n = 0;

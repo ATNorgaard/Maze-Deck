@@ -58,6 +58,29 @@ export interface Deal {
   delay: number;
 }
 
+/**
+ * A card crossing the table in a beat that moves several at once: a
+ * jam's sweep, the Monster it brings in, the discard gathered back onto
+ * the deck. Straight there, top-left to top-left.
+ */
+export interface Flight {
+  key: string;
+  rect: DOMRect;
+  box: { w: number; h: number };
+  scale: number;
+  /** The card size it is drawn at; the river's when unset. */
+  size?: CardSize;
+  /** What it shows. Null is a back. */
+  face: CardCategory | null;
+  dx: number;
+  dy: number;
+  s: number;
+  delay: number;
+  ms: number;
+  /** Fades as it lands, as a card going onto a pile does; or lands whole. */
+  fade: boolean;
+}
+
 export interface Stage {
   /** What the board draws. Lags the truth by whatever is still playing. */
   presented: GameView;
@@ -67,6 +90,8 @@ export interface Stage {
   overlay: Overlay | null;
   /** Cards in flight from the deck pile. */
   deals: Deal[];
+  /** Cards in flight in a beat that moves several at once. */
+  flights: Flight[];
   /** Slots the river must mask: an overlay is in front, or a deal is owed. */
   covered: number[];
   /** Drop everything queued and show the truth. Call before any dispatch. */
@@ -90,6 +115,17 @@ function measure(el: HTMLElement): Pick<Overlay, 'rect' | 'box' | 'scale'> {
   const box = { w: el.offsetWidth, h: el.offsetHeight };
   return { rect, box, scale: box.w > 0 ? rect.width / box.w : 1 };
 }
+
+/** Centre to centre, and the size change, from one box to another. */
+function toward(from: DOMRect, to: DOMRect): Pick<Flight, 'dx' | 'dy' | 's'> {
+  return {
+    dx: (to.left + to.width / 2) - (from.left + from.width / 2),
+    dy: (to.top + to.height / 2) - (from.top + from.height / 2),
+    s: from.width > 0 ? to.width / from.width : 1,
+  };
+}
+
+const EMPTY_SLOT = { category: null, faceUp: false, filled: false } as const;
 
 /**
  * Where a slot's card RESTS, on screen. Read through the slot, never the
@@ -120,6 +156,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
   const [active, setActive] = React.useState<Beat | null>(null);
   const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
   const [deals, setDeals] = React.useState<Deal[]>([]);
+  const [flights, setFlights] = React.useState<Flight[]>([]);
 
   const truth = React.useRef(view);
   const queue = React.useRef<Step[]>([]);
@@ -246,6 +283,67 @@ export function useStage(view: GameView, refs: Refs): Stage {
         setOverlay(null);
         return MOTION.thud;
 
+      // The river swept at once: every card flies for the discard together,
+      // a beat apart, and the slots stand empty behind them for the deal.
+      case 'jam': {
+        const to = refs.discardRef.current?.getBoundingClientRect();
+        if (!to) return 0;
+        setOverlay(null);
+        const out: Flight[] = [];
+        beat.slots.forEach((slot, i) => {
+          const m = measureSlotCard(refs.riverRef.current, slot);
+          if (!m) return;
+          out.push({
+            key: `jam${slot}`, ...m, face: beat.faces[i] ?? null, ...toward(m.rect, to),
+            delay: out.length * MOTION.sweepStagger, ms: MOTION.fly, fade: true,
+          });
+        });
+        if (out.length === 0) return 0;
+        present({ ...presentedRef.current, river: presentedRef.current.river.map(() => EMPTY_SLOT) });
+        setFlights(out);
+        return MOTION.fly + MOTION.sweepStagger * (out.length - 1);
+      }
+
+      // A card from outside the deck, brought in from beyond the edge of
+      // the table and put down on the discard — which the jam's noise did.
+      case 'feed': {
+        // The pile's top card, or the empty place for one: a jam onto an
+        // empty discard starts this beat in the same tick the swept cards
+        // land, before the pile has been drawn with them.
+        const pile = refs.discardRef.current;
+        const top = pile?.querySelector<HTMLElement>('article') ?? pile?.querySelector<HTMLElement>('.md-pile__empty');
+        if (!top) return 0;
+        const m = measure(top);
+        const size = (pile?.querySelector<HTMLElement>('[data-size]')?.dataset.size as CardSize | undefined) ?? 'sm';
+        const rect = new DOMRect(window.innerWidth + m.rect.width * 0.2, m.rect.top - m.rect.height * 0.35, m.rect.width, m.rect.height);
+        setFlights([{
+          key: 'feed', rect, box: m.box, scale: m.scale, size,
+          face: beat.category, dx: m.rect.left - rect.left, dy: m.rect.top - rect.top, s: 1,
+          delay: 0, ms: MOTION.feed, fade: false,
+        }]);
+        return MOTION.feed;
+      }
+
+      // The deck ran dry: the discard is gathered up, turned over, and put
+      // back as the deck, a few cards seen to go for the whole pile.
+      case 'reshuffle': {
+        const from = refs.discardRef.current?.querySelector<HTMLElement>('article');
+        const to = (refs.deckRef.current?.querySelector<HTMLElement>('article') ?? refs.deckRef.current)?.getBoundingClientRect();
+        if (!from || !to || beat.count <= 0) return 0;
+        const m = measure(from);
+        const size = (from.dataset.size as CardSize | undefined) ?? 'sm';
+        const n = Math.min(5, beat.count);
+        setFlights(Array.from({ length: n }, (_, i) => ({
+          key: `gather${i}`, ...m, size, face: null, ...toward(m.rect, to),
+          delay: i * MOTION.gatherStagger, ms: MOTION.gather, fade: false,
+        })));
+        return MOTION.gather + MOTION.gatherStagger * (n - 1);
+      }
+
+      // The board holds while the dark comes in; the screen draws it.
+      case 'found':
+        return MOTION.found;
+
       case 'sync':
       case 'turn':
         // The held card is released once the reveal is really over.
@@ -254,14 +352,19 @@ export function useStage(view: GameView, refs: Refs): Stage {
         // signpost and the rest of the truth land as it arrives.
         return beat.kind === 'turn' && beat.from !== beat.to ? MOTION.baton : 0;
 
+      default:
+        return 0;
     }
   };
 
   const end = (step: Step) => {
-    if (step.beat.kind === 'depart') setOverlay(null);
+    const k = step.beat.kind;
+    if (k === 'depart') setOverlay(null);
     // The dealt cards vanish as the slots underneath show their own —
     // same place, same size, so nothing is seen to change.
-    if (step.beat.kind === 'deal') setDeals([]);
+    if (k === 'deal') setDeals([]);
+    // Likewise a card fed onto the discard, which shows it on top as it goes.
+    if (k === 'jam' || k === 'feed' || k === 'reshuffle') setFlights([]);
   };
 
   const pump = React.useRef<() => void>(() => {});
@@ -297,6 +400,7 @@ export function useStage(view: GameView, refs: Refs): Stage {
     setActive(null);
     setOverlay(null);
     setDeals([]);
+    setFlights([]);
     present(truth.current);
   }, []);
 
@@ -341,5 +445,5 @@ export function useStage(view: GameView, refs: Refs): Stage {
   // arriving — so there is never a dark hole in the river.
   const covered = React.useMemo(() => (overlay ? [overlay.slot] : []), [overlay]);
 
-  return { presented, active, overlay, deals, covered, flush };
+  return { presented, active, overlay, deals, flights, covered, flush };
 }

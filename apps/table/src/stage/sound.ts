@@ -36,7 +36,15 @@ export type Voice =
   /** A card dropping onto a pile. */
   | 'drop'
   /** The turn passing. */
-  | 'baton';
+  | 'baton'
+  /** The river jammed and swept: one heavy blow. */
+  | 'slam'
+  /** The discard riffled back into the deck. */
+  | 'riffle'
+  /** Found: a low swell that does not resolve. */
+  | 'dread'
+  /** A new round: a soft, low bell. */
+  | 'bell';
 
 const KEY = 'mazedeck.sound';
 
@@ -165,6 +173,25 @@ const VOICES: Record<Voice, (c: AudioContext, at: number) => void> = {
     noise(c, at, 0.04, 0.1, 1800, 400);
   },
   baton: (c, at) => tone(c, at, 'sine', 520, 520, 0.08, 0.07, 0.01),
+  slam: (c, at) => {
+    tone(c, at, 'sine', 70, 30, 0.4, 0.32);
+    noise(c, at, 0.25, 0.2, 1400, 160);
+  },
+  riffle: (c, at) => {
+    // A dozen quick flicks, close together, then the deck squared up.
+    for (let i = 0; i < 12; i += 1) noise(c, at + i * 0.028, 0.02, 0.09, 5000, 2200);
+    tone(c, at + 0.4, 'sine', 120, 80, 0.08, 0.1);
+  },
+  dread: (c, at) => {
+    tone(c, at, 'sawtooth', 41, 36, 1.4, 0.1, 0.6);
+    tone(c, at, 'sine', 82, 73, 1.4, 0.08, 0.5);
+    noise(c, at, 1.2, 0.05, 300, 90);
+  },
+  bell: (c, at) => {
+    tone(c, at, 'sine', 196, 196, 1.6, 0.09, 0.01);
+    tone(c, at, 'sine', 392, 392, 1.1, 0.04, 0.01);
+    tone(c, at, 'sine', 587, 587, 0.7, 0.02, 0.01);
+  },
 };
 
 /**
@@ -184,7 +211,18 @@ export function cue(beat: Beat): void {
     case 'deal':
       beat.slots.forEach((_, i) => play('slide', i * MOTION.dealStagger));
       break;
-    case 'turn': if (beat.from !== beat.to) play('baton'); break;
+    case 'jam':
+      play('slam');
+      beat.slots.forEach((_, i) => play('slide', 60 + i * MOTION.sweepStagger));
+      break;
+    // The Monster lands on the pile, and is heard doing it.
+    case 'feed': play('slide'); play('growl', MOTION.feed - 160); break;
+    case 'reshuffle': play('riffle'); break;
+    case 'found': play('dread'); break;
+    case 'turn':
+      if (beat.from !== beat.to) play('baton');
+      if (beat.round) play('bell', 120);
+      break;
     case 'sync': break;
   }
 }

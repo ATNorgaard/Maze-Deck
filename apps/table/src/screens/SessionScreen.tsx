@@ -363,7 +363,7 @@ export function SessionScreen({
         <EventLog log={view.log} />
       </div>
 
-      <StageOverlay overlay={stage.overlay} deals={stage.deals} size={riverSize} />
+      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={riverSize} />
 
       {view.phase === 'choice' && pending?.kind === 'choice' ? (
         <Modal label="A decision is owed">

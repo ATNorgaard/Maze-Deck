@@ -25,6 +25,27 @@ export const ALL_ABILITIES: AbilityKey[] = [
   'its-elementary', 'careful-consideration', 'boost-morale',
 ];
 
+/**
+ * One scene drawn in the crossing in progress: what was read out, and
+ * when. Kept for the run, beside the current prompt, so a Clear Path's
+ * scene can stand on the route as a landmark (docs/overhaul.md, phase 5)
+ * and the crossing can be told back at its end (phase 7). App state, not
+ * GameState: narration is not part of the game.
+ */
+export interface ChronicleEntry extends DrawnPrompt {
+  /**
+   * The reveal it was drawn for: the log line of the pick, and the slot.
+   * Round and turn would not do — an encounter starts the turns again
+   * inside the same round.
+   */
+  key: string;
+  round: number;
+  /** Who took the path. */
+  seatId: string | null;
+  /** Clear Paths already gained when the card was turned. */
+  progress: number;
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -54,6 +75,8 @@ export interface Campaign {
   tablesByBiome: Partial<Record<BiomeId, Tables>>;
   /** The prompt drawn for the card currently in front of the table. */
   prompt: DrawnPrompt | null;
+  /** Every scene drawn in the crossing in progress, in order. */
+  chronicle: ChronicleEntry[];
   /** Last entry used per category, so the same one does not repeat. */
   lastPrompt: Partial<Record<string, string>>;
   /** The join code of the room this campaign is hosted in, if any. */
@@ -98,6 +121,7 @@ export function newCampaign(): Campaign {
     biome: DEFAULT_BIOME,
     tablesByBiome: {},
     prompt: null,
+    chronicle: [],
     lastPrompt: {},
     hostCode: null,
     run: null,
