@@ -88,6 +88,28 @@ describe('cues', () => {
     expect(seen).toEqual(marked);
   });
 
+  it('marks every pick with the card it turned, for everyone', () => {
+    const g = atPick('turned', ['item', 'obstacle', 'clear-path']);
+    const a = apply(g, { type: 'PICK_SLOT', index: 1 });
+    const line = a.state.log[a.state.log.length - 1] as GameEvent;
+    expect(line.turned).toEqual({ slot: 1, category: 'obstacle' });
+    expect(line.visibility).toBe('all');
+
+    // Still there once the reveal has moved on: a device that polled
+    // either side of it can tell a card was turned, and which.
+    const b = apply(a.state, { type: 'ADVANCE_REVEAL' });
+    const seat = b.state.order[0] as string;
+    const seen = view(b.state, { role: 'player', seatId: seat }).log.find((e) => e.n === line.n);
+    expect(seen?.turned).toEqual({ slot: 1, category: 'obstacle' });
+
+    // Only picks: over a whole run, one turned line per card picked.
+    const { final } = playOut(makeRun('turned-run'), 'turned-run');
+    for (const e of final.log) {
+      if (e.turned) expect(e.text).toMatch(/ takes the (left|centre|right|slot d+) path — /);
+      else expect(e.text).not.toMatch(/ takes the (left|centre|right) path — /);
+    }
+  });
+
   it('marks nothing else', () => {
     const { states } = playOut(makeRun('cue-quiet'), 'cue-quiet');
     const final = states[states.length - 1] as GameState;

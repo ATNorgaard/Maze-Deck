@@ -77,6 +77,12 @@ export interface Campaign {
   prompt: DrawnPrompt | null;
   /** Every scene drawn in the crossing in progress, in order. */
   chronicle: ChronicleEntry[];
+  /**
+   * Show every scene to the players' phones as it is drawn, rather than
+   * scene by scene from the board (DECISIONS O1). Off by default: the GM
+   * reads it first.
+   */
+  autoShare: boolean;
   /** Last entry used per category, so the same one does not repeat. */
   lastPrompt: Partial<Record<string, string>>;
   /** The join code of the room this campaign is hosted in, if any. */
@@ -122,6 +128,7 @@ export function newCampaign(): Campaign {
     tablesByBiome: {},
     prompt: null,
     chronicle: [],
+    autoShare: false,
     lastPrompt: {},
     hostCode: null,
     run: null,

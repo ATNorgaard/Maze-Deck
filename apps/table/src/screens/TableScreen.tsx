@@ -24,6 +24,7 @@ import { Vista } from '../components/Vista';
 import { BIOMES, isBiomeId } from '../biomes';
 import type { Biome, BiomeId } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
+import type { SharedScene } from '../transport/types';
 import { MOTION, reducedMotion } from '../stage/motion';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
@@ -68,6 +69,13 @@ interface Props {
   opening?: number | null;
   /** The opening has finished, or been skipped. */
   onOpened?: () => void;
+  /** The scene shown to the table, as the server has it (DECISIONS O1). */
+  sharedScene?: SharedScene | null;
+  /** Show the table a scene, or take it down. Only a hosted room has a table to show. */
+  onShare?: (scene: SharedScene | null) => void;
+  /** Whether the campaign shows every scene to the table as it is drawn. */
+  autoShare?: boolean;
+  onAutoShare?: (on: boolean) => void;
 }
 
 /** Where the light sits, as on the old board: the part the phase is about. */
@@ -134,6 +142,7 @@ function askFor(choice: Choice | null, swapPick: number | null): { title: string
 export function TableScreen({
   view, biome, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
   hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard, opening: openingKey = null, onOpened,
+  sharedScene = null, onShare, autoShare = false, onAutoShare,
 }: Props) {
   const stageRef = React.useRef<HTMLDivElement>(null);
   const sceneRef = React.useRef<HTMLDivElement>(null);
@@ -360,6 +369,12 @@ export function TableScreen({
      the party found: the dark closes in for a beat before the fight takes
      the screen. All of it read off the PRESENTED view, so each lands with
      its beat. */
+  // The scene in the caption, as the chronicle keys it, and whether the
+  // table can see it (DECISIONS O1). Only a hosted room has a table to show.
+  const current = scenes[scenes.length - 1] ?? null;
+  const showable = onShare && prompt && current && current.entryId === prompt.entryId ? current : null;
+  const onTable = Boolean(showable && sharedScene?.key === showable.key);
+
   const landmarks = React.useMemo(
     () => Array.from({ length: view.rules.escapeTarget }, (_, i) => (
       scenes.find((e) => e.category === 'clear-path' && e.progress === i) ?? null
@@ -532,6 +547,23 @@ export function TableScreen({
           {prompt ? biome.cards?.[prompt.category]?.title ?? getCategory(prompt.category).title : 'The scene'}
         </span>
         <p className="t-scene__text">{prompt?.text ?? ''}</p>
+        {/* The players see this scene when the GM shows it to them
+            (DECISIONS O1): the GM reads it first. Hosted rooms only. */}
+        {showable && onShare ? (
+          <button
+            type="button"
+            className="t-btn t-share"
+            aria-pressed={onTable}
+            onClick={() => onShare(onTable ? null : {
+              key: showable.key, category: showable.category, entryId: showable.entryId, text: showable.text,
+            })}
+            title={onTable
+              ? 'The players can read this on their phones. Press to take it back down.'
+              : 'Show this scene on the players’ phones.'}
+          >
+            {onTable ? 'Shown to the table' : 'Show the table'}
+          </button>
+        ) : null}
       </div>
 
       <div className="t-surface" ref={surfaceRef} data-narrow={fit.narrow || undefined} data-fan={fanCards ? true : undefined}>
@@ -838,6 +870,17 @@ export function TableScreen({
             {asPlayer ? 'Seeing a player’s screen' : 'Preview a player’s screen'}
           </button>
           <SoundToggle />
+          {onShare ? (
+            <button
+              type="button"
+              className="t-btn"
+              aria-pressed={autoShare}
+              onClick={() => onAutoShare?.(!autoShare)}
+              title="Show every scene on the players’ phones as it is drawn, rather than one at a time from the caption. Kept with the campaign."
+            >
+              {autoShare ? 'Every scene shown to the table' : 'Scenes shown one at a time'}
+            </button>
+          ) : null}
           <label className="t-biome-switch" title="How much of the setting this device draws behind the table. Auto steps down if the device cannot keep up; Off is the old animated ground.">
             <span>Atmosphere</span>
             <select

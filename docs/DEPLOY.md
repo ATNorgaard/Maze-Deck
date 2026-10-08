@@ -61,6 +61,23 @@ The three non-secret variables are already set: `SUPABASE_URL`,
 the browser bundle at build time, which is fine — they are public by
 construction.
 
+### Migrations
+
+`server/migrations/` holds the changes to `maze_sessions` since it was
+created, one dated file each, written to be run once by hand. The Supabase
+project is shared with other apps, so nothing applies them automatically.
+**Run each one when you ship the code that uses it**, in the SQL editor or
+through the Supabase MCP's `apply_migration` under the name in the file's
+header.
+
+| File | What it adds | What happens without it |
+|---|---|---|
+| `2026-10-09-maze_sessions_scene.sql` | A `scene` column (jsonb, at most 2 KB): the scene the GM has shown the table (DECISIONS O1, `world/8`) | Hosting and play work as before. *Show the table* answers *"Showing the table a scene needs the database migrated first"*, and phones show no scene text. |
+
+Every migration so far is additive, and the code runs against the table as it
+was before each one, so the order does not matter: code deployed first just
+leaves its feature switched off until the migration has run.
+
 ### Vercel Authentication must be off
 
 A fresh Vercel project turns on SSO protection, and a protected deployment
@@ -126,6 +143,28 @@ cd apps/table && npm run dev     # http://localhost:5180, hot reload
 
 To point that at a real backend, set `VITE_SESSION_ENDPOINT` to a deployment's
 origin.
+
+### A hosted game without the hosted half
+
+`scripts/local-session.mjs` runs the real authority (`api/session/[op].ts`,
+bundled with the app's esbuild) against an **in-memory** stand-in for
+`maze_sessions`. The stand-in covers just enough of PostgREST: the read by
+code, the insert that refuses a taken code, and the compare-and-swap PATCH.
+It needs no secrets, never touches the live database, and the Realtime bell
+is swallowed, so clients keep up by polling.
+
+```bash
+node scripts/local-session.mjs --app          # authority on :8790, app on :5182
+node scripts/local-session.mjs --unmigrated   # a table as it is before server/migrations/
+```
+
+With it running:
+
+```bash
+node scripts/check-share.mjs                  # the share op, against the authority
+node scripts/capture-phone.cjs                # a GM's board and a phone, end to end
+node scripts/capture-phone.cjs --manual       # the same, with the phone throwing the die
+```
 
 ## What a Durable Object was giving us for free
 

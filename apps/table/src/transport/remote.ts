@@ -26,7 +26,7 @@ import type {
   GameAction, GameView, Presence, RunSetup, SeatOffer, Viewer,
 } from '@maze-deck/rules';
 import { API_BASE, REALTIME } from '../player';
-import type { SessionTransport, Snapshot } from './types';
+import type { SessionTransport, SharedScene, Snapshot } from './types';
 
 export interface RemoteOptions {
   code: string;
@@ -42,6 +42,8 @@ export interface RemoteOptions {
 interface Reply {
   viewer?: Viewer;
   view?: GameView | null;
+  /** The scene the GM has shown the table. Absent from an older server. */
+  scene?: SharedScene | null;
   version?: number;
   topic?: string;
   seats?: SeatOffer[];
@@ -100,6 +102,7 @@ export class RemoteSession implements SessionTransport {
       presence: [],
       error: null,
       connected: false,
+      scene: null,
     };
     void this.start();
   }
@@ -114,6 +117,11 @@ export class RemoteSession implements SessionTransport {
     // Optimism would be a lie here: the server decides, and it may
     // refuse. The board waits for the view it sends back.
     void this.post('act', { action });
+  }
+
+  /** The GM showing the table a scene, or taking it down. The server checks it is the GM. */
+  share(scene: SharedScene | null): void {
+    void this.post('share', { scene });
   }
 
   close(): void {
@@ -265,6 +273,7 @@ export class RemoteSession implements SessionTransport {
         connected: true,
       };
       if (reply.viewer) patch.viewer = reply.viewer;
+      if (reply.scene !== undefined) patch.scene = reply.scene;
       this.update(patch);
       // Tell the topic who we turned out to be — a player who arrived
       // without a seat has one now.

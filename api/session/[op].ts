@@ -43,7 +43,7 @@ import type { RunSetup, SeatOffer } from '../../packages/rules/src/protocol.js';
 // note here blamed the _-prefix for a deploy failure. It was innocent --
 // _-prefixed files are built fine. The culprit was the module system.)
 import { bump, create, read, swap, topicFor } from '../../server/store.js';
-import type { Patch, Row } from '../../server/store.js';
+import type { Patch, Row, SharedScene } from '../../server/store.js';
 
 export const config = { maxDuration: 15 };
 
@@ -93,14 +93,45 @@ function seatOffers(row: Row, asking: string): SeatOffer[] {
   });
 }
 
-/** What every successful reply carries: your view, and nothing else's. */
+/**
+ * What every successful reply carries: your view, and nothing else's —
+ * and the scene the GM has shown the table, which is everyone's once
+ * shown (DECISIONS O1). It travels beside the view, never inside it: the
+ * view is the engine's redaction, and narration is not game state.
+ */
 function snapshotFor(row: Row, viewer: Viewer): unknown {
   return {
     viewer,
     view: row.state ? view(row.state, viewer) : null,
+    scene: row.scene ?? null,
     version: row.version,
     topic: topicFor(row.code),
   };
+}
+
+const CATEGORIES = new Set(['clear-path', 'obstacle', 'wanderer', 'item', 'monster', 'dead-end', 'trap']);
+
+/**
+ * A scene as the GM's board sent it, or null if it is not one from this
+ * crossing. Its key must name a pick in the current run's public log, and
+ * the card that pick turned, so a scene cannot outlive its run or point at
+ * nothing; its text is capped,
+ * because a row is not a place for essays.
+ */
+function sceneFrom(raw: unknown, row: Row): SharedScene | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const { key, category, entryId, text } = r;
+  if (typeof key !== 'string' || !/^\d{1,5}:\d$/.test(key)) return null;
+  if (typeof category !== 'string' || !CATEGORIES.has(category)) return null;
+  if (typeof entryId !== 'string' || entryId.length === 0 || entryId.length > 80) return null;
+  if (typeof text !== 'string' || text.trim().length === 0 || text.length > 600) return null;
+  const [pick, slot] = key.split(':').map(Number);
+  const line = row.state?.log.find((e) => e.n === pick);
+  if (!line || line.visibility !== 'all' || line.kind !== 'card') return null;
+  // A pick marked with its card (phase 8) must be the card the scene is for.
+  if (line.turned && (line.turned.slot !== slot || line.turned.category !== category)) return null;
+  return { key, category, entryId, text: text.trim() };
 }
 
 /* ---------------- the compare-and-swap loop ---------------- */
@@ -160,7 +191,9 @@ async function opCreate(code: string, playerId: string, setup: RunSetup): Promis
   if (!row) return refuse('That code is already in use.');
   if (row.gm_player_id !== playerId) return refuse('That code is already in use.');
 
-  const written = await swap(code, row.version, fresh);
+  // A new crossing in the same room starts with nothing shown — where the
+  // room has the column to clear (see Row.scene).
+  const written = await swap(code, row.version, 'scene' in row ? { ...fresh, scene: null } : fresh);
   if (!written) return refuse('The table is busy — try that again.', 409);
   await bump(code, written.version);
   return json(snapshotFor(written, { role: 'gm' }));
@@ -242,6 +275,35 @@ async function opAct(code: string, playerId: string, action: GameAction): Promis
 }
 
 /**
+ * Show the table the scene the GM is reading out (DECISIONS O1).
+ *
+ * The GM's alone, as the read-it-first moment the hidden-information
+ * model was built around: the GM's board draws the line, and it reaches
+ * a phone only when they share it, by hand or by the campaign's
+ * setting. `null` takes it back down. It is a column beside the state,
+ * so the engine and GameState never see it, and it bumps the version
+ * like any other write, which is how phones hear of it.
+ */
+async function opShare(code: string, playerId: string, raw: unknown): Promise<Response> {
+  return attempt(
+    code,
+    (row) => {
+      if (!row.state) return refuse('No run here yet.');
+      if (viewerFor(row, playerId)?.role !== 'gm') return refuse('Only the GM can show the table a scene.');
+      if (!('scene' in row)) {
+        return refuse('Showing the table a scene needs the database migrated first (docs/DEPLOY.md).');
+      }
+      const scene = raw === null ? null : sceneFrom(raw, row);
+      if (raw !== null && !scene) return refuse('That is not a scene from this crossing.');
+      // Shown already: no write, so a second press does not ring the bell.
+      if (JSON.stringify(scene) === JSON.stringify(row.scene ?? null)) return json(snapshotFor(row, { role: 'gm' }));
+      return { scene };
+    },
+    (row) => snapshotFor(row, { role: 'gm' }),
+  );
+}
+
+/**
  * Nudge the held reveal.
  *
  * The client says "I think the card has been up long enough". It is not
@@ -275,6 +337,7 @@ interface Body {
   seatId?: unknown;
   setup?: unknown;
   action?: unknown;
+  scene?: unknown;
   code?: unknown;
 }
 
@@ -319,6 +382,8 @@ export default {
           return await opAct(code, playerId, body.action as GameAction);
         case 'tick':
           return await opTick(code);
+        case 'share':
+          return await opShare(code, playerId, body.scene ?? null);
         default:
           return refuse('No such operation.', 404);
       }

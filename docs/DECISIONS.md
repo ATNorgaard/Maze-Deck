@@ -52,8 +52,8 @@ Taken 2026-10-07, every one as recommended in
 
 | # | Decision |
 |---|---|
-| O1 | **Players see the scene text when the GM shares it** — a *Show the table* control per scene, and a campaign setting to make it automatic. It travels as a GM-only `share` op writing a `scene` column on the room row, never through `GameState`. |
-| O2 | **One additive engine change: a `cue` on `GameEvent`** (`jam`, `reshuffle`, `found`, `through`…) so the stage plays what happened instead of inferring it from counts. Every existing rules test stays as it is. *Delivered in `world/5` as `jam`, `reshuffle`, `found`, `through` and `lost`, set only on the line that marks the moment.* |
+| O1 | **Players see the scene text when the GM shares it** — a *Show the table* control per scene, and a campaign setting to make it automatic. It travels as a GM-only `share` op writing a `scene` column on the room row, never through `GameState`. *Delivered in `world/8`. The column is added by `server/migrations/2026-10-09-maze_sessions_scene.sql`, run by hand ([DEPLOY.md](DEPLOY.md#migrations)); until it has run, sharing is refused with that reason and everything else plays as before.* |
+| O2 | **One additive engine change: a `cue` on `GameEvent`** (`jam`, `reshuffle`, `found`, `through`…) so the stage plays what happened instead of inferring it from counts. Every existing rules test stays as it is. *Delivered in `world/5` as `jam`, `reshuffle`, `found`, `through` and `lost`, set only on the line that marks the moment. Phase 8 added one more mark of the same kind: `turned` on a pick's line, naming the slot and the card, so a phone that polled either side of a reveal still knows a card turned (`world/8`).* |
 | O3 | **The roll stays a centred, blocking dialog** (feel/3b) and is restaged at the scale of the moment. |
 | O4 | **A WebGL2 canvas replaces the SMIL grounds as the default ambient layer**, with quality tiers and the still picture as the fallback. No dependency. |
 | O5 | **`packages/art`** holds the generators, shared by the atelier and the table, aliased to source. `packages/ui` and the design-sync stay out of it. |

@@ -179,6 +179,13 @@ export interface GameEvent {
   text: string;
   /** Set on the line that marks a moment a board plays (see Cue). */
   cue?: Cue;
+  /**
+   * Set on the line of a pick: which path was taken and what it was. The
+   * card is face up for everyone by then, so this is no secret; it lets a
+   * device that missed the reveal itself (it polled either side of it)
+   * still know a card turned, and which (docs/overhaul.md, phase 8).
+   */
+  turned?: { slot: number; category: CardCategory };
 }
 
 export type Outcome = 'through' | 'lost';

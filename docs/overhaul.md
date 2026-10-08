@@ -238,8 +238,8 @@ can be found and reverted alone.
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | **done** — `world/5` |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | **done** — `world/6` |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | **done** — `world/7` |
-| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | next |
-| 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | |
+| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | **done** — `world/8`, except the migration on the live database |
+| 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | next |
 | 10 | Retire the old board, re-measure, record what was decided along the way | S | all | |
 
 **Order of execution: 0, 1, 2, 3, then the author's first look, then 4, 5,
@@ -473,7 +473,7 @@ O1–O8.
 | # | Question | Decided |
 |---|---|---|
 | D1 | Do players see the scene text? | **Yes, when the GM shares it**: a *Show the table* control on the GM's caption, per scene, plus a campaign setting to make it automatic. The GM keeps the read-it-first moment that the hidden-information model was built around. |
-| D2 | One small, additive engine change: a `cue` on `GameEvent` (`jam`, `reshuffle`, `found`, `through`…), so the stage plays what happened instead of inferring it from counts. | **Yes.** It is additive, every rules test stays as it is, and it adds one test per cue. It is the only engine change in this plan. |
+| D2 | One small, additive engine change: a `cue` on `GameEvent` (`jam`, `reshuffle`, `found`, `through`…), so the stage plays what happened instead of inferring it from counts. | **Yes.** It is additive, every rules test stays as it is, and it adds one test per cue. It is the only engine change in this plan. *(Phase 8 added a second of the same kind, `turned` on a pick's line: see `world/8`.)* |
 | D3 | Restage the roll as a centre-screen moment that fills the board, still as a blocking dialog. | **Yes.** It keeps feel/3b's call (centred, modal) and changes only its scale. |
 | D4 | A WebGL2 canvas replaces the SMIL grounds as the default. | **Yes**, with the still picture as the fallback tier. No dependency. |
 | D5 | A `packages/art` for the generators, shared by the atelier and the table. | **Yes.** It keeps `packages/ui` and the design-sync out of it. |
@@ -1568,3 +1568,171 @@ hand, and the signatures at the speed of play.
 **Not yet seen by the author.** The opening at full speed, with sound.
 
 **Commit:** `git log --grep world/7`.
+
+### world/8 — windows
+
+**Changed.**
+- **The GM can show the table a scene** (DECISIONS O1). The GM's caption
+  has a *Show the table* button, level with the kicker and out of the
+  flow, so it never moves the river. Pressed, it says *Shown to the
+  table*; pressed again, the scene comes back down. The GM drawer has
+  *Scenes shown one at a time* / *Every scene shown to the table*, kept
+  with the campaign (`autoShare`, off by default): when it is on, each
+  scene is shown as it is drawn. Single-screen games have no table to
+  show, so neither control appears there.
+- **The `share` op** (`api/session/[op].ts`). GM only. It writes the
+  scene (`{key, category, entryId, text}`) to a new `scene` column on
+  the room row, never to `GameState`. Every view reply carries it beside
+  the view. The authority checks that:
+  - the key names a pick in this crossing's public log, and the card that
+    pick turned;
+  - the text is between 1 and 600 characters.
+
+  Sharing the scene already shown writes nothing. `null` takes it down,
+  and a new crossing in the room clears it.
+- **The migration** (`server/migrations/2026-10-09-maze_sessions_scene.sql`):
+  the column, plus a constraint that it is an object of at most 2 KB.
+  **It has not been run on the live database**, which other apps share;
+  [DEPLOY.md](DEPLOY.md#migrations) says how. The authority checks for
+  the column before writing it. Without it, *Show the table* answers
+  *"needs the database migrated first"*, and hosting and play are
+  unchanged. So the code can ship first.
+- **One more mark on the log.** A pick's line now carries `turned:
+  {slot, category}`. The card is face up for everyone by then, so the
+  mark is public, and it is additive like O2's cues. One rules test is
+  new (74). It exists because of what broke below: a phone that polls
+  can miss a reveal entirely, and the log is the one thing it cannot
+  miss.
+- **The phone is a window now** (`screens/PlayerScreen.tsx`, rewritten,
+  and `phone.css`). One column, phone first. From the top:
+  - the setting and round, your name, and a status line that always
+    says whose move it is (*Your turn — choose an action*, *Your roll —
+    throw, and tell the GM*, *Your turn — commit to a path*, *Odalis is
+    rolling*);
+  - the route and the threat track;
+  - **the vista** of the latest card turned. Once the GM has shown its
+    scene, it is that scene's picture, the same one the GM's board drew.
+    Until then it is the card's own picture, seeded by the card;
+  - **the scene**: the card's name in the setting's terms and colour,
+    then the GM's line once shown, or *The GM has the scene*;
+  - the river and the piles, scaled to fit;
+  - somebody else's roll, if there is one;
+  - the party with the baton, the log folded away, and Sound, Haptics
+    and Leave.
+- **A sheet at the foot, under the thumb.** On your turn the hand of six
+  rises into it, three across, large targets. Once you have chosen, your
+  roll takes its place: the die as it landed, or, when the table rolls
+  its own dice, a die to throw. Otherwise the sheet is below the edge
+  and inert.
+- **The throw** (`components/Throw.tsx`). Tap it or flick it, and it
+  tumbles and lands; with advantage, two dice and the better kept. *Tell
+  the GM: 19.* The GM still types the result in, and that is the roll
+  the room acts on. The phone then shows the GM's number in place of
+  its own. One throw per check.
+- **Haptics** (`stage/haptics.ts`), where the device has them:
+  - your turn, `40·60·40`, once per turn;
+  - a Clear Path, a light tick (14 ms);
+  - a strike, a long buzz (260 ms);
+  - the jam, `70·50·70`;
+  - being found, `90·70·90·70·320`;
+  - the die landing, 30 ms.
+
+  On by default, with a toggle that each device remembers.
+- **The world layer at `low`** on a phone. A coarse pointer already
+  started there (phase 3); the phone gets the same mood as the board:
+  threat, progress, the hush, the flash on a reveal, and focus on the
+  hand on your turn.
+- **Scripts.**
+  - `local-session.mjs` (new) runs the real authority against an
+    in-memory stand-in for the table, with `--app` for a copy of the app
+    pointed at it and `--unmigrated` for a table without the column. No
+    secrets, and never the live database.
+  - `check-share.mjs` (new) checks the op against it.
+  - `capture-phone.cjs` (new) plays a hosted game from both sides, a GM
+    at 1600 × 1000 and a phone at 390 × 844 with touch and its vibrations
+    recorded, and checks each step.
+
+**Design notes.**
+- **The phone reads the log, not the reveal.** It learns of a turned card
+  from the last `turned` line, keyed as the GM's chronicle keys it (the
+  pick's line and the slot). A scene the GM shows is matched to its card
+  that way. A stale one, for a card before the latest, is not shown.
+- **A short grace before the picture changes.** A scene shown at once
+  arrives a round trip after its card turns. The phone waits 900 ms
+  before it draws the card's own picture, so with automatic sharing it
+  goes straight to the GM's picture instead of drawing two in a row.
+- ***The GM has the scene*, not *is reading it*.** A phone may first
+  learn of a card after its turn is over, and a GM may tell the scene
+  aloud and never show it. The line stays true in every case.
+- **The throw is ceremony.** Its number stays on the phone and goes
+  nowhere. Nothing a player's device decides reaches the engine.
+- **No verdict on the phone.** It shows the total against the DC, and
+  the verdict is the GM's to give, as in phase 4.
+
+**Broke / retried.**
+- **The phone missed reveals.** Locally there is no Realtime, so the
+  phone polls every six seconds, and the GM resolved an Obstacle (which
+  stays in the river) inside one poll. The phone never saw the reveal
+  phase, so it never knew a card had turned, and a scene shown later
+  had nothing to match. Production rings Realtime on every change, but
+  two quick changes still fold into one fetch. The fix is `turned`, on
+  the log. The choreographer has the same blind spot, older than this
+  phase: a client that skips a reveal's version plays no flip for it.
+  Not fixed here.
+- **"Waiting on Brakka", to Brakka**, while their own roll was waiting
+  for the GM. The status now reads the pending check.
+- **Your own roll was off the bottom of the screen** at 390 × 844, under
+  the river. It moved into the sheet, where the hand was.
+- **The screen still wore `.t-play`**, whose rules make two columns from
+  900 px. The phone rules that were worth keeping (the shake, the
+  bloom, touch) were carried into `phone.css`.
+- **The river sat on a slab** of the deck's ink. The board passes
+  `t-river__ground` (transparent), and the phone now does too.
+- **The thrown die's corners covered the kicker** and the modifier. A d20
+  stands on its point, so its corners reach past its box. It is smaller
+  now, with room around it.
+- **The turn buzzed twice** in development, from React's double effects.
+  It is keyed by round and turn now, so nothing fires it twice.
+- **The script's own mistakes**, for the record:
+  - a join link fills in the code but still waits for *Join*;
+  - the GM's board draws a control a beat after the state allows it, so
+    pressing at once missed;
+  - the waiting die sways, so Playwright never thought it stable;
+  - two regexes lost their backslashes passing through a shell.
+
+**Verified** (headless Chromium, against `local-session.mjs`).
+- **`capture-phone.cjs`, the app rolling:** every check passes. The phone
+  joins by code and takes a seat. It knows a card turned and shows *The
+  GM has the scene*; the GM shows it, and the phone reads the same line
+  within a poll. On the phone's own turn the hand rises, and the turn is
+  felt once. The roll rises where the hand was. The GM lets it land, the
+  phone is asked for a path, and its pick turns the card on the GM's
+  board. With every scene shown as drawn, the next scene reached the
+  phone with nobody pressing anything. The vibrations along the way:
+  a tick, the turn, a strike.
+- **`--manual`:** the phone threw a 6, the GM typed it in, and the phone
+  showed the GM's 6 with *Your roll — the GM is ruling on it*. That run
+  was found on the way, and the phone felt it.
+- **`--manual --gpu`:** the world started at `low` and stayed there (in
+  software it steps down to `still`). A 19 thrown and typed in.
+- **`check-share.mjs`:**
+  - against the migrated stand-in, 12 checks: a player refused, a scene
+    from no pick refused, one for a path nobody took or a card that was
+    not turned refused, an essay refused, a repeat writes nothing, the
+    scene never inside the view, taken down, and cleared by a new
+    crossing;
+  - `--unmigrated`, 4 checks: refused with the reason, and a new
+    crossing in the room still works.
+- **Full crossings, both boards:** new board, 149 reveal samples over 13
+  reveals, **0px**; old board, 162 over 12, **0px**.
+- Rules tests 74 (1 new). App tests 25. Both typechecks (app and
+  `tsconfig.api.json`) and the build are clean. The bundle grew 2.4 KB
+  gzipped, and the CSS 1.1 KB.
+- **Not measured:** the phone's frame budget. `measure-frames.cjs`
+  drives the board, not a hosted phone.
+
+**Not yet seen by the author.** A real phone in a real room: its
+vibrations, the flick, Realtime instead of polling. And the migration,
+which is waiting on the author: it touches a database other apps share.
+
+**Commit:** `git log --grep world/8`.

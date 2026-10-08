@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-10-08 (the overhaul through its phase 5 —
+**Last updated:** 2026-10-09 (the overhaul through its phase 8 —
 see [overhaul.md](overhaul.md))
 
 > **The overhaul is the work now.** [overhaul.md](overhaul.md) is the plan
@@ -29,7 +29,7 @@ devices, with the GM's board and the players' phones talking to a server that
 never tells any of them what is in the deck.**
 
 ```bash
-cd packages/rules && npm test            # 73 tests, ~12s, no browser needed
+cd packages/rules && npm test            # 74 tests, ~12s, no browser needed
 cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev             # http://localhost:5180
 cd apps/table && npm run build           # tsc --noEmit && vite build
@@ -38,7 +38,7 @@ cd packages/ui && npm run build          # tsup + the CSS flattening step
 
 - **`packages/ui`** — the component layer, unchanged except for the canonical
   deck data. Builds; design-sync converter runs clean at 13/13.
-- **`packages/rules`** — the engine. Pure, seeded, 73 tests.
+- **`packages/rules`** — the engine. Pure, seeded, 74 tests.
   `createGame` → `apply(state, action)` → `available(state)`.
 - **`apps/table`** — the GM's screen. Vite + React, both packages aliased to
   **source** (no workspace root; hoisting breaks design-sync).
@@ -286,18 +286,38 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 8](overhaul.md#8-windows): windows.** The
-player's phone gets:
-- the vista on every reveal;
-- the scene text, when the GM shares it (D1/O1: a GM-only `share` op
-  and a `scene` column on the room row, a migration);
-- the hand of six on its own turn;
-- a die to throw in manual roll mode;
-- a haptic for each beat;
-- the world layer at `low`.
+**[The overhaul's phase 9](overhaul.md#9-sound-as-a-bed): sound as a
+bed.** Each setting gets its own ambience, synthesised in WebAudio like
+the existing voices, with no files: wind on the pass, drips in the
+dungeon, crackle in the undercity, and so on. It moves with the mood:
+threat adds a low pulse and narrows the filter, the far side opens it up,
+and beats duck it. Same toggle as today; the threshold asks once (O6).
 
-It is the largest phase left, and the first since phase 2 to touch the
-server and the database.
+**Waiting on the author: one migration.** Phase 8's
+`server/migrations/2026-10-09-maze_sessions_scene.sql` adds a `scene`
+column to `maze_sessions`. It has **not** been run, because the Supabase
+project is shared with other apps. Until it runs, *Show the table* says
+the database needs migrating and nothing else changes, so it can go
+before or after the next fast-forward of `main`
+([DEPLOY.md](DEPLOY.md#migrations)).
+
+Phase 8 (`world/8`) made the phones windows onto the table:
+- the GM can show the table a scene, from the caption or for every
+  scene at once, and the phones read it under the GM's own picture;
+- a phone shows the vista of each card turned, and says whose move it
+  is;
+- on your turn the hand of six rises from the foot of the phone, and
+  your roll takes its place: a die to throw, when the table rolls its
+  own, whose number the GM still types in;
+- the beats are felt: your turn, a Clear Path, a strike, the jam, being
+  found;
+- a pick's log line now names the card it turned (`turned`, a second
+  additive mark beside O2's cues), so a phone that missed a reveal
+  still knows.
+
+`node scripts/local-session.mjs --app` runs a hosted game on this machine
+against a table in memory, and `node scripts/capture-phone.cjs` plays it
+from a GM's board and a phone at once.
 
 Phase 7 (`world/7`) gave the crossing its ceremony:
 - a crossing started opens with its name over the setting's horizon,
@@ -332,10 +352,11 @@ Phase 5 (`world/5`) made the world keep score:
 `node scripts/capture-score.cjs` stages each of those moments and
 photographs it, because a walk only meets a jam when the deck deals one.
 
-Phases 1–7 still want the author's eyes, moving, on a real screen
+Phases 1–8 still want the author's eyes, moving, on a real screen
 (`cd apps/table && npm run dev`). Phase 5's dark and phase 6's tilt are
 mostly motion — eyes blinking, candles guttering, a card turning under
-the hand — that no headless frame shows.
+the hand — that no headless frame shows. Phase 8 wants a real phone in a real
+room: the vibrations, the flick, Realtime instead of polling.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
@@ -349,9 +370,10 @@ the GM reads out has a picture, drawn live by `packages/art`), phase 3
 an *Atmosphere* setting in the GM drawer whose *Off* is the old ground),
 phase 4 (`world/4` — decisions made on the table, not in dialogs) and
 phase 5 (`world/5` — the route, the dark, round marks, the jam and the
-reshuffle), phase 6 (`world/6` — cards with weight) and phase 7
-(`world/7` — the opening, and the crossing told back). Production serves
-`world/3`; `world/4` to `world/7` are on the branch only.
+reshuffle), phase 6 (`world/6` — cards with weight), phase 7
+(`world/7` — the opening, and the crossing told back) and phase 8
+(`world/8` — the phones as windows, and the shared scene). Production
+serves `world/3`; `world/4` to `world/8` are on the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

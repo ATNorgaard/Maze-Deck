@@ -137,12 +137,13 @@ function push(
   visibility: GameEvent['visibility'],
   text: string,
   cue?: Cue,
-): void {
+): GameEvent {
   const e: GameEvent = { n: g.log.length + 1, kind, visibility, text };
   // Only on the lines that mark something, so a stored log stays as it was.
   if (cue) e.cue = cue;
   g.log.push(e);
   events.push(e);
+  return e;
 }
 
 /* ---------------------------------------------------------------
@@ -544,8 +545,9 @@ function revealPick(g: GameState, events: GameEvent[], index: number): void {
   };
   g.phase = 'reveal';
 
-  push(g, events, 'card', 'all',
+  const line = push(g, events, 'card', 'all',
     `${activeSeat(g).name} takes the ${positionName(index)} path — ${getCategory(category).title}.`);
+  line.turned = { slot: index, category };
 }
 
 function resolveRevealed(g: GameState, events: GameEvent[]): void {

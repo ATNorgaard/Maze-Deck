@@ -145,7 +145,17 @@
   margin: 0 auto;
 }
 .t-stage > .t-scene .t-scene__text { font-size: 19px; }
-.t-scene[data-category='clear-path'] .t-kicker { color: var(--md-cat-path-300); }
+
+/* Show the table (DECISIONS O1, phase 8): level with the kicker and
+   out of the flow, so its arriving and going never move the river. */
+.t-stage > .t-scene { position: relative; }
+.t-share {
+  position: absolute;
+  top: calc(-1.5 * var(--md-u));
+  right: 0;
+  padding: calc(1.2 * var(--md-u)) calc(3 * var(--md-u));
+  font-size: 12px;
+}.t-scene[data-category='clear-path'] .t-kicker { color: var(--md-cat-path-300); }
 .t-scene[data-category='obstacle'] .t-kicker { color: var(--md-cat-obst-300); }
 .t-scene[data-category='wanderer'] .t-kicker { color: var(--md-cat-wand-300); }
 .t-scene[data-category='item'] .t-kicker { color: var(--md-cat-item-300); }

@@ -124,6 +124,8 @@ export class LocalSession implements SessionTransport {
       presence: [],
       error: this.error,
       connected: true,
+      // One screen has nobody else to show a scene to.
+      scene: null,
     };
   }
 

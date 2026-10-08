@@ -51,6 +51,20 @@ const headers = (): Record<string, string> => {
   };
 };
 
+/**
+ * A scene the GM has shown the table (DECISIONS O1). The line read out
+ * for one reveal — which reveal, by the pick's log line and slot — and
+ * its card and table entry, so a phone can draw the picture the GM's
+ * board drew. Never part of GameState: narration is not game state.
+ */
+export interface SharedScene {
+  /** `pickLine:slot`, as the GM's chronicle keys it. */
+  key: string;
+  category: string;
+  entryId: string;
+  text: string;
+}
+
 export interface Row {
   code: string;
   version: number;
@@ -59,6 +73,13 @@ export interface Row {
   /** playerId -> seatId. */
   seats: Record<string, string>;
   reveal_due_at: string | null;
+  /**
+   * The scene shown to the table, if any. The key is ABSENT from a row
+   * read before the `scene` migration (server/migrations/), and the
+   * handlers check for that rather than writing a column that is not
+   * there: code deployed ahead of the migration must not break hosting.
+   */
+  scene?: SharedScene | null;
 }
 
 /** What a write changes. `version` and `updated_at` are ours to set. */
@@ -66,6 +87,7 @@ export interface Patch {
   state?: GameState | null;
   gm_player_id?: string | null;
   seats?: Record<string, string>;
+  scene?: SharedScene | null;
 }
 
 async function rest(path: string, init: RequestInit): Promise<unknown> {

@@ -12,7 +12,7 @@ import { loadIdentity, rememberSeat } from './player';
 import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
 import { RemoteSession } from './transport/remote';
-import type { SessionTransport, Snapshot } from './transport/types';
+import type { SessionTransport, SharedScene, Snapshot } from './transport/types';
 import { PortalHost } from './components/PortalHost';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { LandingScreen } from './screens/LandingScreen';
@@ -223,6 +223,23 @@ export function App() {
   const view = snapshot?.view ?? null;
   const hosted = session.current instanceof RemoteSession;
 
+  /* ---------------- showing the table a scene ----------------
+     (DECISIONS O1, docs/overhaul.md phase 8.) The GM's board draws the
+     line; a hosted room's phones see it when the GM shares it — scene by
+     scene from the caption, or every one as it is drawn when the
+     campaign says so. */
+  const share = React.useCallback((scene: SharedScene | null) => {
+    session.current?.share?.(scene);
+  }, []);
+  const latest = campaign.chronicle[campaign.chronicle.length - 1] ?? null;
+  const sharedKey = snapshot?.scene?.key ?? null;
+  React.useEffect(() => {
+    if (!hosted || !campaign.autoShare || !latest || view?.viewer.role !== 'gm') return;
+    if (sharedKey === latest.key) return;
+    share({ key: latest.key, category: latest.category, entryId: latest.entryId, text: latest.text });
+    // Once per scene drawn; whether it is shown already is read as it stands.
+  }, [latest?.key, campaign.autoShare, hosted]);
+
   // Inside a run the setting is the run's own — it is what every
   // device was told, and a joined player has no campaign at all.
   // Everywhere else it is the campaign's, so a choice on the campaign
@@ -251,6 +268,7 @@ export function App() {
           dispatch={dispatch}
           connected={snapshot?.connected ?? false}
           error={snapshot?.error ?? null}
+          scene={snapshot?.scene ?? null}
           onLeave={() => { detach(); setSeatOffers(null); setScreen('join'); }}
         />
       ) : screen === 'join' ? (
@@ -274,6 +292,10 @@ export function App() {
             runName={campaign.runName}
             prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
             scenes={view.viewer.role === 'gm' ? campaign.chronicle : NO_SCENES}
+            sharedScene={snapshot?.scene ?? null}
+            {...(hosted ? { onShare: share } : {})}
+            autoShare={campaign.autoShare}
+            onAutoShare={(on: boolean) => setCampaign((prev) => ({ ...prev, autoShare: on }))}
             asPlayer={asPlayer}
             onTogglePlayerView={togglePlayerView}
             {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
