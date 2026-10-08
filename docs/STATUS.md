@@ -223,8 +223,25 @@ loop. `vercel dev` is the faithful rehearsal: one origin serving the app and
 the authority, exactly as production does. `VITE_SESSION_ENDPOINT` overrides
 the origin, for pointing a local app at a deployment.
 
-**Deployed and live: <https://maze-deck-six.vercel.app>** (2026-09-21).
+**Deployed and live: <https://maze-deck-six.vercel.app>** (first on
+2026-09-21; last on 2026-10-08, with the overhaul through `world/3`).
 Push to `main` to redeploy. See [DEPLOY.md](DEPLOY.md).
+
+The 2026-10-08 deploy was a fast-forward of `main` to the overhaul
+branch, checked first by a clean install and build exactly as
+`vercel.json` runs them. It was then verified on the live site, read-only:
+- the bundle carries the world, the vista and the board choice;
+- `GET /api/session/view?code=ZZZZZZ` answers 404 *No session with that
+  code*, so the functions load, the service key is set and Supabase
+  answers;
+- a single-screen crossing on the GPU ran the world at Full, with the
+  vista and the caption on every reveal, and 159 reveal samples over 12
+  reveals at 0px;
+- there were no console errors and no failed requests.
+
+No room was created. The Vercel token cannot list deployments here (403),
+so the deploy was watched through the commit status Vercel posts on
+GitHub.
 
 **Part 3 — the player view.** A different screen with different content: no GM
 controls, no scenario prompt, no dice overrides. This is why the board layout
@@ -280,7 +297,8 @@ phase 4.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
-fast-forwards to it whenever a phase is worth shipping. On the branch so
+fast-forwards to it whenever a phase is worth shipping — it last did on
+2026-10-08, at `world/3`, and that is what production serves. On the branch so
 far: the atelier's art (`art: …`), phase 0 (`world/0`), phase 1
 (`world/1` — the new board, now the default, with the old one a click
 away in the GM drawer), phase 2 (`world/2` — the vista: every scene
