@@ -1,21 +1,27 @@
 import * as React from 'react';
 import {
-  ActionBar, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, ScoreTrack, getCategory,
+  AbilityCard, ActionBar, DeckCard, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, ScoreTrack,
+  getAbility, getCategory,
 } from '@maze-deck/ui';
 import { availableFor } from '@maze-deck/rules';
-import type { ChoicePayload, GameAction, GameView, Phase } from '@maze-deck/rules';
-import { CheckPanel } from '../components/CheckPanel';
-import { ChoicePanel } from '../components/ChoicePanel';
+import type { CardCategory, Choice, ChoicePayload, GameAction, GameView, Phase } from '@maze-deck/rules';
+import { CardFan } from '../components/CardFan';
 import { Drawer } from '../components/Drawer';
+import { Encounter } from '../components/Encounter';
 import { EventLog } from '../components/EventLog';
+import { Ghosts } from '../components/Ghosts';
+import type { Ghost } from '../components/Ghosts';
 import { Modal } from '../components/Modal';
 import { ObstacleWork } from '../components/ObstacleWork';
 import type { Suggestion } from '../components/ObstacleWork';
+import { RollStage } from '../components/RollStage';
 import { SeatBaton } from '../components/SeatBaton';
+import { SlotLayer } from '../components/SlotLayer';
 import { SoundToggle } from '../components/SoundToggle';
 import { Vista } from '../components/Vista';
 import { BIOMES, isBiomeId } from '../biomes';
 import type { Biome, BiomeId } from '../biomes';
+import { reducedMotion } from '../stage/motion';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
 import { useStage } from '../stage/useStage';
@@ -63,11 +69,33 @@ const FOCUS: Record<Phase, 'actions' | 'river' | null> = {
 
 const CHRONICLE_KEY = 'mazedeck.chronicle';
 
+const POSITION = ['left', 'centre', 'right'];
+const position = (i: number) => POSITION[i] ?? `slot ${i + 1}`;
+
 function readOpen(key: string): boolean {
   try { return window.localStorage.getItem(key) === 'open'; } catch { return false; }
 }
 function writeOpen(key: string, open: boolean): void {
   try { window.localStorage.setItem(key, open ? 'open' : 'closed'); } catch { /* blocked: not remembered */ }
+}
+
+/** What the table is asked, for the prompt where the hand would rise. */
+function askFor(choice: Choice | null, swapPick: number | null): { title: string; note: string } | null {
+  if (!choice) return null;
+  switch (choice.kind) {
+    case 'wanderer-stays':
+      return { title: 'Does the wanderer keep pace?', note: 'Some travel on and hold their place in the river; others go their own way.' };
+    case 'discard-revealed':
+      return { title: 'Strike one from the river', note: 'The other is shuffled back face down with the rest.' };
+    case 'scout-top':
+      return { title: 'Scouted off the deck', note: 'One goes back on top, to be drawn next. The rest are shuffled in. The table is told which.' };
+    case 'swap-river':
+      return swapPick === null
+        ? { title: 'Swap one into the river', note: 'Choose a drawn card. The other goes back on top of the deck.' }
+        : { title: 'Now the path it replaces', note: 'What it displaces is discarded.' };
+    case 'boost-target':
+      return { title: 'Who gets the advantage?', note: 'Choose a seat. They roll two dice and keep the better on their next check.' };
+  }
 }
 
 /**
@@ -141,6 +169,64 @@ export function TableScreen({
     ?? (prompt?.score ? { score: prompt.score, dcOffset: prompt.dcOffset ?? 0 } : null)
   );
 
+  /* ---------------- decisions, on the table ----------------
+     The old board asked every decision in a dialog that blurred out the
+     thing it was about. Here each is made where its cards are: the river
+     for a Wanderer, a strike or a swap; the deck for a scout; the party
+     rail for a boost. The prompt sits where the hand would rise, and is
+     announced. The payloads are the engine's, unchanged. */
+  const choice = view.phase === 'choice' && pending?.kind === 'choice' ? pending.choice : null;
+  const decider = pending?.kind === 'choice'
+    ? view.seats.find((x) => x.id === pending.seatId)?.name ?? 'The table'
+    : null;
+  const resolve = (payload: ChoicePayload) => act({ type: 'RESOLVE_CHOICE', payload });
+  // It's Elementary is two steps: a drawn card, then the slot it replaces.
+  const [swapPick, setSwapPick] = React.useState<number | null>(null);
+  const choiceKey = choice ? `${view.round}:${view.turn}:${choice.kind}` : '';
+  React.useEffect(() => { setSwapPick(null); }, [choiceKey]);
+
+  /* Cards seen to go where a decision sent them (components/Ghosts). */
+  const [ghosts, setGhosts] = React.useState<Ghost[]>([]);
+  const ghostId = React.useRef(0);
+  const fly = (category: CardCategory, from: DOMRect, to: DOMRect | undefined) => {
+    if (!to || reducedMotion()) return;
+    ghostId.current += 1;
+    setGhosts((g) => [...g, { id: ghostId.current, category, size: fit.river, from, to }]);
+  };
+  const ghostLanded = (id: number) => setGhosts((g) => g.filter((x) => x.id !== id));
+  const deckTop = () => deckRef.current?.querySelector('article')?.getBoundingClientRect();
+  const slotRect = (i: number) => riverRef.current
+    ?.querySelectorAll('.md-river__slot')[i]?.querySelector('article')?.getBoundingClientRect();
+
+  // The cards a decision is about stand up in their slots.
+  const raisedSlots = choice?.kind === 'wanderer-stays' ? [choice.slot]
+    : choice?.kind === 'discard-revealed' ? choice.slots
+    : [];
+  const fanCards = choice?.kind === 'scout-top' ? choice.cards
+    : choice?.kind === 'swap-river' && swapPick === null ? choice.cards
+    : null;
+  const swapCard = choice?.kind === 'swap-river' && swapPick !== null ? choice.cards[swapPick] ?? null : null;
+  const ask = askFor(choice, swapPick);
+
+  // A boost is chosen on the rail: its first seat takes the focus.
+  const boosting = choice?.kind === 'boost-target';
+  React.useEffect(() => {
+    if (boosting) seatsRef.current?.querySelector<HTMLElement>('.md-seat[role="button"]')?.focus();
+  }, [boosting]);
+
+  /* ---------------- the roll ---------------- */
+  const check = view.phase === 'check' && pending?.kind === 'check' ? pending : null;
+  const rollCard = check
+    ? check.reason.type === 'ability'
+      ? <AbilityCard ability={check.reason.ability} size="sm" />
+      : <DeckCard category={view.river[check.reason.slot]?.category ?? 'obstacle'} size="sm" showCount={false} />
+    : null;
+  const attempt = check
+    ? check.reason.type === 'ability'
+      ? getAbility(check.reason.ability).title
+      : `Clearing the ${position(check.reason.slot)}`
+    : '';
+
   /* ---------------- the turn ---------------- */
   const activeIdx = shown.turn % Math.max(shown.order.length, 1);
   const batonSeat = stage.active?.kind === 'turn' ? stage.active.to : shown.order[activeIdx] ?? null;
@@ -154,21 +240,47 @@ export function TableScreen({
     if (handRef.current) handRef.current.inert = !raised;
   }, [raised]);
 
+  // A decision made in place takes its control with it, and focus falls
+  // to the page. Send it on to what is owed next — a path to pick, an
+  // action to take — so the table can be played from the keyboard.
+  React.useEffect(() => {
+    const el = document.activeElement;
+    if (el && el !== document.body) return;
+    const next = view.phase === 'pick'
+      ? riverRef.current?.querySelector<HTMLElement>('.md-river__slot [role="button"]')
+      : view.phase === 'act'
+        ? handRef.current?.querySelector<HTMLElement>('.md-action')
+        : null;
+    next?.focus({ preventScroll: true });
+  }, [view.phase]);
+
   const ticker = view.log.filter((e) => e.visibility === 'all').slice(-2).reverse();
 
   /* ---------------- the world ----------------
      Read off the PRESENTED view, like everything else that is drawn, so
      the light moves when the beat lands and not when the truth does. */
-  const focus = FOCUS[shown.phase];
+  // A decision made in the river lights the river; a boost is on the rail.
+  const focus = shown.phase === 'choice' && choice && choice.kind !== 'boost-target' ? 'river' : FOCUS[shown.phase];
   const worldMood = {
-    threat: shown.strikes / Math.max(1, shown.rules.encounterAt),
+    // Found: the threat light floods past the edge it reaches at two strikes.
+    threat: shown.phase === 'encounter' ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
     progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
     dim: shown.outcome === 'lost' ? 1 : 0,
     bloom: shown.outcome === 'through' ? 1 : 0,
   };
-  const worldFlash = shown.revealed
-    ? { key: `${shown.round}:${shown.turn}:${shown.revealed.slot}`, category: shown.revealed.category }
-    : null;
+  // The world's wash: a turned card's colour, or a roll's verdict as it lands.
+  const [worldFlash, setWorldFlash] = React.useState<{ key: string; category: CardCategory } | null>(null);
+  const revealed = shown.revealed;
+  const revealKey = revealed ? `${shown.round}:${shown.turn}:${revealed.slot}` : null;
+  React.useEffect(() => {
+    if (revealKey && revealed) setWorldFlash({ key: `r:${revealKey}`, category: revealed.category });
+    // Once per card turned.
+  }, [revealKey]);
+  const onLanded = (verdict: boolean | null) => {
+    if (verdict === null || !check) return;
+    // The roll's colours: success in the Obstacle's green, failure in the Monster's red.
+    setWorldFlash({ key: `v:${view.round}:${view.turn}:${check.d20}`, category: verdict ? 'obstacle' : 'monster' });
+  };
   const [worldChoice, setWorldChoice] = useWorldChoice();
   const handStyle = { '--n': view.rules.abilities.length } as React.CSSProperties;
 
@@ -177,7 +289,7 @@ export function TableScreen({
       className="t-table"
       data-shake={stage.active?.kind === 'strike' || undefined}
       data-outcome={shown.outcome ?? undefined}
-      data-focus={FOCUS[shown.phase] ?? undefined}
+      data-focus={focus ?? undefined}
       data-chronicle={chronicle || undefined}
       data-narrow={fit.narrow || undefined}
     >
@@ -246,9 +358,19 @@ export function TableScreen({
         <p className="t-scene__text">{prompt?.text ?? ''}</p>
       </div>
 
-      <div className="t-surface" data-narrow={fit.narrow || undefined}>
+      <div className="t-surface" data-narrow={fit.narrow || undefined} data-fan={fanCards ? true : undefined}>
         <div className="t-surface__pile t-surface__pile--deck" ref={deckRef}>
           <DeckPile count={deckCount} size={fit.piles} />
+          {/* It's Elementary's chosen card, held up off the deck while its
+              slot is chosen. After the pile, so the stage's deal still
+              measures the pile's own top card. */}
+          {swapCard ? (
+            <div className="t-held" aria-hidden="true">
+              <MazeDeckProvider size={fit.piles} background="transparent">
+                <DeckCard category={swapCard} showCount={false} />
+              </MazeDeckProvider>
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -257,6 +379,8 @@ export function TableScreen({
           data-covered={stage.covered.length ? stage.covered.join(' ') : undefined}
           data-settled={settling === null ? undefined : String(settling)}
           data-pickable={a.pickSlots.length ? true : undefined}
+          data-raised={raisedSlots.length ? raisedSlots.join(' ') : undefined}
+          data-dim={fanCards ? true : undefined}
         >
           <River
             className="t-river__ground"
@@ -280,6 +404,56 @@ export function TableScreen({
               onAttempt={(slot, score, dc) => act({ type: 'ATTEMPT_OBSTACLE', slot, score, dc })}
             />
           ) : null}
+
+          {choice?.kind === 'wanderer-stays' ? (
+            <SlotLayer riverRef={riverRef} slots={[choice.slot]} layoutKey={`${fit.river}|${fit.narrow}|${chronicle}|${shown.river.map((s) => `${s.category}${s.faceUp}`).join()}`} className="t-decide">
+              {() => (
+                <div className="t-decide__pair">
+                  <button type="button" className="t-btn" data-choice="" autoFocus
+                    onClick={() => resolve({ kind: 'wanderer-stays', stays: true })}>
+                    They stay
+                  </button>
+                  <button type="button" className="t-btn t-btn--primary" data-choice=""
+                    onClick={() => resolve({ kind: 'wanderer-stays', stays: false })}>
+                    They move on
+                  </button>
+                </div>
+              )}
+            </SlotLayer>
+          ) : null}
+
+          {choice?.kind === 'discard-revealed' ? (
+            <SlotLayer riverRef={riverRef} slots={choice.slots} layoutKey={`${fit.river}|${fit.narrow}|${chronicle}|${shown.river.map((s) => `${s.category}${s.faceUp}`).join()}`} className="t-decide">
+              {(slot) => (
+                <button type="button" className="t-btn t-btn--danger t-decide__strike" data-choice=""
+                  autoFocus={slot === choice.slots[0]}
+                  onClick={() => resolve({ kind: 'discard-revealed', slot })}>
+                  Strike the {position(slot)}
+                </button>
+              )}
+            </SlotLayer>
+          ) : null}
+
+          {choice?.kind === 'swap-river' && swapPick !== null && swapCard ? (
+            <SlotLayer
+              riverRef={riverRef}
+              slots={view.river.flatMap((x, i) => (x.filled ? [i] : []))}
+              layoutKey={`${fit.river}|${fit.narrow}|${chronicle}|${shown.river.map((s) => `${s.category}${s.faceUp}`).join()}`}
+              className="t-decide t-decide--target"
+            >
+              {(slot) => (
+                <button type="button" className="t-btn t-btn--primary" data-choice=""
+                  autoFocus={slot === view.river.findIndex((x) => x.filled)}
+                  onClick={() => {
+                    const held = deckRef.current?.querySelector('.t-held article')?.getBoundingClientRect();
+                    if (held) fly(swapCard, held, slotRect(slot));
+                    resolve({ kind: 'swap-river', cardIndex: swapPick, slot });
+                  }}>
+                  Put it in the {position(slot)}
+                </button>
+              )}
+            </SlotLayer>
+          ) : null}
         </div>
 
         {/* Keyed on the count so a new top card remounts and drops. */}
@@ -294,11 +468,31 @@ export function TableScreen({
             {...(shown.discardTop ? { top: shown.discardTop } : {})}
           />
         </div>
+
+        {fanCards && choice ? (
+          <CardFan
+            key={choiceKey}
+            cards={fanCards}
+            size={fit.river}
+            deckRef={deckRef}
+            selected={swapPick}
+            verb={choice.kind === 'scout-top' ? 'Put on top of the deck' : 'Swap into the river'}
+            onPick={(i, el) => {
+              if (choice.kind === 'scout-top') {
+                const card = choice.cards[i];
+                if (card) fly(card, el.getBoundingClientRect(), deckTop());
+                resolve({ kind: 'scout-top', cardIndex: i });
+              } else {
+                setSwapPick(i);
+              }
+            }}
+          />
+        ) : null}
       </div>
       </div>
 
       <div className="t-bottom">
-        <div className="t-rail">
+        <div className="t-rail" data-choosing={boosting || undefined}>
           <div className="t-seats" ref={seatsRef}>
             <SeatBaton containerRef={seatsRef} index={batonIndex} />
             {shown.order.map((id, i) => {
@@ -313,13 +507,30 @@ export function TableScreen({
                   active={i === activeIdx && shown.phase !== 'over'}
                   {...(boosted ? { className: 't-seat--boosted' } : {})}
                   detail={[s.cls, boosted ? 'advantage' : null].filter(Boolean).join(' · ')}
+                  {...(boosting ? { onSelect: () => resolve({ kind: 'boost-target', seatId: id }) } : {})}
                 />
               );
             })}
           </div>
         </div>
 
-        <div className="t-hand" ref={handRef} data-raised={raised || undefined} style={handStyle}>
+        <div className="t-handwrap">
+        {/* What is being decided, where the hand would rise. Announced. */}
+        <div className="t-ask" role="status" aria-live="polite" data-shown={ask ? true : undefined}>
+          {ask ? (
+            <>
+              <p className="t-kicker">{decider} decides</p>
+              <p className="t-ask__title">{ask.title}</p>
+              <p className="t-ask__note">{ask.note}</p>
+              {swapCard ? (
+                <button type="button" className="t-btn t-ask__back" onClick={() => setSwapPick(null)}>
+                  Choose the other card
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+        <div className="t-hand" ref={handRef} data-raised={raised || undefined} data-asking={ask ? true : undefined} style={handStyle}>
           <MazeDeckProvider size="md" className="t-hand__cards" background="transparent">
             <ActionBar
               className="t-hand__strip"
@@ -328,6 +539,7 @@ export function TableScreen({
               {...(raised ? { onUse: (ability) => act({ type: 'USE_ABILITY', ability }) } : {})}
             />
           </MazeDeckProvider>
+        </div>
         </div>
 
         <div className="t-ticker">
@@ -355,11 +567,16 @@ export function TableScreen({
       {error ? <p className="t-toast" role="alert">{error}</p> : null}
 
       {/* The decisions, still the old board's centred dialogs. */}
-      {view.phase === 'check' && pending?.kind === 'check' ? (
+      {/* The roll: the centred, blocking dialog of feel/3b, at the size of
+          the moment (D3). */}
+      {check ? (
         <Modal label="A roll is on the table">
-          <CheckPanel
+          <RollStage
             seats={view.seats}
-            check={pending}
+            check={check}
+            card={rollCard}
+            attempt={attempt}
+            onLanded={onLanded}
             onEnterRoll={(d20, d20b) => act(
               d20b === undefined ? { type: 'ENTER_ROLL', d20 } : { type: 'ENTER_ROLL', d20, d20b },
             )}
@@ -370,48 +587,18 @@ export function TableScreen({
         </Modal>
       ) : null}
 
-      {view.phase === 'choice' && pending?.kind === 'choice' ? (
-        <Modal label="A decision is owed">
-          <ChoicePanel
-            view={view}
-            choice={pending.choice}
-            onResolve={(payload: ChoicePayload) => act({ type: 'RESOLVE_CHOICE', payload })}
-          />
-        </Modal>
+      {view.phase === 'encounter' ? (
+        <Encounter
+          monster={biome.cards?.monster.title ?? getCategory('monster').title}
+          onResolve={(outcome) => dispatch(
+            outcome === 'won' ? { type: 'RESOLVE_ENCOUNTER', won: true }
+              : outcome === 'away' ? { type: 'RESOLVE_ENCOUNTER', won: false }
+                : { type: 'RESOLVE_ENCOUNTER', won: false, endRun: true },
+          )}
+        />
       ) : null}
 
-      {view.phase === 'encounter' ? (
-        <Modal label="The party is found">
-          <div className="t-panel t-panel--bad">
-            <h2 className="t-panel__title">Roll initiative</h2>
-            <p className="t-note">
-              Two strikes: something has found them. Run the fight at the table.
-              Winning takes a Monster out of the deck for good and the crossing
-              carries on.
-            </p>
-            <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
-              <button
-                type="button" className="t-btn t-btn--primary"
-                onClick={() => dispatch({ type: 'RESOLVE_ENCOUNTER', won: true })}
-              >
-                They won
-              </button>
-              <button
-                type="button" className="t-btn"
-                onClick={() => dispatch({ type: 'RESOLVE_ENCOUNTER', won: false })}
-              >
-                They got away
-              </button>
-              <button
-                type="button" className="t-btn t-btn--danger"
-                onClick={() => dispatch({ type: 'RESOLVE_ENCOUNTER', won: false, endRun: true })}
-              >
-                It ends here
-              </button>
-            </div>
-          </div>
-        </Modal>
-      ) : null}
+      <Ghosts ghosts={ghosts} onDone={ghostLanded} />
 
       {view.phase === 'over' && endingShown ? (
         <Modal label="The run is closed">

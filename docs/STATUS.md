@@ -286,14 +286,17 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**The author's first look at the slice (phases 1–3), then [phase
-4](overhaul.md#4-decide-on-the-table): decide on the table.** The slice
-is the new board, the vista and the world layer — enough to judge the
-direction before the bulk of the work is spent on it. It wants seeing
-*moving* on a real screen (`cd apps/table && npm run dev`): headless
-frames cannot show the fog or the air, and three beats in the feel pass
-were reversed after a first look. Whatever the look turns up comes before
-phase 4.
+**[The overhaul's phase 5](overhaul.md#5-the-world-keeps-score): the
+world keeps score.**
+- The route and the dark.
+- Round marks.
+- The jam and the reshuffle as events, through D2's `cue` on
+  `GameEvent` — the one engine change in the plan.
+
+Phase 4 (`world/4`) put every decision on the table: the Wanderer, the
+strike, the scout, the swap and the boost are made in place, the roll is
+restaged, and the encounter is a takeover. Phases 1–4 still want the
+author's eyes, moving, on a real screen (`cd apps/table && npm run dev`).
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
@@ -302,9 +305,11 @@ fast-forwards to it whenever a phase is worth shipping — it last did on
 far: the atelier's art (`art: …`), phase 0 (`world/0`), phase 1
 (`world/1` — the new board, now the default, with the old one a click
 away in the GM drawer), phase 2 (`world/2` — the vista: every scene
-the GM reads out has a picture, drawn live by `packages/art`) and phase 3
+the GM reads out has a picture, drawn live by `packages/art`), phase 3
 (`world/3` — the world layer: one WebGL2 canvas behind the table, with
-an *Atmosphere* setting in the GM drawer whose *Off* is the old ground).
+an *Atmosphere* setting in the GM drawer whose *Off* is the old ground)
+and phase 4 (`world/4` — decisions made on the table, not in dialogs).
+Production serves `world/3`; `world/4` is on the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

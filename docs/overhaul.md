@@ -234,8 +234,8 @@ can be found and reverted alone.
 | 1 | The new board, beside the old: world / table / rail / hand layers, GM and chronicle drawers, piles flanking the river, behind a toggle | L | 0 | **done** — `world/1` |
 | 2 | The vista: the atelier's scene generator in `packages/art`, rendered live for each drawn entry; the scene set large | M | 1, D5 | **done** — `world/2` |
 | 3 | The world layer: one WebGL2 canvas for light, fog and particles per setting, driven by `mood`, with quality tiers; replaces the SMIL grounds | L | 1, D4 | **done** — `world/3` |
-| 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | next, after the author's look at the slice |
-| 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | |
+| 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | **done** — `world/4` |
+| 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | next |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | |
 | 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | |
@@ -1015,3 +1015,113 @@ whatever is behind the table.
 - **One look on a real phone**, still owed from phase 0.
 
 **Commit:** `git log --grep world/3`.
+
+### world/4 — decide on the table
+
+**Changed.** On the new board no decision is a dialog any more, except
+the two that must block (the roll and the encounter), and those grew to
+the size of the moment. Every decision still sends the engine's own
+payloads; nothing in `packages/rules` changed.
+
+- **Wanderer.** The card stands up in its slot — lifted, lit in its
+  colour — with *They stay* / *They move on* on its foot. Its scene
+  stays visible above. This is the decision the analysis found worst
+  served: the old dialog blurred out the Wanderer and the scene it is
+  narrated from.
+- **Careful Consideration.** The two turned cards stand up, with *Strike
+  the left* / *Strike the centre* on each.
+- **Scout Ahead.** The three drawn cards rise off the deck pile — each
+  animated in from the pile's top card — and fan over the river, which
+  steps back. The chosen card flies back onto the deck.
+- **It's Elementary.** Two steps. The drawn cards fan over the river; the
+  chosen one is held up off the deck, and every river slot offers *Put
+  it in the left / centre / right*. The card flies into the slot it
+  replaces, and *Choose the other card* goes back a step.
+- **Boost Morale.** The party rail lights up, and a seat is the choice.
+- **The prompt.** What is being decided, and who decides, sits where the
+  hand would rise; the hand sinks further to make room. It is a
+  `role="status"` live region, so it is announced.
+- **The roll** (`components/RollStage.tsx`) is still the centred,
+  blocking Radix dialog of feel/3b, restaged as D3 decided:
+  - the card being attempted is lifted beside the die — the action's
+    own ability card, or the Obstacle;
+  - the die is about three times its old size;
+  - the DC is a mark on a line that the total runs up to, falling short
+    of it or clearing it, after the die lands;
+  - the verdict washes the world's light as well as the panel, through a
+    new `onLanded` on `DieRoll`: the Obstacle's green for a success, the
+    Monster's red for a failure.
+- **The encounter** (`components/Encounter.tsx`) is a takeover, not a
+  box:
+  - the threat light floods in from the edges, with the world's threat
+    pushed past its two-strike maximum;
+  - the vista and the caption above still show the Monster that found
+    the party;
+  - *Roll initiative* is set large, with the three outcomes under it.
+
+  It is still a blocking dialog: focus held, Escape and outside clicks
+  refused.
+- **Shared pieces.**
+  - `SlotLayer` lays a box over a river card. Work-on-it now uses it
+    too.
+  - `CardFan` is the drawn cards.
+  - `Ghosts` flies a card from where a decision was made to where it
+    went. The stage cannot see these moves: a face-down card replaced by
+    another face-down card is invisible to it, by design. The dispatch
+    goes at once, and the ghost only shows it.
+- **Keyboard.**
+  - Each decision takes focus as it opens: the first fanned card, the
+    first slot button, the first seat.
+  - When a decision closes, its control goes with it. Focus is then
+    handed on to what is owed next — a path to pick, or the first
+    action.
+- `capture-walk.cjs` drives in-place decisions: it reads the prompt's
+  title, then presses *They move on*, the first offered choice, or a
+  lit seat.
+
+**Design notes.**
+- **The fan goes over the river rather than beside the deck.** Beside
+  the deck there is no room at any size; over the river, three cards are
+  readable at the river's own size, and the river is not what is being
+  decided while a fan is up. For It's Elementary's second step the fan
+  goes away and the river comes back, because then the river *is* the
+  decision.
+- **The success colour is the Obstacle's green**, as it already was on
+  the old roll's total and panel wash, not the Clear Path's gold.
+
+**Broke / retried.**
+- **The takeover repeated the Monster's scene line**, which the caption
+  above already shows through the transparent top of the overlay. It
+  was removed.
+- **Two shell blocks were refused before they ran**, a CSS heredoc and a
+  docs update; nothing was half-written. Both went through files and the
+  Edit tool instead.
+
+**Verified** (headless Chromium; decisions on the GPU with the world at
+Full).
+- **The six on-table decisions**, photographed: Wanderer, both steps of
+  It's Elementary, Careful Consideration, Scout Ahead, Boost Morale.
+  Also the restaged roll on a failure (14 short of the DC 15 mark, in
+  red) and the encounter takeover.
+- **Scout Ahead.** Focus opened on the first fanned card. Choosing
+  launched one ghost, and the log read *"Item goes on top of the deck"*.
+  Focus then went to a river card.
+- **Boost Morale.** Focus opened on the first seat. **Enter** on it gave
+  Sable the advantage dot.
+- **Reduced motion.** The same decisions work, with no ghost flights,
+  and focus is still handed on.
+- **Full crossings.**
+  - New board, desert: 13 prompts answered in place, and 175 reveal
+    samples over 15 reveals at **0px**.
+  - The GPU walk in the tower: 235 over 16, **0px**.
+  - Old board, deep forest: 176 over 14, **0px**. Its dialogs are
+    untouched.
+- `npm run typecheck`, `npm test` (11) and `npm run build` are clean.
+  The bundle grew 3.1 KB gzipped.
+
+**Not yet seen by the author.** The look of these needs a real screen,
+as phase 3's world did. The roll's world wash in particular is behind
+the dialog's frosted scrim, and a headless frame cannot show how much of
+it comes through.
+
+**Commit:** `git log --grep world/4`.

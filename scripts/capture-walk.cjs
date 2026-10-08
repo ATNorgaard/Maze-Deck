@@ -88,7 +88,10 @@ const revealOffset = (page) => page.evaluate(() => {
 const state = (page) => page.evaluate(() => ({
   // The old board is .t-board, the new one .t-table (docs/overhaul.md, phase 1).
   focus: document.querySelector('.t-board, .t-table')?.dataset.focus ?? '-',
-  modal: document.querySelector('.t-modal .t-panel__title')?.textContent ?? '',
+  // The new board's encounter is a takeover, not a panel (phase 4).
+  modal: (document.querySelector('.t-modal .t-panel__title') ?? document.querySelector('.t-found__title'))?.textContent ?? '',
+  // ...and its decisions are made in place, under a prompt.
+  ask: document.querySelector('.t-ask[data-shown] .t-ask__title')?.textContent ?? '',
   outcome: document.querySelector('.t-board, .t-table')?.dataset.outcome ?? '',
   river: [...document.querySelectorAll('.md-river__slot')]
     .map((s) => s.querySelector('article')?.dataset.category ?? (s.querySelector('.md-card--back') ? 'back' : '·'))
@@ -147,7 +150,7 @@ const state = (page) => page.evaluate(() => ({
   let reveals = 0;
   for (let step = 0; step < maxTurns && !crashed; step += 1) {
     const s = await state(page);
-    log(`#${step} focus=${s.focus} modal="${s.modal}" river=${s.river} log=${s.log}`);
+    log(`#${step} focus=${s.focus} modal="${s.modal}" ask="${s.ask}" river=${s.river} log=${s.log}`);
     if (s.outcome) break;
 
     if (/initiative/i.test(s.modal)) {
@@ -162,6 +165,14 @@ const state = (page) => page.evaluate(() => ({
       const rule = page.getByRole('button', { name: 'Rule it a success' });
       if (step % 2 === 0 && await rule.count()) await rule.click();
       else await click(page.getByRole('button', { name: 'Let it land' }));
+    } else if (s.ask) {
+      // A decision on the table: the Wanderer moves on; otherwise the
+      // first thing offered — a fanned card, a slot, a seat on the rail.
+      await once(`ask:${s.ask}`, `ask-${s.ask.toLowerCase().replace(/[^a-z]+/g, '-').replace(/-$/, '')}`);
+      if (!(await click(page.getByRole('button', { name: 'They move on' })))
+        && !(await click(page.locator('[data-choice]')))) {
+        await click(page.locator('.t-rail[data-choosing] .md-seat[role="button"]'));
+      }
     } else if (s.modal) {
       await once(`choice:${s.modal}`, `choice-${s.modal.toLowerCase().replace(/[^a-z]+/g, '-').replace(/-$/, '')}`);
       if (await click(page.locator('.t-modal .t-pick'))) await page.waitForTimeout(200);

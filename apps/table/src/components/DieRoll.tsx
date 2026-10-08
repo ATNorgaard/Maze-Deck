@@ -14,6 +14,8 @@ interface Props {
    * be a lie they can still overturn.
    */
   verdict: boolean | null;
+  /** Called once, as the die stops, with the verdict it shows. */
+  onLanded?: (verdict: boolean | null) => void;
 }
 
 /**
@@ -53,7 +55,7 @@ function useTumble(value: number): { face: number; landed: boolean } {
  * beside them; the total lands with a bump against the DC. Only then,
  * and only where a verdict is allowed, does the colour arrive.
  */
-export function DieRoll({ d20, d20b, mod, dc, verdict }: Props) {
+export function DieRoll({ d20, d20b, mod, dc, verdict, onLanded }: Props) {
   const advantage = d20b !== null;
   const a = useTumble(d20);
   const b = useTumble(d20b ?? d20);
@@ -71,6 +73,10 @@ export function DieRoll({ d20, d20b, mod, dc, verdict }: Props) {
     if (verdictName === 'good') play('chime', 160);
     if (verdictName === 'bad') play('buzz', 160);
   }, [verdictName]);
+  React.useEffect(() => {
+    if (landed) onLanded?.(verdict);
+    // Once per landing; the callback's identity is not news.
+  }, [landed]);
 
   const die = (face: number, tumbling: boolean, index: number) => (
     <span

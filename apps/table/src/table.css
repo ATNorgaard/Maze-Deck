@@ -386,19 +386,24 @@
   line-height: 1;
 }
 
-/* ---------------- working an Obstacle ----------------
-   Laid over the blocker's own card (ObstacleWork). The layer itself
-   lets the pointer through; only what is on it takes clicks. */
-.t-work {
+/* ---------------- over a river card ----------------
+   SlotLayer lays a box exactly over a card for whatever the table asks
+   of it. The box lets the pointer through; only what is on it takes
+   clicks. Its contents sit at the card's foot. */
+.t-slotlayer {
   position: absolute;
   z-index: 2;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(2 * var(--md-u));
   padding: calc(3 * var(--md-u));
   pointer-events: none;
 }
-.t-work > * { pointer-events: auto; }
+.t-slotlayer > * { pointer-events: auto; }
+
+/* ---------------- working an Obstacle ---------------- */
 
 .t-work__open {
   background: var(--md-ink-900);
@@ -589,4 +594,291 @@
 .t-app:has(.t-world[data-live])::before {
   background: var(--md-ink-900);
   animation: none;
+}
+
+/* ============================================================
+   Deciding on the table (docs/overhaul.md, phase 4).
+   ============================================================ */
+
+/* The surface holds the fan over the river, so it is positioned. The
+   river's own children still measure against .t-river. */
+.t-surface { position: relative; }
+
+/* ---------------- cards a decision is about ----------------
+   They stand up out of the river: lifted, lit in their own colour. A
+   transform on the card only — the stage and SlotLayer measure the slot. */
+.t-river[data-raised~='0'] .md-river__slot:nth-child(1) article,
+.t-river[data-raised~='1'] .md-river__slot:nth-child(2) article,
+.t-river[data-raised~='2'] .md-river__slot:nth-child(3) article {
+  transform: translateY(calc(-3 * var(--md-u))) scale(1.03);
+  box-shadow: 0 calc(5 * var(--md-u)) calc(12 * var(--md-u)) rgba(0, 0, 0, .55),
+              0 0 calc(8 * var(--md-u)) calc(1 * var(--md-u)) var(--md-cat-glow, var(--md-cat-path-glow));
+}
+
+/* While a fan is up, the river steps back under it. */
+.t-river { transition: opacity 300ms ease; }
+.t-river[data-dim] { opacity: .22; }
+
+/* The buttons laid over a card need a ground of their own to read. */
+.t-decide .t-btn:not(.t-btn--primary) { background: var(--md-ink-900); }
+.t-decide__pair {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--md-u));
+}
+
+/* ---------------- the fan ----------------
+   Cards drawn off the deck, over the river (components/CardFan). */
+.t-fan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.t-fan__row { display: flex; align-items: center; }
+
+.t-fan__card {
+  --off: 0;
+  position: relative;
+  margin: 0 calc(-2 * var(--md-u));
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--md-card-radius);
+  cursor: pointer;
+  pointer-events: auto;
+  transform-origin: 50% 120%;
+  transform: rotate(calc(var(--off) * 5deg)) translateY(calc(var(--off) * var(--off) * 3 * var(--md-u)));
+  transition: transform 220ms cubic-bezier(.2, .7, .3, 1), filter 220ms ease;
+  filter: drop-shadow(0 calc(4 * var(--md-u)) calc(8 * var(--md-u)) rgba(0, 0, 0, .55));
+}
+.t-fan__card:hover,
+.t-fan__card:focus-visible {
+  z-index: 1;
+  transform: translateY(calc(-5 * var(--md-u)));
+  filter: drop-shadow(0 calc(6 * var(--md-u)) calc(12 * var(--md-u)) rgba(0, 0, 0, .6))
+          drop-shadow(0 0 calc(6 * var(--md-u)) var(--md-cat-path-glow));
+  outline: none;
+}
+
+/* ---------------- a card held off the deck ----------------
+   It's Elementary's chosen card, while its slot is chosen. */
+.t-surface__pile--deck { position: relative; }
+.t-held {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  transform: translate(calc(5 * var(--md-u)), calc(-9 * var(--md-u))) rotate(5deg);
+  filter: drop-shadow(0 calc(5 * var(--md-u)) calc(10 * var(--md-u)) rgba(0, 0, 0, .6))
+          drop-shadow(0 0 calc(5 * var(--md-u)) var(--md-cat-path-glow));
+  animation: tRise 260ms cubic-bezier(.2, .7, .3, 1) both;
+}
+
+/* ---------------- the prompt ----------------
+   What is being decided, where the hand would rise; the hand sinks
+   further to make room. */
+.t-handwrap { grid-area: hand; position: relative; }
+
+.t-hand[data-asking]:not([data-raised]) .t-hand__cards { transform: translateY(74%); }
+
+.t-ask {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  padding-top: calc(1 * var(--md-u));
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(calc(2 * var(--md-u)));
+  transition: opacity 300ms ease, transform 300ms cubic-bezier(.2, .7, .3, 1);
+}
+.t-ask[data-shown] { opacity: 1; transform: none; }
+.t-ask > * { pointer-events: auto; }
+.t-ask .t-kicker { display: block; color: var(--md-cat-path-300); }
+
+.t-ask__title {
+  margin: calc(1 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: calc(5 * var(--md-u));
+  letter-spacing: .04em;
+  color: var(--md-parchment-100);
+}
+
+.t-ask__note {
+  margin: calc(1 * var(--md-u)) auto 0;
+  max-width: calc(140 * var(--md-u));
+  font-size: 14px;
+  color: var(--md-parchment-300);
+}
+
+.t-ask__back { margin-top: calc(2 * var(--md-u)); }
+
+/* ---------------- the rail, choosing ----------------
+   Boost Morale: every seat lights, and a seat is the choice. */
+.t-rail[data-choosing] .md-seat { cursor: pointer; border-radius: calc(1.6 * var(--md-u)); }
+.t-rail[data-choosing] .md-seat__order {
+  box-shadow: 0 0 0 calc(0.6 * var(--md-u)) var(--md-cat-path-500), 0 0 calc(5 * var(--md-u)) var(--md-cat-path-glow);
+}
+.t-rail[data-choosing] .md-seat:hover .md-seat__order,
+.t-rail[data-choosing] .md-seat:focus-visible .md-seat__order {
+  background: var(--md-cat-path-700);
+  box-shadow: 0 0 0 calc(0.8 * var(--md-u)) var(--md-cat-path-300), 0 0 calc(8 * var(--md-u)) var(--md-cat-path-glow);
+}
+.t-rail[data-choosing] .md-seat:focus-visible {
+  outline: calc(0.5 * var(--md-u)) solid var(--md-cat-path-300);
+  outline-offset: calc(0.5 * var(--md-u));
+}
+
+/* ---------------- ghosts ---------------- */
+.t-ghost { position: fixed; z-index: 30; pointer-events: none; }
+
+/* ---------------- the roll, at the size of the moment ---------------- */
+.t-modal:has(.t-rollstage) { max-width: min(calc(260 * var(--md-u)), 100%); }
+
+.t-rollstage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: calc(8 * var(--md-u));
+  padding: calc(7 * var(--md-u));
+}
+
+.t-rollstage__card {
+  animation: tLift 520ms cubic-bezier(.34, 1.45, .64, 1) both;
+  filter: drop-shadow(0 calc(6 * var(--md-u)) calc(12 * var(--md-u)) rgba(0, 0, 0, .6));
+}
+@keyframes tLift {
+  from { opacity: 0; transform: translateY(calc(12 * var(--md-u))) rotate(-4deg) scale(.92); }
+  to   { opacity: 1; transform: none; }
+}
+
+.t-rollstage__body { min-width: 0; }
+
+.t-rollstage__who {
+  margin: calc(1 * var(--md-u)) 0 calc(4 * var(--md-u));
+  font-family: var(--md-font-display);
+  font-size: calc(6 * var(--md-u));
+  letter-spacing: .04em;
+  color: var(--md-parchment-100);
+}
+
+.t-rollstage .t-roll { justify-content: flex-start; }
+.t-rollstage .t-die {
+  width: calc(30 * var(--md-u));
+  height: calc(30 * var(--md-u));
+  border-width: 3px;
+  margin: calc(6 * var(--md-u));
+}
+.t-rollstage .t-die__face { font-size: calc(14 * var(--md-u)); }
+.t-rollstage .t-roll__total { font-size: calc(20 * var(--md-u)); }
+.t-rollstage .t-roll__mod { font-size: calc(7 * var(--md-u)); }
+.t-rollstage .t-verdict { text-align: left; }
+
+.t-rollstage__entry { margin-top: calc(3 * var(--md-u)); }
+.t-rollstage__entry .t-input { width: calc(24 * var(--md-u)); }
+.t-rollstage__go { margin-top: calc(4 * var(--md-u)); justify-content: flex-start; }
+
+/* The DC as a mark on a line, and the total running up to it — or past. */
+.t-gauge {
+  position: relative;
+  height: calc(2.4 * var(--md-u));
+  margin: calc(5 * var(--md-u)) 0 calc(8 * var(--md-u));
+  border-radius: 999px;
+  background: var(--md-ink-700);
+}
+.t-gauge__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--md-parchment-400);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.t-gauge[data-verdict='good'] .t-gauge__fill { background: var(--md-cat-obst-500); }
+.t-gauge[data-verdict='bad'] .t-gauge__fill { background: var(--md-cat-mons-500); }
+.t-rollstage:has(.t-roll[data-landed]) .t-gauge__fill {
+  transform: scaleX(1);
+  transition: transform 560ms cubic-bezier(.34, 1.45, .64, 1) 160ms;
+}
+.t-gauge__mark {
+  position: absolute;
+  top: calc(-1.8 * var(--md-u));
+  bottom: calc(-1.8 * var(--md-u));
+  width: 2px;
+  margin-left: -1px;
+  background: var(--md-parchment-100);
+}
+.t-gauge__label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, calc(1 * var(--md-u)));
+  white-space: nowrap;
+  font-family: var(--md-font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--md-parchment-300);
+}
+
+/* ---------------- the party is found ----------------
+   A takeover, not a box (components/Encounter): the threat light
+   floods in from the edges, the vista stays visible above, and the
+   title is set large. */
+.t-found {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background:
+    radial-gradient(ellipse 90% 75% at 50% 26%, transparent 30%,
+      color-mix(in srgb, var(--md-cat-mons-700) 50%, transparent) 72%,
+      color-mix(in srgb, var(--md-ink-900) 92%, transparent) 100%),
+    linear-gradient(180deg, transparent 32%, color-mix(in srgb, var(--md-ink-900) 88%, transparent) 64%);
+  animation: tFade 900ms ease-out both;
+}
+
+.t-found__content {
+  position: fixed;
+  z-index: 51;
+  left: 0;
+  right: 0;
+  bottom: calc(10 * var(--md-u));
+  width: min(calc(230 * var(--md-u)), calc(100vw - 10 * var(--md-u)));
+  margin: 0 auto;
+  text-align: center;
+  outline: none;
+  animation: tRise 600ms cubic-bezier(.2, .7, .3, 1) 250ms both;
+}
+
+.t-found__kicker { color: var(--md-cat-mons-300); }
+
+.t-found__title {
+  margin: calc(2 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: clamp(48px, 8vw, 112px);
+  line-height: 1;
+  letter-spacing: .04em;
+  color: var(--md-parchment-100);
+  text-shadow: 0 0 calc(10 * var(--md-u)) var(--md-cat-mons-glow);
+}
+
+.t-found__note { margin: calc(2 * var(--md-u)) auto 0; max-width: calc(160 * var(--md-u)); }
+
+.t-found__go {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(3 * var(--md-u));
+  margin-top: calc(6 * var(--md-u));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-found, .t-found__content, .t-held, .t-rollstage__card { animation: none; }
+  .t-ask, .t-fan__card, .t-river, .t-rollstage:has(.t-roll[data-landed]) .t-gauge__fill { transition: none; }
 }
