@@ -66,6 +66,19 @@ export const MOTION = {
   /** A Wanderer standing up. */
   stand: 700,
 
+  /* The opening of a crossing (phase 7), as moments from its start. The
+     name is up from the start until `openTitle`; the deck is riffled at
+     `openShuffle` for `riffle`; three cards are dealt from `openDeal`; the
+     party drop onto the rail from `openSeats`, one every `seatStagger`;
+     the hand rises at `openDone`. */
+  openTitle: 2700,
+  openShuffle: 700,
+  riffle: 900,
+  openDeal: 1700,
+  openSeats: 2500,
+  seatStagger: 140,
+  openDone: 3600,
+
   /* easings */
   settle: 'cubic-bezier(.2, .7, .3, 1)',
   overshoot: 'cubic-bezier(.34, 1.45, .64, 1)',

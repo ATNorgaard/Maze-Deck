@@ -1340,3 +1340,236 @@
   .t-fly[data-sig] .md-card, .t-dust > span, .t-glint::before, .t-beam__light { animation: none; }
   .t-dust, .t-glint, .t-beam { display: none; }
 }
+
+/* ============================================================
+   Ceremony (docs/overhaul.md, phase 7).
+   ============================================================ */
+
+/* ---------------- the opening ----------------
+   While `data-opening` is on the board, the river's cards are hidden
+   until the dealt card lands in each slot, the party wait above the
+   rail and drop onto it in initiative order, and the baton waits for
+   them. The timings are custom properties the board sets from MOTION.
+   Taking the attribute away (the opening done, or skipped) shows
+   everything at once. */
+.t-table[data-opening] .t-river .md-river__slot article {
+  animation: tOpenHidden 1ms step-end backwards;
+  animation-delay: calc(var(--t-open-land, 2200ms) + var(--k, 0) * var(--t-deal-stagger, 110ms));
+}
+.t-table[data-opening] .t-river .md-river__slot:nth-child(2) article { --k: 1; }
+.t-table[data-opening] .t-river .md-river__slot:nth-child(3) article { --k: 2; }
+@keyframes tOpenHidden { from { opacity: 0; } to { opacity: 0; } }
+
+.t-table[data-opening] .t-rail .md-seat {
+  animation: tSeatDrop 460ms cubic-bezier(.34, 1.45, .64, 1) backwards;
+  animation-delay: calc(var(--t-open-seats, 2500ms) + var(--i, 0) * var(--t-seat-stagger, 140ms));
+}
+@keyframes tSeatDrop {
+  from { opacity: 0; transform: translateY(-140%) scale(.85); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: none; }
+}
+.t-table[data-opening] .t-baton { opacity: 0; }
+
+/* The crossing's name over the horizon: up out of the dark, held, gone. */
+.t-opening {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 62%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  animation: tOpening var(--ms, 2700ms) cubic-bezier(.2, .7, .3, 1) both;
+}
+.t-opening__kicker { color: var(--md-cat-path-300); }
+.t-opening__title {
+  margin: calc(1.5 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: clamp(40px, 6vw, 96px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .06em;
+  color: var(--md-parchment-100);
+  text-shadow: 0 0 calc(10 * var(--md-u)) var(--md-cat-path-glow), 0 2px 18px rgba(0, 0, 0, .7);
+}
+.t-opening__flavour {
+  margin: calc(3 * var(--md-u)) auto 0;
+  max-width: calc(170 * var(--md-u));
+  font-size: 18px;
+  font-style: italic;
+  color: var(--md-parchment-300);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .8);
+}
+.t-opening__skip {
+  margin: calc(5 * var(--md-u)) 0 0;
+  font-family: var(--md-font-ui);
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--md-parchment-400);
+  opacity: .7;
+}
+@keyframes tOpening {
+  0%   { opacity: 0; transform: translateY(3%); }
+  20%  { opacity: 1; transform: none; }
+  78%  { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-2%); }
+}
+
+/* The deck riffled: its top cards split into two packets either side of
+   the pile, and come back together one by one. */
+.t-riffle {
+  position: fixed;
+  z-index: 38;
+  pointer-events: none;
+}
+.t-riffle__card {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  animation: var(--ms, 900ms) cubic-bezier(.4, .05, .35, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45));
+}
+.t-riffle__card[data-side='left'] { animation-name: tRiffleLeft; }
+.t-riffle__card[data-side='right'] { animation-name: tRiffleRight; }
+@keyframes tRiffleLeft {
+  0%   { transform: none; }
+  35%  { transform: translate(-58%, -6%) rotate(-9deg); }
+  60%  { transform: translate(-50%, -3%) rotate(-6deg); }
+  100% { transform: none; }
+}
+@keyframes tRiffleRight {
+  0%   { transform: none; }
+  35%  { transform: translate(58%, -6%) rotate(9deg); }
+  60%  { transform: translate(50%, -3%) rotate(6deg); }
+  100% { transform: none; }
+}
+
+/* ---------------- the crossing, told back ----------------
+   The end screen (components/Storyboard): how it ended, then every
+   scene read out, round by round, each with its picture, who took the
+   path, and what came of it when it got the party found. Wide, and
+   scrolls inside the dialog. */
+.t-modal:has(.t-story) { width: min(1180px, 100%); max-width: none; }
+
+.t-story {
+  border: 1px solid var(--md-cat-path-700);
+  background: var(--md-ink-800);
+  border-radius: calc(2.5 * var(--md-u));
+  padding: calc(6 * var(--md-u));
+}
+.t-story[data-outcome='lost'] { border-color: var(--md-cat-mons-700); }
+
+.t-story__head { text-align: center; }
+.t-story__title {
+  margin: calc(1.5 * var(--md-u)) 0 0;
+  font-family: var(--md-font-display);
+  font-size: clamp(30px, 3.6vw, 48px);
+  font-weight: 600;
+  letter-spacing: .05em;
+  color: var(--md-parchment-100);
+}
+.t-story__sum {
+  margin: calc(2 * var(--md-u)) 0 0;
+  font-size: 19px;
+  color: var(--md-parchment-200);
+}
+.t-story__go {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(3 * var(--md-u));
+  margin-top: calc(4 * var(--md-u));
+}
+
+.t-story__rounds {
+  list-style: none;
+  margin: calc(7 * var(--md-u)) 0 0;
+  padding: 0;
+  display: grid;
+  gap: calc(6 * var(--md-u));
+}
+.t-story__roundTitle {
+  margin: 0 0 calc(3 * var(--md-u));
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--md-u));
+  font-family: var(--md-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--md-cat-path-300);
+}
+.t-story__roundTitle::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--md-cat-path-700), transparent);
+}
+
+.t-story__scenes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(62 * var(--md-u)), 1fr));
+  gap: calc(4 * var(--md-u));
+}
+.t-story__scene {
+  min-width: 0;
+  text-align: left;
+  /* A long crossing is thirty pictures: draw them as they scroll in. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(80 * var(--md-u));
+}
+.t-story__pic {
+  aspect-ratio: 1.8;
+  border-radius: calc(1.5 * var(--md-u));
+  overflow: hidden;
+  background: var(--md-ink-900);
+  box-shadow: 0 0 0 1px var(--md-ink-700);
+}
+.t-story__pic > svg { display: block; width: 100%; height: 100%; }
+.t-story__card { margin: calc(2.5 * var(--md-u)) 0 0; display: block; }
+.t-story__scene[data-category='clear-path'] .t-story__card { color: var(--md-cat-path-300); }
+.t-story__scene[data-category='obstacle'] .t-story__card { color: var(--md-cat-obst-300); }
+.t-story__scene[data-category='wanderer'] .t-story__card { color: var(--md-cat-wand-300); }
+.t-story__scene[data-category='item'] .t-story__card { color: var(--md-cat-item-300); }
+.t-story__scene[data-category='monster'] .t-story__card { color: var(--md-cat-mons-300); }
+.t-story__scene[data-category='dead-end'] .t-story__card { color: var(--md-cat-dead-300); }
+.t-story__scene[data-category='trap'] .t-story__card { color: var(--md-cat-trap-300); }
+.t-story__text {
+  margin: calc(1 * var(--md-u)) 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--md-parchment-100);
+}
+.t-story__who {
+  margin: calc(1.5 * var(--md-u)) 0 0;
+  font-family: var(--md-font-ui);
+  font-size: 12px;
+  color: var(--md-parchment-400);
+}
+.t-story__fight {
+  margin: calc(1.5 * var(--md-u)) 0 0;
+  padding-left: calc(2 * var(--md-u));
+  border-left: 2px solid var(--md-cat-mons-500);
+  font-size: 13px;
+  color: var(--md-cat-mons-300);
+}
+.t-story__scene[data-fight='won'] .t-story__fight { border-color: var(--md-cat-obst-500); color: var(--md-cat-obst-300); }
+.t-story__empty { margin-top: calc(6 * var(--md-u)); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-table[data-opening] .t-river .md-river__slot article,
+  .t-table[data-opening] .t-rail .md-seat,
+  .t-opening, .t-riffle__card { animation: none; }
+}

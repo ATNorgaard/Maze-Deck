@@ -62,6 +62,9 @@ export function App() {
   const [asPlayer, setAsPlayer] = React.useState(false);
   const [previewBiome, setPreviewBiome] = React.useState<BiomeId | null>(null);
   const [board, setBoard] = React.useState<Board>(loadBoard);
+  // A crossing just started opens with its ceremony on the new board (phase
+  // 7); a resumed or reloaded one does not.
+  const [opening, setOpening] = React.useState<number | null>(null);
   const switchBoard = React.useCallback(() => {
     setBoard((was) => {
       const next: Board = was === 'table' ? 'session' : 'table';
@@ -183,6 +186,7 @@ export function App() {
       role: 'gm',
       create: runSetupFor(campaign),
     }));
+    setOpening(Date.now());
     setAsPlayer(false);
     setScreen('session');
   }, [attach, campaign]);
@@ -211,6 +215,7 @@ export function App() {
       ensureLocal(state);
       return { ...prev, run: state, prompt: null, chronicle: [], lastPrompt: {} };
     });
+    setOpening(Date.now());
     setAsPlayer(false);
     setScreen('session');
   }, [ensureLocal]);
@@ -274,8 +279,10 @@ export function App() {
             {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
             previewBiome={previewBiome}
             onPreviewBiome={setPreviewBiome}
-            onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
+            onExit={() => { setPreviewBiome(null); setOpening(null); setScreen('campaign'); }}
             onSwitchBoard={switchBoard}
+            opening={opening}
+            onOpened={() => setOpening(null)}
           />
         ) : (
           <SessionScreen

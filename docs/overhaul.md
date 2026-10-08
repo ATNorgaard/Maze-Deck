@@ -237,8 +237,8 @@ can be found and reverted alone.
 | 4 | Decide on the table: Wanderer, Scout, Swap, Consider and Boost in place; the roll restaged; the encounter as a takeover | L | 1, D3 | **done** — `world/4` |
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | **done** — `world/5` |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | **done** — `world/6` |
-| 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | next |
-| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | |
+| 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | **done** — `world/7` |
+| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | next |
 | 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | |
 | 10 | Retire the old board, re-measure, record what was decided along the way | S | all | |
 
@@ -1450,3 +1450,121 @@ all motion, which no headless frame shows.
 hand, and the signatures at the speed of play.
 
 **Commit:** `git log --grep world/6`.
+
+### world/7 — ceremony
+
+**Changed.**
+- **The opening.** A crossing just started, whether on one screen or
+  hosted, opens with its ceremony on the new board. `App` passes an
+  `opening` key on Start and on Host; a resumed or reloaded board does
+  not get one. The ceremony runs on MOTION's `open*` moments:
+
+  | From | What happens |
+  |---|---|
+  | 0 ms | The world starts in the dark and the setting lights up. The crossing's name rises over the horizon, with the setting's name above it and its flavour line below (`components/Opening.tsx`), and a low bell. |
+  | 700 ms | The deck is riffled: its top cards split into two packets either side of the pile and come back together, with the riffle sound. |
+  | 1700 ms | Three cards are dealt from the deck into the river, with the stage's own deal flights. Each slot's card is hidden until its flight lands. |
+  | 2500 ms | The party drop onto the rail one at a time, in initiative order. |
+  | 3600 ms | The hand rises, the baton appears, and focus goes to the first action. |
+
+  Any key or pointer ends it at once, with everything on the table, and
+  reduced motion never starts it. Screen readers are told the crossing
+  has begun.
+- **The world starts where it is asked to.** The renderer's first frame
+  jumps to the mood instead of easing in from nothing. That is what
+  lets the opening start in the dark, and a board reopened at one strike
+  is now dark from its first frame.
+- **The crossing, told back** (`components/Storyboard.tsx`,
+  `story.ts`). The end screen is now a storyboard. After feel/8's
+  ending (the river fanning open, or the light going out), it shows:
+  - how the crossing ended, and a summary in a line ("5 Clear Paths in
+    4 rounds; found once, and won");
+  - every scene the GM read out, round by round, each with its picture
+    (seeded by the entry, as the vista drew it), the setting's name for
+    the card in its colour, who took the path, and which path;
+  - what came of an encounter, shown on the Monster that caused it.
+
+  *Copy the recap* puts it all on the clipboard as plain text, to read
+  out or to keep for next session. A player's preview shows no scenes:
+  they are the GM's, until phase 8 shares them.
+- **`story.ts`** is the telling, as pure functions with tests (six of
+  them): the chronicle in order and in rounds, every encounter read off
+  the log's cues (a `found` line, then a Monster put out of the game, a
+  getaway, or the end) and given to the last scene drawn before it, the
+  summary clause, and the recap text.
+- **The vista no longer crossfades on mount.** It used to draw a first
+  picture at a guessed shape, measure its box, and fade to the right
+  one: two horizons overlaid, and the opening's title sat right over
+  them. The first picture now waits for the box, and simply appears.
+- **Scripts.**
+  - `capture-ceremony.cjs` (new) photographs the opening as frames,
+    skips one with a key, stages a crossing near its end and photographs
+    its storyboard, copies the recap and reads it back off the
+    clipboard, closes a run from the drawer, and starts one under
+    reduced motion. Each of those is a check.
+  - `measure-frames.cjs` skips the ceremony with a key in every row,
+    and has a row of the opening's own.
+
+**Design notes.**
+- **The opening is presentation only.** The run is dealt before it
+  starts; the ceremony hides the dealt cards and shows them arriving.
+  Nothing waits on it, and any input ends it.
+- **An encounter belongs to the scene before it.** The engine's
+  `found` line follows the reveal of the Monster that found them, so
+  the last scene drawn before that line is the one that caused it. No
+  new state was needed for that: the chronicle's keys carry the pick's
+  log line.
+- **The storyboard's actions are at the top.** The dialog focuses its
+  primary button, and a button at the foot of thirty pictures would
+  scroll the dialog to the end on open.
+
+**Broke / retried.**
+- **The storyboard dialog shrank to two columns** at 1600 wide: the
+  dialog takes its content's width, and an auto-fill grid asks for
+  little. It is given its full width now.
+- **The capture script's start button was ambiguous**: the threshold
+  has two *Start the crossing* buttons. It takes the first.
+
+**Verified** (headless Chromium, on the GPU).
+- **The opening**, as frames at 250, 950, 1950, 2750, 3150 and 3900 ms:
+  the name over a dark horizon, the riffle (six cards), the deal (three
+  flights) with the river hidden, the river shown and the seats
+  dropping, then all four seats down. At 3900 ms the ceremony was over,
+  the hand up and focus on the first action.
+- **Skipping.** A key at 700 ms ended it: the river and all four seats
+  were showing within 120 ms, and the hand was up.
+- **The storyboard**, on a staged crossing of seven scenes over three
+  rounds with an encounter won, plus the last Clear Path drawn live:
+  *The party is through*, "5 Clear Paths in 4 rounds; found once, and
+  won", 8 scenes in 4 rounds, 8 pictures, and the encounter on the
+  round-two Monster. The recap read back off the clipboard was correct.
+  A run closed from the drawer said *The run is closed*.
+- **A real crossing's storyboard**, at the end of a walk through the
+  undercity, with every scene drawn live and the setting's own card
+  names.
+- **Reduced motion.** No opening; the hand was up at once.
+- **Full crossings**, through the opening. New board, undercity: 218
+  reveal samples over 16 reveals, **0px**. Old board, frozen pass: 223
+  over 17, **0px**. No console errors.
+- **The vista's step** (phase 5) still plays (`capture-score.cjs`).
+- **The budget**, GPU, 4× CPU:
+
+  | | Main-thread task | Worst frame | Frames > 33 ms |
+  |---|---|---|---|
+  | The opening, 1600 × 1000, frozen pass | 0.53 s | 17 ms | 0 |
+  | The opening, 1600 × 1000, dungeon | 0.58 s | 17 ms | 0 |
+  | The opening, 390 × 844, dungeon | 0.53 s | 26 ms | 0 |
+  | Idle, world Full, 1600 × 1000 | 0.22–0.24 s | 17 ms | 0 |
+  | One turn, 1600 × 1000 | 1.34–1.54 s | 117–217 ms | 2–3 |
+
+  The opening's window starts at the click, so it includes mounting
+  the board, and drops no frames. Nothing on the turn path changed in
+  this phase, and idle and the turns sit inside phase 6's ranges. These
+  rows are a reference run, not an A/B.
+- `npm test` in `apps/table` (25; 6 new) and `npm run typecheck`
+  and `npm run build` are clean. The bundle grew 2.5 KB gzipped, and
+  the CSS 1.0 KB.
+
+**Not yet seen by the author.** The opening at full speed, with sound.
+
+**Commit:** `git log --grep world/7`.

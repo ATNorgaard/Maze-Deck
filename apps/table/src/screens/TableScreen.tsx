@@ -12,6 +12,7 @@ import { EventLog } from '../components/EventLog';
 import { Ghosts } from '../components/Ghosts';
 import type { Ghost } from '../components/Ghosts';
 import { Modal } from '../components/Modal';
+import { OpeningTitle, Riffle } from '../components/Opening';
 import { ObstacleWork } from '../components/ObstacleWork';
 import type { Suggestion } from '../components/ObstacleWork';
 import { RollStage } from '../components/RollStage';
@@ -28,6 +29,9 @@ import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
 import { useDiscardTrail } from '../stage/useDiscardTrail';
 import { useStage } from '../stage/useStage';
+import type { Deal } from '../stage/useStage';
+import { play } from '../stage/sound';
+import { Storyboard } from '../components/Storyboard';
 import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import { useTableFit } from '../useTableFit';
@@ -60,6 +64,10 @@ interface Props {
   onPreviewBiome?: (id: BiomeId | null) => void;
   /** Back to the old board (docs/overhaul.md, D7). */
   onSwitchBoard: () => void;
+  /** Set when a crossing has just been started: the opening plays (phase 7). */
+  opening?: number | null;
+  /** The opening has finished, or been skipped. */
+  onOpened?: () => void;
 }
 
 /** Where the light sits, as on the old board: the part the phase is about. */
@@ -125,7 +133,7 @@ function askFor(choice: Choice | null, swapPick: number | null): { title: string
  */
 export function TableScreen({
   view, biome, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
-  hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard,
+  hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard, opening: openingKey = null, onOpened,
 }: Props) {
   const stageRef = React.useRef<HTMLDivElement>(null);
   const sceneRef = React.useRef<HTMLDivElement>(null);
@@ -157,6 +165,74 @@ export function TableScreen({
     const t = window.setTimeout(() => setPicking(null), 2500);
     return () => window.clearTimeout(t);
   }, [picking, view.phase]);
+
+  /* ---------------- the opening ----------------
+     (docs/overhaul.md, phase 7.) A crossing just started opens in the
+     dark: its name over the setting's horizon as the light comes up, the
+     deck riffled, three cards dealt from it, the party dropping onto the
+     rail in initiative order, and then the hand rises. About four
+     seconds; any input ends it at once, and reduced motion never starts
+     it. A board opened any other way — a reload, a resume — does not. */
+  const [opening, setOpening] = React.useState(() => openingKey !== null && !reducedMotion());
+  const [dawn, setDawn] = React.useState(opening);
+  const [riffleAt, setRiffleAt] = React.useState<DOMRect | null>(null);
+  const [openDeals, setOpenDeals] = React.useState<Deal[]>([]);
+  const opened = React.useRef(onOpened);
+  opened.current = onOpened;
+  React.useEffect(() => {
+    if (openingKey !== null && !reducedMotion()) { setOpening(true); setDawn(true); }
+  }, [openingKey]);
+  React.useEffect(() => {
+    if (!opening) return undefined;
+    const timers: number[] = [];
+    const at = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
+    const end = () => {
+      setOpening(false);
+      setDawn(false);
+      setRiffleAt(null);
+      setOpenDeals([]);
+      opened.current?.();
+    };
+    at(120, () => setDawn(false));
+    at(150, () => play('bell'));
+    at(MOTION.openShuffle, () => {
+      const top = deckRef.current?.querySelector<HTMLElement>('article');
+      if (top) setRiffleAt(top.getBoundingClientRect());
+      play('riffle');
+    });
+    at(MOTION.openShuffle + MOTION.riffle, () => setRiffleAt(null));
+    // Dealt from the deck pile's top card into each slot, as the stage
+    // deals, measured as it starts so the layout has settled.
+    at(MOTION.openDeal, () => {
+      const top = deckRef.current?.querySelector<HTMLElement>('article');
+      const slots = riverRef.current?.querySelectorAll<HTMLElement>('.md-river__slot');
+      if (!top || !slots) return;
+      const from = top.getBoundingClientRect();
+      const box = { w: top.offsetWidth, h: top.offsetHeight };
+      const deals: Deal[] = [];
+      slots.forEach((el, i) => {
+        if (!el.querySelector('article')) return;
+        const to = el.getBoundingClientRect();
+        deals.push({
+          slot: i, rect: from, box, scale: box.w > 0 ? from.width / box.w : 1, size: fit.piles,
+          dx: to.left - from.left, dy: to.top - from.top, s: from.width > 0 ? to.width / from.width : 1,
+          delay: deals.length * MOTION.dealStagger,
+        });
+        play('slide', deals.length * MOTION.dealStagger);
+      });
+      setOpenDeals(deals);
+    });
+    at(MOTION.openDone, end);
+    // Any input ends it: the board is the GM's the moment they reach for it.
+    window.addEventListener('pointerdown', end, true);
+    window.addEventListener('keydown', end, true);
+    return () => {
+      for (const t of timers) window.clearTimeout(t);
+      window.removeEventListener('pointerdown', end, true);
+      window.removeEventListener('keydown', end, true);
+    };
+    // Once per opening; the board is read as it stands at each moment.
+  }, [opening]);
 
   const a = availableFor(view);
   const pending = view.pending;
@@ -257,7 +333,7 @@ export function TableScreen({
 
   // The hand is always on the table; it rises when an action is owed and
   // sinks to the edge otherwise. Sunk, it is inert, not merely dimmed.
-  const raised = view.phase === 'act';
+  const raised = view.phase === 'act' && !opening;
   React.useEffect(() => {
     if (handRef.current) handRef.current.inert = !raised;
   }, [raised]);
@@ -274,7 +350,7 @@ export function TableScreen({
         ? handRef.current?.querySelector<HTMLElement>('.md-action')
         : null;
     next?.focus({ preventScroll: true });
-  }, [view.phase]);
+  }, [view.phase, raised]);
 
   const ticker = view.log.filter((e) => e.visibility === 'all').slice(-2).reverse();
 
@@ -342,7 +418,8 @@ export function TableScreen({
     threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt) + (seeping ? 0.5 : 0),
     progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
     hush: found || near ? 1 : 0,
-    dim: shown.outcome === 'lost' ? 1 : 0,
+    // The opening starts in the dark and the setting lights up.
+    dim: shown.outcome === 'lost' ? 1 : dawn ? 0.9 : 0,
     bloom: shown.outcome === 'through' ? 1 : 0,
   };
   // The world's wash: a turned card's colour, or a roll's verdict as it lands.
@@ -374,6 +451,13 @@ export function TableScreen({
       className="t-table"
       data-shake={stage.active?.kind === 'strike' || stage.active?.kind === 'jam' || undefined}
       data-found={found || undefined}
+      data-opening={opening || undefined}
+      style={opening ? {
+        '--t-open-land': `${MOTION.openDeal + MOTION.deal}ms`,
+        '--t-open-seats': `${MOTION.openSeats}ms`,
+        '--t-seat-stagger': `${MOTION.seatStagger}ms`,
+        '--t-deal-stagger': `${MOTION.dealStagger}ms`,
+      } as React.CSSProperties : undefined}
       data-outcome={shown.outcome ?? undefined}
       data-focus={focus ?? undefined}
       data-chronicle={chronicle || undefined}
@@ -426,6 +510,8 @@ export function TableScreen({
           landscape, on a small laptop nothing at all. */}
       <div className="t-stage" ref={stageRef}>
       <Vista biome={biome} prompt={prompt} step={shown.progress} />
+      {opening ? <OpeningTitle biome={biome} runName={runName} /> : null}
+      <p className="t-sr" role="status">{opening ? `The crossing begins: ${runName}, in the ${biome.name.toLowerCase()}.` : ''}</p>
 
       {/* A new round, announced; it is drawn passing over the river. */}
       <p className="t-sr" role="status">{roundMark !== null ? `Round ${roundMark} begins.` : ''}</p>
@@ -620,6 +706,7 @@ export function TableScreen({
                   key={id}
                   name={s.name}
                   order={i + 1}
+                  style={{ '--i': i } as React.CSSProperties}
                   active={i === activeIdx && shown.phase !== 'over'}
                   {...(boosted ? { className: 't-seat--boosted' } : {})}
                   detail={[s.cls, boosted ? 'advantage' : null].filter(Boolean).join(' · ')}
@@ -677,7 +764,8 @@ export function TableScreen({
         </aside>
       ) : null}
 
-      <StageOverlay overlay={stage.overlay} deals={stage.deals} flights={stage.flights} size={fit.river} signatures />
+      {riffleAt ? <Riffle rect={riffleAt} size={fit.piles} /> : null}
+      <StageOverlay overlay={stage.overlay} deals={openDeals.length ? [...stage.deals, ...openDeals] : stage.deals} flights={stage.flights} size={fit.river} signatures />
       {beam ? (
         <div
           className="t-beam"
@@ -727,23 +815,10 @@ export function TableScreen({
 
       <Ghosts ghosts={ghosts} onDone={ghostLanded} />
 
+      {/* The crossing told back, once feel/8's ending has played (phase 7). */}
       {view.phase === 'over' && endingShown ? (
-        <Modal label="The run is closed">
-          <div className={`t-panel ${view.outcome === 'through' ? 't-panel--live' : 't-panel--bad'}`}>
-            <h2 className="t-panel__title">
-              {view.outcome === 'through' ? 'The party is through' : 'The run is closed'}
-            </h2>
-            <p className="t-note">
-              {view.outcome === 'through'
-                ? `${view.progress} Clear Paths in ${view.round} rounds. Start the scene on the far side.`
-                : 'Note where they got to, and pick it up from there.'}
-            </p>
-            <div className="t-row t-row--centre" style={{ marginTop: 'calc(4 * var(--md-u))' }}>
-              <button type="button" className="t-btn t-btn--primary" onClick={onExit}>
-                Back to the campaign
-              </button>
-            </div>
-          </div>
+        <Modal label="The crossing, told back">
+          <Storyboard view={view} biome={biome} runName={runName} scenes={scenes} onExit={onExit} />
         </Modal>
       ) : null}
 

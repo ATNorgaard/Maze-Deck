@@ -28,7 +28,8 @@
                              session. Phase 0's baseline was the old one.
        --world=auto          the new board's world layer: auto, high, low,
                              still or off (phase 3). `off` is the old ground.
-       --rows=idle,strike,floor,turn   which rows to measure (all by default)
+       --rows=idle,strike,floor,turn,opening   which rows to measure (all
+                             by default); the opening is the new board's
        --gpu                 draw WebGL on this machine's GPU. Without it
                              headless Chromium uses SwiftShader, software
                              GL, and a canvas's main-thread time is mostly
@@ -37,7 +38,10 @@
    Rows, per setting: idle as configured; idle at one strike, with the
    dark drawn in (phase 5); idle with nothing behind the
    table at all (world off, old ground stilled) — the floor anything
-   ambient is measured against; and one turn as configured.
+   ambient is measured against; on the new board, the opening of a
+   crossing, from its start (phase 7); and one turn as configured.
+   Every row but the opening's skips the ceremony with a key, as a GM
+   can.
 
    Prints a Markdown table, ready to paste into docs/overhaul.md.
 
@@ -65,11 +69,11 @@ const windowMs = Number(flag('window', '4000'));
 const board = flag('board', 'table');
 const world = flag('world', 'auto');
 const gpu = args.includes('--gpu');
-const rows = flag('rows', 'idle,strike,floor,turn').split(',');
+const rows = flag('rows', 'idle,strike,floor,turn,opening').split(',');
 
 const STILL = '.t-app::before { background: var(--md-ink-900) !important; animation: none !important; }';
 
-async function open(browser, biome, worldChoice = world, strikes = 0) {
+async function open(browser, biome, worldChoice = world, strikes = 0, ceremony = false) {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
   await page.goto(url);
   await page.evaluate(([b, w]) => {
@@ -85,7 +89,12 @@ async function open(browser, biome, worldChoice = world, strikes = 0) {
   if (await door.count()) await door.first().click();
   await page.waitForTimeout(300);
   await page.getByRole('button', { name: /Start the crossing/ }).first().click();
-  await page.waitForTimeout(1500);
+  // The new board opens a crossing with a ceremony (phase 7). Every row
+  // but the opening's own skips it, as a GM can, with a key.
+  if (ceremony) return page;
+  await page.waitForTimeout(200);
+  await page.keyboard.press('Shift');
+  await page.waitForTimeout(1300);
   if (strikes > 0) {
     // The saved run, with strikes on it, so the dark is drawn (phase 5).
     await page.evaluate((n) => {
@@ -167,6 +176,13 @@ const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFix
       await page.addStyleTag({ content: STILL });
       await page.waitForTimeout(300);
       console.log(row(`${biome}, idle, nothing behind`, await measure(page, windowMs)));
+      await page.close();
+    }
+
+    // The opening of a crossing, from the start button to the hand rising.
+    if (rows.includes('opening') && board === 'table') {
+      page = await open(browser, biome, world, 0, true);
+      console.log(row(`${biome}, the opening`, await measure(page, 4000)));
       await page.close();
     }
 

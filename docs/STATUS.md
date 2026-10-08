@@ -286,12 +286,28 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 7](overhaul.md#7-ceremony): ceremony.**
-- The opening: the crossing's name over the setting's horizon, the
-  shuffle, the deal, the party taking their places.
-- The chronicle at the end: the crossing told back as a storyboard of
-  its scenes. `campaign.chronicle` (phase 5) already keeps every scene
-  drawn, with its round and seat.
+**[The overhaul's phase 8](overhaul.md#8-windows): windows.** The
+player's phone gets:
+- the vista on every reveal;
+- the scene text, when the GM shares it (D1/O1: a GM-only `share` op
+  and a `scene` column on the room row, a migration);
+- the hand of six on its own turn;
+- a die to throw in manual roll mode;
+- a haptic for each beat;
+- the world layer at `low`.
+
+It is the largest phase left, and the first since phase 2 to touch the
+server and the database.
+
+Phase 7 (`world/7`) gave the crossing its ceremony:
+- a crossing started opens with its name over the setting's horizon,
+  the deck riffled, three cards dealt and the party dropping onto the
+  rail, in about four seconds that any key skips;
+- the end screen is the crossing told back: every scene round by round,
+  with its picture, who took the path, and what came of the encounters,
+  and a recap to copy for next session.
+
+`node scripts/capture-ceremony.cjs` photographs and checks both.
 
 Phase 6 (`world/6`) gave the cards weight:
 - the card under the pointer tilts, a sheen crosses a face-up card, and
@@ -316,7 +332,7 @@ Phase 5 (`world/5`) made the world keep score:
 `node scripts/capture-score.cjs` stages each of those moments and
 photographs it, because a walk only meets a jam when the deck deals one.
 
-Phases 1–6 still want the author's eyes, moving, on a real screen
+Phases 1–7 still want the author's eyes, moving, on a real screen
 (`cd apps/table && npm run dev`). Phase 5's dark and phase 6's tilt are
 mostly motion — eyes blinking, candles guttering, a card turning under
 the hand — that no headless frame shows.
@@ -333,8 +349,9 @@ the GM reads out has a picture, drawn live by `packages/art`), phase 3
 an *Atmosphere* setting in the GM drawer whose *Off* is the old ground),
 phase 4 (`world/4` — decisions made on the table, not in dialogs) and
 phase 5 (`world/5` — the route, the dark, round marks, the jam and the
-reshuffle) and phase 6 (`world/6` — cards with weight). Production serves
-`world/3`; `world/4` to `world/6` are on the branch only.
+reshuffle), phase 6 (`world/6` — cards with weight) and phase 7
+(`world/7` — the opening, and the crossing told back). Production serves
+`world/3`; `world/4` to `world/7` are on the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

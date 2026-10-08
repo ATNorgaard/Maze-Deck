@@ -354,6 +354,8 @@ export class WorldRenderer {
   private scale = 1;
   /** The constants need sending again (see `constants`). */
   private dirty = true;
+  /** No frame drawn yet: the first goes straight to the mood. */
+  private first = true;
 
   /* The mood as drawn, easing towards the mood as asked for. */
   private now = {
@@ -449,6 +451,10 @@ export class WorldRenderer {
   frame(time: number, dt: number, mood: Mood, air: boolean): void {
     const c = this.colors;
     if (!c) return;
+    // The first frame starts where it is asked to, rather than easing in
+    // from nothing: a board opened at one strike is already dark, and the
+    // opening of a crossing starts in the dark and lights up (phase 7).
+    if (this.first) { this.first = false; dt = Infinity; }
     const n = this.now;
     n.fx = ease(n.fx, mood.focus?.x ?? n.fx, dt, 0.9);
     n.fy = ease(n.fy, mood.focus?.y ?? n.fy, dt, 0.9);

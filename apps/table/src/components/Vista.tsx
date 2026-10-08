@@ -114,11 +114,20 @@ export function Vista({ biome, prompt, step = 0 }: Props) {
   const p = paramsFor(biome, vocab, prompt, box.aspect);
   const key = `${p.seed}|${p.category}|${box.aspect}`;
 
-  const [layers, setLayers] = React.useState<Layer[]>([{ key, p }]);
+  // No picture until the box is measured: the first one is composed for
+  // the box it will fill, and simply appears. Drawing one at a guessed
+  // shape first meant a crossfade between two horizons on every mount,
+  // which the opening's title sat over (phase 7).
+  const [layers, setLayers] = React.useState<Layer[]>([]);
   React.useEffect(() => {
-    setLayers((prev) => (prev[prev.length - 1]?.key === key ? prev : [...prev.slice(-1), { key, p }]));
+    if (!box.shown) return;
+    setLayers((prev) => (
+      prev.length === 0 ? [{ key, p }]
+        : prev[prev.length - 1]?.key === key ? prev
+          : [...prev.slice(-1), { key, p }]
+    ));
     // `key` stands for `p`.
-  }, [key]);
+  }, [key, box.shown]);
 
   // The old picture goes once the new one has covered it.
   React.useEffect(() => {
