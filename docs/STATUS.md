@@ -5,40 +5,48 @@ Rewritten at the end of every session. Coming in cold: read this, then
 [reference/canonical-rules.md](reference/canonical-rules.md). Before touching
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md).
 
-**Last updated:** 2026-10-09, with the overhaul finished (`world/10`).
+**Last updated:** 2026-10-09, with the overhaul finished (`world/10`) and live.
 
 ## Where we are
 
-**The game is built, and the overhaul is finished on its branch.** A GM runs
-a crossing on one screen or hosts a room that players join from their own
+**The game is built, and the overhaul is finished and live.** A GM runs a
+crossing on one screen or hosts a room that players join from their own
 phones. The server never tells any device what is in the deck that it should
 not know.
 
 | | What | Where |
 |---|---|---|
-| Live | The game through the overhaul's phase 3 (`world/3`) | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | Phases 4–10: decisions on the table, the world keeping score, cards with weight, the opening and the storyboard, phones as windows, each setting's bed of sound, one board | `overhaul`, 9 commits ahead of `main`, never pushed |
-| Database | The live `maze_sessions` table already has phase 8's `scene` column (run 2026-10-09) | Supabase, a project shared with other apps |
+| Live | The whole overhaul, `world/10` (`678673d`), shipped 2026-10-09 | <https://maze-deck-six.vercel.app>, from `main` |
+| Branch | `overhaul`: `main` plus this file's update, which rides along with the next ship | never pushed |
+| Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09) | Supabase, a project shared with other apps |
 
-**Shipping the branch is a fast-forward of `main` to `overhaul`**, which
-deploys (see [DEPLOY.md](DEPLOY.md)). It has not been done, because no one has
-yet looked at phases 4–10 on a real screen.
+**The ship was verified on the live site, read-only** (no room was created):
+- the served bundle carries the sound question, *Show the table*, the phone's
+  scene and throw, and the haptics, and has no trace of the old board;
+- `/api/session/view` answers an unknown code with 404 *No session with that
+  code*, and `/api/session/share` exists (an unknown op answers *No such
+  operation*);
+- a single-screen crossing on the GPU revealed 13 cards over 167 samples at
+  **0px**, with no console errors and no failed requests;
+- the threshold asks once about sound, and keeps the answer;
+- Supabase's schema-reload trigger (`pgrst_ddl_watch`) is enabled, so the
+  API sees the `scene` column.
+
+Not yet exercised live: a hosted room (creating one writes a row), so the
+`share` op has been proved only against `local-session.mjs`.
 
 ## Next single action
 
-**The author plays it.** On a real screen, with sound on, phones in hand:
+**The author plays it, live.** At <https://maze-deck-six.vercel.app>, on a
+real screen with sound on, and with a real phone or two in a hosted room:
+- the board in each setting (phases 4–7);
+- the bed (phase 9). The WAVs from `node scripts/capture-sound.cjs` in
+  `proof/sound/` are a way in first;
+- a phone joining by code: the vista, *Show the table*, the hand, the
+  throw in *Players roll their own*, the vibrations (phase 8).
 
-1. `cd apps/table && npm run dev`, then a crossing in each setting. Look at
-   the board (phases 4–7). Listen to the bed (phase 9); the WAVs from
-   `node scripts/capture-sound.cjs` in `proof/sound/` are a way in first.
-2. A hosted room with a real phone or two (phase 8). On this machine alone,
-   `node scripts/local-session.mjs --app` rehearses one against an in-memory
-   table, a second browser window standing in for the phone; it listens on
-   localhost only. A real phone has to reach the app, so it needs a
-   deployment of the branch (a preview, not `main`, which would ship it)
-   or a dev server opened to the local network. A preview talks to the live
-   `maze_sessions` table, like production does.
-3. Then decide: ship (fast-forward `main`), or say what to change.
+Then say what to change. Work goes on a branch, since a push to `main`
+deploys.
 
 Also waiting on the author: **D9**, a size step between `sm` and `md` for
 laptops with about 657px of viewport, which get `sm` today. It is a change to
@@ -166,7 +174,7 @@ this blocks anything (O8, D8).
 | M4 | Multiplayer, now on Vercel + Supabase | done |
 | M5 | Deck and print regeneration | done |
 | — | Biomes: six settings | done |
-| — | The overhaul, `world/0`–`world/10` | done on `overhaul`; live through `world/3` |
+| — | The overhaul, `world/0`–`world/10` | done, and live since 2026-10-09 |
 
 ## History
 

@@ -2052,3 +2052,15 @@ a real phone and real speakers. Shipping it is a fast-forward of `main` to
 this branch, as `world/3` was.
 
 **Commit:** `git log --grep world/10`.
+
+### Shipped — 2026-10-09
+
+`main` was fast-forwarded to `world/10` (`678673d`) and deployed. Before the
+push, a fresh checkout ran `vercel.json`'s install and build exactly, and
+typechecked the API. After it, Vercel's commit status reported the
+deployment complete, and the live site was checked read-only: the bundle
+carries phases 4–10 and nothing of the old board; the API answers; `share`
+exists; a single-screen crossing on the GPU revealed 13 cards at **0px**
+with no errors; the threshold asks once about sound; and Supabase's
+schema-reload trigger is on, so the API sees the `scene` column. No room
+was created, so a hosted game has not yet been played live.
