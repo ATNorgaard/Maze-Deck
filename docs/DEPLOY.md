@@ -70,9 +70,9 @@ project is shared with other apps, so nothing applies them automatically.
 through the Supabase MCP's `apply_migration` under the name in the file's
 header.
 
-| File | What it adds | What happens without it |
-|---|---|---|
-| `2026-10-09-maze_sessions_scene.sql` | A `scene` column (jsonb, at most 2 KB): the scene the GM has shown the table (DECISIONS O1, `world/8`) | Hosting and play work as before. *Show the table* answers *"Showing the table a scene needs the database migrated first"*, and phones show no scene text. |
+| File | What it adds | What happens without it | Run on the live project |
+|---|---|---|---|
+| `2026-10-09-maze_sessions_scene.sql` | A `scene` column (jsonb, at most 2 KB): the scene the GM has shown the table (DECISIONS O1, `world/8`) | Hosting and play work as before. *Show the table* answers *"Showing the table a scene needs the database migrated first"*, and phones show no scene text. | 2026-10-09, as `maze_sessions_scene` |
 
 Every migration so far is additive, and the code runs against the table as it
 was before each one, so the order does not matter: code deployed first just

@@ -238,7 +238,7 @@ can be found and reverted alone.
 | 5 | The world keeps score: the route, the dark, round marks, the jam, the reshuffle | M | 2, 3, D2 | **done** — `world/5` |
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | **done** — `world/6` |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | **done** — `world/7` |
-| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | **done** — `world/8`, except the migration on the live database |
+| 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | **done** — `world/8` |
 | 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | next |
 | 10 | Retire the old board, re-measure, record what was decided along the way | S | all | |
 
@@ -1592,8 +1592,9 @@ hand, and the signatures at the speed of play.
   and a new crossing in the room clears it.
 - **The migration** (`server/migrations/2026-10-09-maze_sessions_scene.sql`):
   the column, plus a constraint that it is an object of at most 2 KB.
-  **It has not been run on the live database**, which other apps share;
-  [DEPLOY.md](DEPLOY.md#migrations) says how. The authority checks for
+  It was run on the live database on 2026-10-09, after the commit, with
+  the author's go-ahead: other apps share that database, so it is never
+  run without one. [DEPLOY.md](DEPLOY.md#migrations) says how. The authority checks for
   the column before writing it. Without it, *Show the table* answers
   *"needs the database migrated first"*, and hosting and play are
   unchanged. So the code can ship first.
@@ -1732,7 +1733,6 @@ hand, and the signatures at the speed of play.
   drives the board, not a hosted phone.
 
 **Not yet seen by the author.** A real phone in a real room: its
-vibrations, the flick, Realtime instead of polling. And the migration,
-which is waiting on the author: it touches a database other apps share.
+vibrations, the flick, Realtime instead of polling.
 
 **Commit:** `git log --grep world/8`.

@@ -293,13 +293,13 @@ dungeon, crackle in the undercity, and so on. It moves with the mood:
 threat adds a low pulse and narrows the filter, the far side opens it up,
 and beats duck it. Same toggle as today; the threshold asks once (O6).
 
-**Waiting on the author: one migration.** Phase 8's
-`server/migrations/2026-10-09-maze_sessions_scene.sql` adds a `scene`
-column to `maze_sessions`. It has **not** been run, because the Supabase
-project is shared with other apps. Until it runs, *Show the table* says
-the database needs migrating and nothing else changes, so it can go
-before or after the next fast-forward of `main`
-([DEPLOY.md](DEPLOY.md#migrations)).
+**The live database is ready for phase 8.** Its migration
+(`server/migrations/2026-10-09-maze_sessions_scene.sql`, the `scene`
+column on `maze_sessions`) was run on 2026-10-09 with the author's
+go-ahead. Production still serves `world/3`, which ignores the column;
+*Show the table* works as soon as `main` fast-forwards past `world/8`.
+The Supabase project is shared with other apps, so a migration is never
+run there without asking ([DEPLOY.md](DEPLOY.md#migrations)).
 
 Phase 8 (`world/8`) made the phones windows onto the table:
 - the GM can show the table a scene, from the caption or for every
