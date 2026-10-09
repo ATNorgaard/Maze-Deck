@@ -185,7 +185,23 @@ export interface GameEvent {
    * device that missed the reveal itself (it polled either side of it)
    * still know a card turned, and which (docs/overhaul.md, phase 8).
    */
-  turned?: { slot: number; category: CardCategory };
+  turned?: Turned;
+}
+
+/** A card turned by a pick, as its log line records it (see GameEvent.turned). */
+export interface Turned {
+  slot: number;
+  category: CardCategory;
+  /**
+   * Who took the path, the round, and the Clear Paths gained before this
+   * card: what the GM's chronicle records with the card's scene, so a GM
+   * whose device catches up after the reveal records them as they were,
+   * not as they are by then. Absent on lines written before they were
+   * added (world/10 and earlier).
+   */
+  seatId?: string;
+  round?: number;
+  progress?: number;
 }
 
 export type Outcome = 'through' | 'lost';

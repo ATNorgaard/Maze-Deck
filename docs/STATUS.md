@@ -144,10 +144,9 @@ the commit before it, measured in the same session, alternating.
   `check-deck-parity.mjs` fails if they disagree.
 - **`--md-u` is a millimetre.** Add a size step rather than change the base.
 - **On the polling fallback** (a room without Realtime), a client that misses
-  a reveal's version plays no flip for it, and the GM draws no scene for a
-  player's pick that resolved between two of its polls. With Realtime on,
-  neither happens. The `turned` mark is the way to fix the second
-  ([overhaul.md](overhaul.md), `world/10`).
+  a reveal's version plays no flip for it. With Realtime on, it does not
+  happen. The GM's scenes no longer depend on catching the reveal: they are
+  drawn off the log's `turned` marks (`apps/table/src/picks.ts`).
 - **The Vercel token cannot list deployments** (403). Watch a deploy through
   the commit status Vercel posts on GitHub.
 - `docs/BUILD-PLAN.md` predates the design interview; where it disagrees with

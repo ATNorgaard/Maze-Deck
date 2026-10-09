@@ -2064,3 +2064,45 @@ exists; a single-screen crossing on the GPU revealed 13 cards at **0px**
 with no errors; the threshold asks once about sound; and Supabase's
 schema-reload trigger is on, so the API sees the `scene` column. No room
 was created, so a hosted game has not yet been played live.
+
+### After the ship — the GM's scenes on the polling fallback
+
+`world/10` left one known gap: the GM's chronicle drew a card's scene only
+if the GM's own device saw the reveal. On the polling fallback (a room
+without Realtime), a player's pick can turn, resolve and move on between
+two of the GM's polls (a reveal is held 1.8 s; a poll comes every 6 s), and
+that card got no scene: nothing on the caption, nothing to show the table,
+nothing in the storyboard.
+
+**Changed.**
+- **The scenes are drawn off the log** (`apps/table/src/picks.ts`, new).
+  `undrawn(view, chronicle)` gives the cards turned that have no scene yet,
+  oldest first. That is every one after the newest scene, so a device that
+  missed two reveals catches up on both. A device meeting a crossing
+  already under way, with an empty chronicle, gets only the latest, so a
+  storyboard never fills with scenes nobody read out. `App.tsx` draws from
+  it instead of from the reveal.
+- **The `turned` mark records who, when and how far:** the picker's seat,
+  the round and the progress before the card, as they were at the pick.
+  A GM catching up after the reveal sees the turn already passed and, for
+  a Clear Path, its progress already counted. Without these, a late scene
+  would credit the wrong seat and stand at the wrong place on the route.
+  The fields are optional in the type (`Turned`). A mark written before
+  them is completed from the view, as before, and a log with no marks at
+  all (a crossing begun before `world/8`) still draws off the reveal.
+- **Tests:** ten for `picks.ts`, and the rules test for `turned` checks the
+  new fields. App tests 41, rules tests 74.
+- **`capture-phone.cjs`** checks that the GM's chronicle gains a scene for
+  the phone's pick, credited to the phone's seat.
+
+**Verified.**
+- **Before the fix**, the new check failed. The phone's pick turned a card
+  on the GM's board, but the GM's chronicle ended at an earlier card
+  (`21:0`).
+- **After it**, two runs passed all 18 checks. One pick was an Obstacle,
+  which resolves inside the hold, and the GM's scene for it was credited
+  to the phone's seat. The old fallback would have credited the next seat.
+- **On a single screen:** 12 cards turned and 12 scenes, each matching its
+  mark's seat, round and progress, with no duplicates.
+- **`capture-walk`** (10 reveals at 0px), **`capture-ceremony`** (10 checks,
+  the storyboard among them) and **`capture-score`** are clean.

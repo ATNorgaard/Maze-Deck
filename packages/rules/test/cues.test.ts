@@ -89,10 +89,13 @@ describe('cues', () => {
   });
 
   it('marks every pick with the card it turned, for everyone', () => {
-    const g = atPick('turned', ['item', 'obstacle', 'clear-path']);
+    const g = atPick('turned', ['item', 'obstacle', 'clear-path'], { progress: 2, round: 3 });
+    const picker = g.order[g.turn % g.order.length] as string;
     const a = apply(g, { type: 'PICK_SLOT', index: 1 });
     const line = a.state.log[a.state.log.length - 1] as GameEvent;
-    expect(line.turned).toEqual({ slot: 1, category: 'obstacle' });
+    // Who took it, and when: as they were at the pick, for a GM who
+    // catches up after the reveal has moved on.
+    expect(line.turned).toEqual({ slot: 1, category: 'obstacle', seatId: picker, round: 3, progress: 2 });
     expect(line.visibility).toBe('all');
 
     // Still there once the reveal has moved on: a device that polled
@@ -100,7 +103,7 @@ describe('cues', () => {
     const b = apply(a.state, { type: 'ADVANCE_REVEAL' });
     const seat = b.state.order[0] as string;
     const seen = view(b.state, { role: 'player', seatId: seat }).log.find((e) => e.n === line.n);
-    expect(seen?.turned).toEqual({ slot: 1, category: 'obstacle' });
+    expect(seen?.turned).toEqual({ slot: 1, category: 'obstacle', seatId: picker, round: 3, progress: 2 });
 
     // Only picks: over a whole run, one turned line per card picked.
     const { final } = playOut(makeRun('turned-run'), 'turned-run');

@@ -9,6 +9,7 @@ import type { BiomeId } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign, ChronicleEntry } from './campaign';
 import { loadIdentity, rememberSeat } from './player';
+import { picksIn, undrawn } from './picks';
 import { drawPrompt } from './tables';
 import { LocalSession } from './transport/local';
 import { RemoteSession } from './transport/remote';
@@ -95,34 +96,38 @@ export function App() {
 
   /* ---------------- the scenario prompt ---------------- */
 
-  // One draw per reveal, and every draw kept for the run in the chronicle:
-  // a Clear Path's scene stands on the route as its landmark. A reveal
-  // already drawn for (the page reloaded mid-reveal) is read back, not
-  // drawn again.
+  // One draw per card turned, and every draw kept for the run in the
+  // chronicle: a Clear Path's scene stands on the route as its landmark.
+  // Read off the log rather than the reveal (picks.ts), so a GM whose
+  // device polls and misses a player's reveal still gets its scene, with
+  // who took the path and when as they were. A card already drawn for (the
+  // page reloaded) is read back, not drawn again.
   const shownView = snapshot?.view ?? null;
-  const revealed = shownView?.revealed ?? null;
-  const pickLine = shownView?.log[shownView.log.length - 1]?.n ?? 0;
-  const revealKey = revealed ? `${pickLine}:${revealed.slot}` : '';
+  const picks = React.useMemo(() => (shownView ? picksIn(shownView) : []), [shownView]);
+  const latestPick = picks[picks.length - 1]?.key ?? '';
   React.useEffect(() => {
-    if (!revealKey || !revealed || !shownView) return;
-    const { category } = revealed;
-    const round = shownView.round;
-    const progress = shownView.progress;
-    const seatId = shownView.order[shownView.turn % Math.max(1, shownView.order.length)] ?? null;
+    if (!shownView || !latestPick) return;
     setCampaign((prev) => {
-      const known = prev.chronicle.find((e) => e.key === revealKey);
-      if (known) return prev.prompt?.entryId === known.entryId ? prev : { ...prev, prompt: known };
-      const drawn = drawPrompt(tablesFor(prev), category, prev.lastPrompt[category]);
-      if (!drawn) return prev;
-      return {
-        ...prev,
-        prompt: drawn,
-        chronicle: [...prev.chronicle, { ...drawn, key: revealKey, round, seatId, progress }],
-        lastPrompt: { ...prev.lastPrompt, [category]: drawn.entryId },
-      };
+      const due = undrawn(shownView, prev.chronicle);
+      if (!due.length) {
+        const known = prev.chronicle.find((e) => e.key === latestPick);
+        return known && prev.prompt?.entryId !== known.entryId ? { ...prev, prompt: known } : prev;
+      }
+      let next = prev;
+      for (const pick of due) {
+        const drawn = drawPrompt(tablesFor(next), pick.category, next.lastPrompt[pick.category]);
+        if (!drawn) continue;
+        next = {
+          ...next,
+          prompt: drawn,
+          chronicle: [...next.chronicle, { ...drawn, key: pick.key, round: pick.round, seatId: pick.seatId, progress: pick.progress }],
+          lastPrompt: { ...next.lastPrompt, [pick.category]: drawn.entryId },
+        };
+      }
+      return next;
     });
-    // Once per reveal; the view is read as it stands then.
-  }, [revealKey]);
+    // Once per card turned; the view is read as it stands then.
+  }, [latestPick]);
 
   /* ---------------- a player, joining ---------------- */
 

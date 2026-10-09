@@ -547,7 +547,7 @@ function revealPick(g: GameState, events: GameEvent[], index: number): void {
 
   const line = push(g, events, 'card', 'all',
     `${activeSeat(g).name} takes the ${positionName(index)} path — ${getCategory(category).title}.`);
-  line.turned = { slot: index, category };
+  line.turned = { slot: index, category, seatId: activeSeat(g).id, round: g.round, progress: g.progress };
 }
 
 function resolveRevealed(g: GameState, events: GameEvent[]): void {

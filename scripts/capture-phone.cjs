@@ -334,6 +334,11 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
         document.querySelector('.t-surface__pile--discard article')?.dataset.category ?? '-',
       ].join(' | '));
       const before = await table();
+      const phoneScenes = await gm.evaluate((name) => {
+        const c = JSON.parse(localStorage.getItem('mazedeck.campaign.v1') || '{}');
+        const id = (c.roster || []).find((ch) => (ch.name.trim() || 'Unnamed') === name)?.id;
+        return (c.chronicle || []).filter((e) => e.seatId === id).length;
+      }, seatName);
       // A face-down card: a blocker left face up from an earlier turn is not a path to take.
       const pick = () => phone.locator('.t-river[data-pickable] .md-river__slot article.md-card--back').first().tap();
       if (measuring) await measure('The phone, its own pick', 5000, pick);
@@ -346,6 +351,19 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
       log(`the GM's table before the pick: ${before}`);
       log(`and after: ${await table()}`);
       check(turned, 'the phone\'s pick turns the card on the GM\'s board');
+      // And the GM has its scene, credited to the phone's seat, though the
+      // GM's client polls and the reveal is held for under two seconds.
+      const credited = await until(gm, ([name, had]) => {
+        const c = JSON.parse(localStorage.getItem('mazedeck.campaign.v1') || '{}');
+        const id = (c.roster || []).find((ch) => (ch.name.trim() || 'Unnamed') === name)?.id;
+        return (c.chronicle || []).filter((e) => e.seatId === id).length > had;
+      }, 12000, [seatName, phoneScenes]);
+      const lastScene = await gm.evaluate(() => {
+        const c = JSON.parse(localStorage.getItem('mazedeck.campaign.v1') || '{}');
+        const e = (c.chronicle || []).slice(-1)[0];
+        return e ? `${e.key}, round ${e.round}, ${e.category}` : 'none';
+      });
+      check(credited, `the GM's chronicle has a scene for the phone's pick, credited to it (latest: ${lastScene})`);
       await phone.waitForTimeout(1500);
       await shot(phone, 'phone-5-picked');
       ownTurn = true;

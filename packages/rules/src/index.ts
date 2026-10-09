@@ -47,4 +47,5 @@ export type {
   RunConfig,
   Seat,
   Slot,
+  Turned,
 } from './types.js';
