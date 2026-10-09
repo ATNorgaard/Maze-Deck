@@ -10,7 +10,7 @@ interface Props {
   /** Cards in a beat that moves several at once. */
   flights?: Flight[];
   size: CardSize;
-  /** The new board's reveal signatures, one per category (phase 6). */
+  /** The board's reveal signatures, one per category (phase 6). A phone does without. */
   signatures?: boolean;
 }
 

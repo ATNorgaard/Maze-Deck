@@ -262,7 +262,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, scene, o
 
         {/* River and piles scale as one block, so a pile is never drawn
             larger than the paths being chosen between. */}
-        <ScaleToFit className="t-play__fit">
+        <ScaleToFit className="t-phone__fit">
           <div
             className="t-river"
             ref={riverRef}

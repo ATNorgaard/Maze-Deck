@@ -252,7 +252,7 @@ const VOICES: Record<Voice, (c: AudioContext, at: number) => void> = {
  * belongs to its end (the card landing on the discard) is delayed by
  * the beat's own length.
  *
- * With the new board's signatures (phase 6) a reveal also sounds like
+ * With the board's signatures (phase 6) a reveal also sounds like
  * what turned up, and the Monster's growl moves from its strike to its
  * reveal, where the red seeps in; the strike that follows is a blow.
  */

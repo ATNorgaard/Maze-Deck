@@ -24,7 +24,6 @@
        --frames=2            how many reveals to photograph as frames
        --turns=40            give up after this many steps
        --still               paint the ground still, for comparing
-       --board=table         which GM board: table (the new one) or session
        --world=auto          the new board's world layer: auto, high, low, still, off
        --gpu                 draw WebGL on this machine's GPU, not SwiftShader
 
@@ -54,7 +53,6 @@ const biome = flag('biome', 'dungeon');
 const frameReveals = Number(flag('frames', '2'));
 const maxTurns = Number(flag('turns', '40'));
 const still = args.includes('--still');
-const board = flag('board', 'table');
 const world = flag('world', 'auto');
 const gpu = args.includes('--gpu');
 fs.mkdirSync(out, { recursive: true });
@@ -86,13 +84,12 @@ const revealOffset = (page) => page.evaluate(() => {
 });
 
 const state = (page) => page.evaluate(() => ({
-  // The old board is .t-board, the new one .t-table (docs/overhaul.md, phase 1).
-  focus: document.querySelector('.t-board, .t-table')?.dataset.focus ?? '-',
+  focus: document.querySelector('.t-table')?.dataset.focus ?? '-',
   // The new board's encounter is a takeover, not a panel (phase 4).
   modal: (document.querySelector('.t-modal .t-panel__title') ?? document.querySelector('.t-found__title'))?.textContent ?? '',
   // ...and its decisions are made in place, under a prompt.
   ask: document.querySelector('.t-ask[data-shown] .t-ask__title')?.textContent ?? '',
-  outcome: document.querySelector('.t-board, .t-table')?.dataset.outcome ?? '',
+  outcome: document.querySelector('.t-table')?.dataset.outcome ?? '',
   river: [...document.querySelectorAll('.md-river__slot')]
     .map((s) => s.querySelector('article')?.dataset.category ?? (s.querySelector('.md-card--back') ? 'back' : '·'))
     .join('/'),
@@ -134,12 +131,11 @@ const state = (page) => page.evaluate(() => ({
 
   // A fresh visitor: no campaign, no run.
   await page.goto(url);
-  await page.evaluate(([b, w]) => {
+  await page.evaluate((w) => {
     localStorage.clear();
     localStorage.setItem('mazedeck.sound', 'off'); // the threshold's question, answered
-    localStorage.setItem('mazedeck.board', b);
     localStorage.setItem('mazedeck.world', w);
-  }, [board, world]);
+  }, world);
   await page.goto(url);
   await page.waitForTimeout(1000);
   await shot('landing');

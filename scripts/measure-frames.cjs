@@ -24,12 +24,10 @@
        --dpr=3               device pixels per CSS pixel; 3 is a phone, and
                              a desktop size wants 1 or 2
        --window=4000         ms measured per row
-       --board=table         which GM board: table (the new one) or
-                             session. Phase 0's baseline was the old one.
-       --world=auto          the new board's world layer: auto, high, low,
-                             still or off (phase 3). `off` is the old ground.
+       --world=auto          the world layer: auto, high, low, still or off
+                             (phase 3). `off` is the old ground.
        --rows=idle,strike,floor,turn,opening   which rows to measure (all
-                             by default); the opening is the new board's
+                             by default)
        --sound               sound on, so the setting's bed plays (phase 9);
                              answered off otherwise
        --gpu                 draw WebGL on this machine's GPU. Without it
@@ -40,8 +38,9 @@
    Rows, per setting: idle as configured; idle at one strike, with the
    dark drawn in (phase 5); idle with nothing behind the
    table at all (world off, old ground stilled) — the floor anything
-   ambient is measured against; on the new board, the opening of a
-   crossing, from its start (phase 7); and one turn as configured.
+   ambient is measured against; the opening of a crossing, from its
+   start (phase 7); and one turn as configured. (Phase 0's baseline was
+   the old board, retired in phase 10.)
    Every row but the opening's skips the ceremony with a key, as a GM
    can.
 
@@ -68,7 +67,6 @@ const cpu = Number(flag('cpu', '4'));
 const [W, H] = flag('size', '390x844').split('x').map(Number);
 const dpr = Number(flag('dpr', '3'));
 const windowMs = Number(flag('window', '4000'));
-const board = flag('board', 'table');
 const world = flag('world', 'auto');
 const gpu = args.includes('--gpu');
 const sound = args.includes('--sound');
@@ -79,12 +77,11 @@ const STILL = '.t-app::before { background: var(--md-ink-900) !important; animat
 async function open(browser, biome, worldChoice = world, strikes = 0, ceremony = false) {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
   await page.goto(url);
-  await page.evaluate(([b, w, s]) => {
+  await page.evaluate(([w, s]) => {
     localStorage.clear();
-    localStorage.setItem('mazedeck.board', b);
     localStorage.setItem('mazedeck.world', w);
     localStorage.setItem('mazedeck.sound', s ? 'on' : 'off');
-  }, [board, worldChoice, sound]);
+  }, [worldChoice, sound]);
   await page.goto(url);
   await page.waitForTimeout(800);
   await page.getByRole('button', { name: /Set up a crossing/ }).first().click();
@@ -93,7 +90,7 @@ async function open(browser, biome, worldChoice = world, strikes = 0, ceremony =
   if (await door.count()) await door.first().click();
   await page.waitForTimeout(300);
   await page.getByRole('button', { name: /Start the crossing/ }).first().click();
-  // The new board opens a crossing with a ceremony (phase 7). Every row
+  // The board opens a crossing with a ceremony (phase 7). Every row
   // but the opening's own skips it, as a GM can, with a key.
   if (ceremony) return page;
   await page.waitForTimeout(200);
@@ -158,7 +155,7 @@ const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFix
   const browser = await chromium.launch({
     args: [...(gpu ? ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu'] : []), '--autoplay-policy=no-user-gesture-required'],
   });
-  console.log(`${board} board, world ${world}${gpu ? ', real GPU' : ', software GL'}${sound ? ', sound on' : ''}, ${W}×${H} at ${dpr}x, ${cpu}× CPU, ${windowMs} ms a row\n`);
+  console.log(`World ${world}${gpu ? ', real GPU' : ', software GL'}${sound ? ', sound on' : ''}, ${W}×${H} at ${dpr}x, ${cpu}× CPU, ${windowMs} ms a row\n`);
   console.log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
   console.log('|---|---|---|---|---|---|---|');
   for (const biome of biomes) {
@@ -186,7 +183,7 @@ const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFix
     }
 
     // The opening of a crossing, from the start button to the hand rising.
-    if (rows.includes('opening') && board === 'table') {
+    if (rows.includes('opening')) {
       page = await open(browser, biome, world, 0, true);
       console.log(row(`${biome}, the opening`, await measure(page, 4000)));
       await page.close();

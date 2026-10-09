@@ -17,8 +17,6 @@
        --only=route,jam      the scenes to stage; default all of them:
                              route, round, jam, reshuffle, found, dark
        --world=high          the world layer; `still` for software GL
-       --board=table         or session: the old board shares the stage, so
-                             its jam and reshuffle fly too
        --gpu                 draw WebGL on this machine's GPU
        --reduced             ask for reduced motion: every beat is a cut, so
                              only what is not motion is expected — the
@@ -59,7 +57,6 @@ const url = flag('url', 'http://localhost:5180');
 const [W, H] = flag('size', '1600x1000').split('x').map(Number);
 const biome = flag('biome', 'dungeon');
 const world = flag('world', 'high');
-const boardName = flag('board', 'table');
 const gpu = args.includes('--gpu');
 const reduced = args.includes('--reduced');
 const ALL = ['route', 'round', 'jam', 'reshuffle', 'found', 'dark'];
@@ -188,14 +185,13 @@ const board = (page) => page.evaluate(() => ({
     const scene = SCENES[name];
     if (!scene) { log(`?? no scene "${name}"`); failed = true; continue; }
 
-    // A fresh crossing, on the new board.
+    // A fresh crossing.
     await page.goto(url);
-    await page.evaluate(([w, b]) => {
+    await page.evaluate((w) => {
       localStorage.clear();
       localStorage.setItem('mazedeck.sound', 'off'); // the threshold's question, answered
-      localStorage.setItem('mazedeck.board', b);
       localStorage.setItem('mazedeck.world', w);
-    }, [world, boardName]);
+    }, world);
     await page.goto(url);
     await page.waitForTimeout(600);
     await click(page.getByRole('button', { name: /Set up a crossing/ }));

@@ -58,8 +58,31 @@ Taken 2026-10-07, every one as recommended in
 | O4 | **A WebGL2 canvas replaces the SMIL grounds as the default ambient layer**, with quality tiers and the still picture as the fallback. No dependency. |
 | O5 | **`packages/art`** holds the generators, shared by the atelier and the table, aliased to source. `packages/ui` and the design-sync stay out of it. |
 | O6 | **Sound stays off by default, and the threshold asks once.** *Delivered in `world/9`: a card at the threshold's foot, the first time on a device; either answer is kept. The one switch covers the voices and each setting's bed.* |
-| O7 | **The new board is built beside the old**, behind a toggle, and the old one is retired at the end. |
+| O7 | **The new board is built beside the old**, behind a toggle, and the old one is retired at the end. *Retired in `world/10` (W1).* |
 | O8 | **No rules change comes with the overhaul.** Whether a failed check should cost something stays a separate decision ([reference/balance.md](reference/balance.md)). |
+
+## Decided while building the overhaul
+
+Taken during phases 1–10 and recorded in [overhaul.md](overhaul.md)'s log;
+gathered here in phase 10. W2 and W3 are the shapes the plan named but left
+to the build.
+
+| # | Decision |
+|---|---|
+| W1 | **One board.** `TableScreen` is the GM's board. The old board (`SessionScreen`, its `CheckPanel` and its CSS) is gone, and with it the per-device board choice: a stored `mazedeck.board` is ignored (`world/10`). |
+| W2 | **`packages/art`, as built:** seeded randomness (FNV-1a seeds, mulberry32 streams, one salt per purpose so streams never reshuffle each other), each setting's vocabulary, the styles, and the scene generator (`SceneArt`). It is pure: React only for the SVG it returns, and the palette read off the page's CSS. The table draws the vista, the route's landmarks and the storyboard from it at runtime; the atelier draws on its benches with the same code; `scripts/bake-art.cjs` bakes the card backs and their depth layers from it. |
+| W3 | **The room's `scene` column, as built:** `jsonb`, nullable, at most 2 KB by constraint, holding `{key, category, entryId, text}`. Only the GM-only `share` op writes it, and only a scene whose key names a pick in the run's public log and the card that pick turned (W4), with 1–600 characters of text. A repeat writes nothing, `null` takes it down, and a new crossing clears it. It travels beside the view, never inside it. The authority checks for the column, so code can ship before the migration (`world/8`). |
+| W4 | **A second additive mark on the log: `turned`** on a pick's line, naming the slot and the card. It is public, because the card is face up for everyone. Any client can tell a card turned without catching the reveal phase, and the authority can check a shown scene against its card (`world/8`). |
+| W5 | **Schema changes are dated SQL files in `server/migrations/`**, run by hand, and only with the author's go-ahead: the Supabase project is shared with other apps. Each is additive, the code feature-detects it, and [DEPLOY.md](DEPLOY.md#migrations) records when each ran. |
+| W6 | **A hosted game is rehearsed without the hosted half.** `scripts/local-session.mjs` runs the real authority against an in-memory table; nothing touches the live database to be tested (`world/8`). |
+| W7 | **A phone's throw is ceremony.** Its number never leaves the phone; the GM types in the roll the room acts on. A phone never shows a verdict, which is the GM's to give (`world/8`). |
+| W8 | **One mood, many layers.** The world layer, the setting's bed and the phone's haptics all follow one mood, taken from the presented view, so they never disagree. The world has tiers (high, low, still; *Off* is the old animated ground). *Auto* starts low on a coarse pointer or a machine with few cores, and steps down if frames run long (`world/3`, `world/8`, `world/9`). |
+| W9 | **Haptics are on by default** where the device has them, with a toggle each device remembers. Sound stays off by default (O6) (`world/8`). |
+
+Still open from the build: **D9**, a size step between `sm` and `md` for
+laptops with about 657px of viewport. It is a change to `packages/ui` and its
+design-sync, so it is the author's call
+([overhaul.md](overhaul.md#d9--for-the-author)).
 
 ## Build order
 

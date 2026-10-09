@@ -18,23 +18,10 @@ import { CampaignScreen } from './screens/CampaignScreen';
 import { LandingScreen } from './screens/LandingScreen';
 import { JoinScreen } from './screens/JoinScreen';
 import { PlayerScreen } from './screens/PlayerScreen';
-import { SessionScreen } from './screens/SessionScreen';
 import { TableScreen } from './screens/TableScreen';
 import { TablesScreen } from './screens/TablesScreen';
 
 type Screen = 'landing' | 'campaign' | 'tables' | 'session' | 'join' | 'play';
-
-/**
- * Which GM board a run is played on. The overhaul builds the new one
- * beside the old (docs/overhaul.md, D7), so either is one click from the
- * other and the choice is remembered per device. New by default.
- */
-type Board = 'table' | 'session';
-const BOARD_KEY = 'mazedeck.board';
-
-function loadBoard(): Board {
-  try { return window.localStorage.getItem(BOARD_KEY) === 'session' ? 'session' : 'table'; } catch { return 'table'; }
-}
 
 /** A player's preview carries no narration: the scenes are the GM's. */
 const NO_SCENES: ChronicleEntry[] = [];
@@ -61,17 +48,9 @@ export function App() {
   const [snapshot, setSnapshot] = React.useState<Snapshot | null>(null);
   const [asPlayer, setAsPlayer] = React.useState(false);
   const [previewBiome, setPreviewBiome] = React.useState<BiomeId | null>(null);
-  const [board, setBoard] = React.useState<Board>(loadBoard);
-  // A crossing just started opens with its ceremony on the new board (phase
-  // 7); a resumed or reloaded one does not.
+  // A crossing just started opens with its ceremony (phase 7); a resumed
+  // or reloaded one does not.
   const [opening, setOpening] = React.useState<number | null>(null);
-  const switchBoard = React.useCallback(() => {
-    setBoard((was) => {
-      const next: Board = was === 'table' ? 'session' : 'table';
-      try { window.localStorage.setItem(BOARD_KEY, next); } catch { /* blocked: not remembered */ }
-      return next;
-    });
-  }, []);
   const [joinCode, setJoinCode] = React.useState(deepLink.current ?? '');
   const [seatOffers, setSeatOffers] = React.useState<SeatOffer[] | null>(null);
 
@@ -283,46 +262,27 @@ export function App() {
           onBack={() => { detach(); setSeatOffers(null); setScreen('landing'); }}
         />
       ) : screen === 'session' && view ? (
-        board === 'table' ? (
-          <TableScreen
-            view={view}
-            biome={biome}
-            dispatch={dispatch}
-            error={snapshot?.error ?? null}
-            runName={campaign.runName}
-            prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
-            scenes={view.viewer.role === 'gm' ? campaign.chronicle : NO_SCENES}
-            sharedScene={snapshot?.scene ?? null}
-            {...(hosted ? { onShare: share } : {})}
-            autoShare={campaign.autoShare}
-            onAutoShare={(on: boolean) => setCampaign((prev) => ({ ...prev, autoShare: on }))}
-            asPlayer={asPlayer}
-            onTogglePlayerView={togglePlayerView}
-            {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
-            previewBiome={previewBiome}
-            onPreviewBiome={setPreviewBiome}
-            onExit={() => { setPreviewBiome(null); setOpening(null); setScreen('campaign'); }}
-            onSwitchBoard={switchBoard}
-            opening={opening}
-            onOpened={() => setOpening(null)}
-          />
-        ) : (
-          <SessionScreen
-            view={view}
-            biome={biome}
-            dispatch={dispatch}
-            error={snapshot?.error ?? null}
-            runName={campaign.runName}
-            prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
-            asPlayer={asPlayer}
-            onTogglePlayerView={togglePlayerView}
-            {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
-            previewBiome={previewBiome}
-            onPreviewBiome={setPreviewBiome}
-            onExit={() => { setPreviewBiome(null); setScreen('campaign'); }}
-            onSwitchBoard={switchBoard}
-          />
-        )
+        <TableScreen
+          view={view}
+          biome={biome}
+          dispatch={dispatch}
+          error={snapshot?.error ?? null}
+          runName={campaign.runName}
+          prompt={view.viewer.role === 'gm' ? campaign.prompt : null}
+          scenes={view.viewer.role === 'gm' ? campaign.chronicle : NO_SCENES}
+          sharedScene={snapshot?.scene ?? null}
+          {...(hosted ? { onShare: share } : {})}
+          autoShare={campaign.autoShare}
+          onAutoShare={(on: boolean) => setCampaign((prev) => ({ ...prev, autoShare: on }))}
+          asPlayer={asPlayer}
+          onTogglePlayerView={togglePlayerView}
+          {...(hosted && campaign.hostCode ? { hostCode: campaign.hostCode } : {})}
+          previewBiome={previewBiome}
+          onPreviewBiome={setPreviewBiome}
+          onExit={() => { setPreviewBiome(null); setOpening(null); setScreen('campaign'); }}
+          opening={opening}
+          onOpened={() => setOpening(null)}
+        />
       ) : screen === 'landing' ? (
         <LandingScreen
           onStart={() => setScreen('campaign')}

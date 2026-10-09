@@ -1,11 +1,11 @@
 /* ============================================================
-   The table — the new board (docs/overhaul.md, phase 1).
+   The table: the GM's board (docs/overhaul.md, phase 1).
 
-   Its own file so that retiring the old board (phase 10) is a
-   deletion in app.css and nothing here. The machinery both boards
-   share — the river's masking and lift, the ledge, the stage's
-   overlay, the tracks' pulse, the baton — stays in app.css, which
-   this file only switches on for `.t-table`.
+   Built in its own file beside the old board, so that retiring that
+   one (phase 10) was a deletion in app.css and nothing here. The
+   machinery the boards shared — the river's masking and lift, the
+   ledge, the stage's overlay, the tracks' pulse, the baton — is still
+   in app.css, which this file switches on for `.t-table`.
 
    Same rules as app.css: every colour and dimension is a token.
    `--md-u` is a millimetre here (the app's provider is `md`).
@@ -203,9 +203,8 @@
 }
 
 /* ---------------- the party ----------------
-   Tokens: a numbered circle with the name under it, the old board's
-   condensed seats always. Ported rather than shared, because those
-   rules live inside the old board's breakpoint. */
+   Tokens: a numbered circle with the name under it, as the old board
+   condensed its seats on a narrow screen, here at every size. */
 .t-rail {
   grid-area: rail;
   align-self: center;

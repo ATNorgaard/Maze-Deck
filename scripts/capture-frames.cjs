@@ -35,7 +35,7 @@ const sample = (page) => page.evaluate(() => ({
   }),
   covered: document.querySelector('.t-river')?.dataset.covered ?? '-',
   // The phase signpost went in feel/9; the light on the board says it now.
-  phase: document.querySelector('.t-board')?.dataset.focus ?? '-',
+  phase: document.querySelector('.t-table')?.dataset.focus ?? '-',
   modal: document.querySelector('.t-modal .t-panel__title')?.textContent ?? '',
   slots: [...document.querySelectorAll('.md-river__slot article')]
     .map((a) => (a.classList.contains('md-card--back') ? 'back' : a.dataset.category) + ':' + getComputedStyle(a).opacity).join('/'),
@@ -46,6 +46,8 @@ const sample = (page) => page.evaluate(() => ({
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
   page.on('console', (m) => { if (m.type() === 'error') console.log('console:', m.text()); });
+  await page.goto(url);
+  await page.evaluate(() => localStorage.setItem('mazedeck.sound', 'off')); // the threshold's question
   await page.goto(url);
   await page.waitForTimeout(800);
 
@@ -69,7 +71,7 @@ const sample = (page) => page.evaluate(() => ({
       if (await land.count()) await land.click();
       await page.waitForTimeout(1500);
     }
-    const phase = await page.locator('.t-board').getAttribute('data-focus');
+    const phase = await page.locator('.t-table').getAttribute('data-focus');
     console.log(`cycle ${cycle}: phase ${phase}`);
     if (phase !== 'river') continue;
 

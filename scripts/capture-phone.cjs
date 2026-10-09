@@ -7,11 +7,15 @@
    live database:
 
      node scripts/local-session.mjs --app          (in another terminal)
-     node scripts/capture-phone.cjs [outDir] [--manual] [--gpu]
+     node scripts/capture-phone.cjs [outDir] [--manual] [--gpu] [--measure]
 
        --url=http://localhost:5182   the app local-session.mjs serves
        --manual                      the table rolls its own dice: the
                                      phone gets a die to throw
+       --measure                     the phone's frame budget at 4x CPU, as
+                                     measure-frames.cjs takes the board's:
+                                     at rest, and its own pick (the reveal,
+                                     the flight, the refill)
 
    A GM opens a room on the new board; a phone (390 x 844, touch, its
    vibrations recorded) joins by the code and takes a seat. The GM plays
@@ -43,6 +47,8 @@ const out = args.find((a) => !a.startsWith('--')) || path.join(__dirname, '..', 
 const url = flag('url', 'http://localhost:5182');
 const manual = args.includes('--manual');
 const gpu = args.includes('--gpu');
+const measuring = args.includes('--measure');
+const CPU = 4;
 fs.mkdirSync(out, { recursive: true });
 
 const lines = [];
@@ -92,7 +98,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
 
   /* ---------------- the GM opens a room ---------------- */
   await gm.goto(url);
-  await gm.evaluate(() => { localStorage.clear(); localStorage.setItem('mazedeck.sound', 'off'); localStorage.setItem('mazedeck.board', 'table'); localStorage.setItem('mazedeck.world', 'high'); });
+  await gm.evaluate(() => { localStorage.clear(); localStorage.setItem('mazedeck.sound', 'off'); localStorage.setItem('mazedeck.world', 'high'); });
   await gm.goto(url);
   await gm.waitForTimeout(500);
   await click(gm, gm.getByRole('button', { name: /Set up a crossing/ }));
@@ -125,6 +131,38 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
   check(tier === 'low' || tier === 'still', `a phone's world starts light: ${tier}`);
   const ground = await phone.evaluate(() => getComputedStyle(document.querySelector('.t-phone .md-river')).backgroundColor);
   check(ground === 'rgba(0, 0, 0, 0)' || ground === 'transparent', `the river lies on the world, not on a slab: ${ground}`);
+
+  /* ---------------- the phone's budget (--measure) ---------------- */
+  // As measure-frames.cjs measures the board: main-thread time from the
+  // DevTools protocol, frames from requestAnimationFrame.
+  const budget = [];
+  const measure = async (label, ms, during) => {
+    const cdp = await phone.context().newCDPSession(phone);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+    await cdp.send('Performance.enable');
+    const before = await cdp.send('Performance.getMetrics');
+    const frames = phone.evaluate((total) => new Promise((resolve) => {
+      const deltas = [];
+      let last = performance.now();
+      const t0 = last;
+      const tick = (t) => {
+        deltas.push(t - last);
+        last = t;
+        if (t - t0 < total) requestAnimationFrame(tick);
+        else resolve({ count: deltas.length, worst: Math.max(...deltas), long: deltas.filter((d) => d > 33.4).length });
+      };
+      requestAnimationFrame(tick);
+    }), ms);
+    if (during) await during();
+    const f = await frames;
+    const after = await cdp.send('Performance.getMetrics');
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    const get = (m, k) => m.metrics.find((x) => x.name === k)?.value ?? 0;
+    const d = (k) => get(after, k) - get(before, k);
+    const tierNow = await phone.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'none');
+    budget.push(`| ${label} (world ${tierNow}) | ${d('TaskDuration').toFixed(2)} s | ${d('RecalcStyleDuration').toFixed(2)} s | ${d('LayoutDuration').toFixed(2)} s | ${(f.count / (ms / 1000)).toFixed(0)} | ${f.worst.toFixed(0)} ms | ${f.long} |`);
+  };
+  if (measuring) await measure('The phone, at rest', 4000);
 
   /* ---------------- the GM plays the other seats ---------------- */
   const gmState = () => gm.evaluate(() => ({
@@ -192,7 +230,9 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
       const ok = await until(phone, (c) => document.querySelector('.t-phone__text:not(.t-phone__text--waiting)')?.textContent === c, 10000, s.caption);
       const p = await phoneScene();
       check(ok, `the GM shows it, and the phone reads the same line: "${p.text.slice(0, 60)}"`);
-      check((await gmState()).share === 'true', 'the GM\'s caption says it is shown');
+      // The phone's poll can land between the write and the GM's own render.
+      check(await until(gm, () => document.querySelector('.t-share')?.getAttribute('aria-pressed') === 'true', 3000),
+        'the GM\'s caption says it is shown');
       await shot(phone, 'phone-2-scene-shown');
       await shot(gm, 'gm-scene-shown');
       shared = true;
@@ -284,8 +324,27 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
       const pickStatus = await phone.locator('.t-phone__status').textContent();
       log(`the phone's status: "${pickStatus}"`);
       await shot(phone, 'phone-5-pick');
-      await phone.locator('.t-river[data-pickable] .md-river__slot article').first().tap();
-      const turned = await until(gm, () => document.querySelector('.t-table')?.dataset.focus !== 'river', 8000);
+      // What the GM's table shows: the river's faces, the deck, the discard's
+      // top. A pick changes at least one, whatever the card turns out to be
+      // (a Wanderer keeps the GM's call in the river, so the light is no test).
+      const table = () => gm.evaluate(() => [
+        [...document.querySelectorAll('.t-table .md-river__slot article')]
+          .map((a) => (a.classList.contains('md-card--back') ? 'back' : a.dataset.category)).join('/'),
+        document.querySelector('.t-top__meta')?.textContent ?? '',
+        document.querySelector('.t-surface__pile--discard article')?.dataset.category ?? '-',
+      ].join(' | '));
+      const before = await table();
+      // A face-down card: a blocker left face up from an earlier turn is not a path to take.
+      const pick = () => phone.locator('.t-river[data-pickable] .md-river__slot article.md-card--back').first().tap();
+      if (measuring) await measure('The phone, its own pick', 5000, pick);
+      else await pick();
+      let turned = false;
+      for (let t = 0; t < 48 && !turned; t += 1) {
+        turned = (await table()) !== before;
+        if (!turned) await gm.waitForTimeout(250);
+      }
+      log(`the GM's table before the pick: ${before}`);
+      log(`and after: ${await table()}`);
       check(turned, 'the phone\'s pick turns the card on the GM\'s board');
       await phone.waitForTimeout(1500);
       await shot(phone, 'phone-5-picked');
@@ -296,6 +355,15 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
     await gmStep(s);
   }
   check(shared && ownTurn && autoChecked, 'every check was reached');
+
+  if (budget.length) {
+    log(`
+The phone's budget: 390 × 844 at 2x, ${CPU}× CPU, ${gpu ? 'real GPU' : 'software GL'}
+`);
+    log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
+    log('|---|---|---|---|---|---|---|');
+    budget.forEach((row) => log(row));
+  }
 
   save();
   await browser.close();

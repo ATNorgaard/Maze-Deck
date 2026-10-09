@@ -128,7 +128,6 @@ html, body, #root {
 }
 
 .t-panel--live { border-color: var(--md-cat-path-700); }
-.t-panel--bad { border-color: var(--md-cat-mons-700); }
 
 .t-panel__title {
   margin: 0 0 calc(2 * var(--md-u));
@@ -173,152 +172,11 @@ html, body, #root {
 
 .t-centre { display: flex; justify-content: center; }
 
-/* ---------------- board ----------------
-   Three columns: initiative, the board, the log. The side columns
-   stick; the board is the only thing that scrolls the page.
-
-   The centre column is what the river has to fit in:
-     centre = width - 620 (sides) - 45 (two gaps) - 38 (padding)
-            = width - 703
-   That model is exact — at a 2085px window it predicts 1257 and the
-   board measures 1257. Every number below comes out of it. */
-
-.t-board {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 300px;
-  gap: calc(6 * var(--md-u));
-  align-items: start;
-  padding: calc(5 * var(--md-u));
-  /* An `lg` river needs 1181px of centre column, so the board must be
-     at least 1884 wide before it can reach the largest step. 1960 clears
-     that with room to spare and is kept as it was — the old note here
-     claimed lg needed ~1104, which was wrong, but wrong in the safe
-     direction. */
-  max-width: 1960px;
-  margin: 0 auto;
-}
-
 .t-col {
   display: flex;
   flex-direction: column;
   gap: calc(5 * var(--md-u));
   min-width: 0;
-}
-
-.t-col--side {
-  position: sticky;
-  top: calc(5 * var(--md-u));
-  max-height: calc(100vh - 10 * var(--md-u));
-}
-
-.t-col--board { align-items: stretch; }
-
-/* 1246, not 1180. Three `sm` cards need 543px, so three columns need
-   543 + 703 = 1246 before the centre can hold a river at all. The old
-   breakpoint left a live band between 1180 and 1246 where the board
-   stayed in three columns with a centre of only ~478px and clipped the
-   outer cards off both edges. Collapsing to one column earlier gives the
-   river the whole width instead.
-
-   The hard floor is about 580px of window: below that even one column
-   cannot hold three `sm` cards, and there is no smaller step. A device
-   that narrow wants the player's screen, which scales. */
-@media (max-width: 1246px) {
-  .t-board { grid-template-columns: minmax(0, 1fr); }
-
-  /* The side columns stop being columns and hand their panels straight
-     to the grid, so each one becomes a row that `order` can move. */
-  .t-col--side { display: contents; }
-
-  /* Campaign / preview / end-the-run is the least urgent thing on the
-     screen and was landing between the initiative order and the score
-     tracks. Ordered last, it sits under the log where it belongs. */
-  .t-board__controls { order: 1; }
-
-  /* Initiative condenses to a row of numbered circles. Stacked seats
-     cost most of a phone-height screen. Only the order is left, with a
-     name under each circle, and which one is lit.
-
-     This reaches into the library's own markup, like the .t-river rules
-     above. It is the second place the app knows a component's DOM, and
-     it is read-only.
-
-     Scoped under .t-board on purpose: the player's screen uses .t-seats
-     too, and its Order list keeps its names — that screen is narrow at
-     every size, so condensing it buys nothing. */
-  .t-board .t-seats {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: calc(3 * var(--md-u));
-  }
-
-  /* Circle on top, name underneath. */
-  .t-board .t-seats .md-seat {
-    flex-direction: column;
-    align-items: center;
-    gap: calc(1.2 * var(--md-u));
-    padding: 0;
-    border: 0;
-    background: none;
-    max-width: calc(24 * var(--md-u));
-  }
-
-  .t-board .t-seats .md-seat__body { align-items: center; }
-
-  .t-board .t-seats .md-seat__name {
-    font-size: calc(2.7 * var(--md-u));
-    text-align: center;
-    max-width: 100%;
-    /* A long name must not stretch the row and push a seat onto a
-       second line. */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* The class and the advantage tag are what get dropped, not the name.
-     Visually hidden rather than removed, so a screen reader still reads
-     the whole seat. */
-  .t-board .t-seats .md-seat__meta {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .t-board .t-seats .md-seat__order {
-    position: relative;
-    width: calc(9 * var(--md-u));
-    height: calc(9 * var(--md-u));
-    font-size: calc(3.8 * var(--md-u));
-  }
-
-  /* Boost Morale is real state — it changes how the next check is rolled
-     — and the hidden detail line was the board's only sign of it. A dot
-     on the rim carries it instead. */
-  .t-board .t-seats .t-seat--boosted .md-seat__order::after {
-    content: '';
-    position: absolute;
-    top: calc(-0.4 * var(--md-u));
-    right: calc(-0.4 * var(--md-u));
-    width: calc(2.6 * var(--md-u));
-    height: calc(2.6 * var(--md-u));
-    border-radius: 50%;
-    background: var(--md-cat-path-300);
-    border: calc(0.4 * var(--md-u)) solid var(--md-ink-900);
-  }
-
-  /* The seat's own active treatment was a left border on a box that no
-     longer exists, so the circle carries it instead. */
-  .t-board .t-seats .md-seat[data-active='true'] .md-seat__order {
-    background: var(--md-ink-700);
-    box-shadow: 0 0 0 calc(0.6 * var(--md-u)) var(--md-cat-path-700);
-  }
 }
 
 .t-tracks {
@@ -360,7 +218,7 @@ html, body, #root {
   100% { transform: none; filter: none; }
 }
 
-.t-board[data-shake], .t-play[data-shake], .t-table[data-shake] { animation: tShake 380ms ease-out; }
+.t-table[data-shake] { animation: tShake 380ms ease-out; }
 
 @keyframes tShake {
   0%   { transform: translate(0, 0); }
@@ -375,21 +233,21 @@ html, body, #root {
 /* ---------------- the light ----------------
    There is no phase signpost. The board says where to look by lighting
    the part the phase is about: the river while a path is picked and
-   while it turns over, the action strip while an action is owed. The
-   lit seat in the initiative order already says who. The other phases
-   are answered in a centred modal, which is its own light.
+   while it turns over, the hand while an action is owed. The lit seat
+   on the rail already says who. The roll and the encounter happen at
+   the centre of the board, which is its own light.
 
-   `data-focus` on .t-board follows the presented phase, so the light
+   `data-focus` on .t-table follows the presented phase, so the light
    moves when the beat lands. It is a ledge, not a pool: a thin line of
    gold under the section and a low light thrown up from it onto what
    stands there, as if the cards were set on a lit shelf. It swells when
    it arrives — that is the one moment the eye needs telling — and
    settles to a glimmer. It does not breathe: a pool of light that kept
    moving under the whole river was the signpost again, only louder. */
-.t-river, .t-actions, .t-hand { position: relative; isolation: isolate; }
+.t-river, .t-hand { position: relative; isolation: isolate; }
 
-.t-river::before, .t-actions::before, .t-hand::before,
-.t-river::after, .t-actions::after, .t-hand::after {
+.t-river::before, .t-hand::before,
+.t-river::after, .t-hand::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -401,7 +259,7 @@ html, body, #root {
 }
 
 /* The line. */
-.t-river::before, .t-actions::before, .t-hand::before {
+.t-river::before, .t-hand::before {
   --t-rest: .85;
   width: 62%;
   height: 1px;
@@ -418,7 +276,7 @@ html, body, #root {
 
 /* The light it throws up. Under the cards and the buttons: the wrapper
    is isolated, so -1 puts it beneath its content and not the board. */
-.t-river::after, .t-actions::after, .t-hand::after {
+.t-river::after, .t-hand::after {
   --t-rest: .55;
   width: 84%;
   height: 48%;
@@ -430,10 +288,6 @@ html, body, #root {
   z-index: -1;
 }
 
-.t-board[data-focus='river'] .t-river::before,
-.t-board[data-focus='river'] .t-river::after,
-.t-board[data-focus='actions'] .t-actions::before,
-.t-board[data-focus='actions'] .t-actions::after,
 .t-table[data-focus='river'] .t-river::before,
 .t-table[data-focus='river'] .t-river::after,
 .t-table[data-focus='actions'] .t-hand::before,
@@ -510,22 +364,6 @@ html, body, #root {
   justify-content: center;
   align-items: flex-start;
 }
-
-/* The action strip is the one thing a player reaches for, so it sits
-   centred and a step larger than the rest of the board. */
-.t-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: calc(40 * var(--md-u));
-}
-
-.t-actions__bar { display: flex; justify-content: center; max-width: 100%; }
-
-/* The library's bar paints ink-900 behind its buttons. Here that block
-   would sit on the light as a dark rectangle, so the strip is bare and
-   only the buttons themselves have a ground. */
-.t-actions__strip { background: transparent; }
 
 /* The card standing in for a river slot: turned over, held, then sent
    to the discard. The outer element carries the trip, the inner one
@@ -701,7 +539,7 @@ html, body, #root {
 }
 
 /* Two lines held open whether or not there is a scene yet, so the
-   prompt arriving mid-flip never moves the river (see SessionScreen). */
+   prompt arriving mid-flip never moves the river (see TableScreen). */
 .t-scene__text {
   margin: 0;
   min-height: calc(2em * var(--md-leading-body));
@@ -806,13 +644,7 @@ html, body, #root {
 
 .t-entry__check { display: flex; flex-direction: column; gap: calc(1.5 * var(--md-u)); min-width: calc(38 * var(--md-u)); }
 
-/* ---------------- the campaign screen ----------------
-   The first thing anybody sees. Two columns like the board — the
-   settings, and the reference cards beside them — held to a readable
-   measure. `.t-main` and `.t-stack` were lost in the same rewrite that
-   took the panel rules, which is why this screen ran full-bleed with
-   its reference cards falling out the bottom. */
-
+/* A column of panels: the threshold's dials. */
 .t-stack {
   display: flex;
   flex-direction: column;
@@ -1456,20 +1288,18 @@ html, body, #root {
 
 @media (prefers-reduced-motion: reduce) {
   .t-app::before, .t-app .md-card__light, .t-log__line { animation: none; }
-  .t-river .md-river__slot, .t-board .t-col, .t-play__board, .t-play__aside,
-  [data-outcome='lost'] .md-card__light { transition: none; }
-  [data-outcome='through'] .t-track:first-child, .t-board[data-outcome='through']::after,
-  .t-play[data-outcome='through']::after { animation: none; }
+  .t-river .md-river__slot, [data-outcome='lost'] .md-card__light { transition: none; }
+  [data-outcome='through'] .t-track:first-child { animation: none; }
   .t-baton { transition: none; }
-  .t-rise, .t-play .t-panel[data-yours], .t-soundask { animation: none; }
-  .t-river::before, .t-actions::before, .t-hand::before,
-  .t-river::after, .t-actions::after, .t-hand::after { animation: none; transition: none; }
+  .t-rise, .t-soundask { animation: none; }
+  .t-river::before, .t-hand::before,
+  .t-river::after, .t-hand::after { animation: none; transition: none; }
   .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,
   .t-roll--staged[data-landed] .t-roll__total, .t-roll--staged[data-landed] .t-roll__vs,
   .t-verdict[data-verdict] { animation: none; }
   .t-roll--staged .t-roll__mod, .t-roll--staged .t-roll__total, .t-roll--staged .t-roll__vs { opacity: 1; }
   .t-scrim, .t-modal, .t-track, .t-track .md-score__pip,
-  .t-deal, .t-deal__lift, .t-flight, .t-drop, .t-flare, .t-board[data-shake], .t-play[data-shake], .t-table[data-shake],
+  .t-deal, .t-deal__lift, .t-flight, .t-drop, .t-flare, .t-table[data-shake],
   .t-river[data-settled] .md-river__slot article { animation: none; }
   .t-fly, .t-fly__pose, .t-flip { transition: none !important; }
   .t-river[data-pickable] .md-river__slot:hover article { transform: none; }
@@ -1611,8 +1441,6 @@ html, body, #root {
 }
 .t-roll__total { font-size: calc(12 * var(--md-u)); font-weight: 700; line-height: 1; }
 .t-roll__vs { font-size: calc(4 * var(--md-u)); color: var(--md-parchment-400); }
-.t-roll--good { color: var(--md-cat-obst-300); }
-.t-roll--bad { color: var(--md-cat-mons-300); }
 
 /* ---------------- the ending ----------------
    Through: the river fans open like a hand laid down, the escape track
@@ -1624,26 +1452,11 @@ html, body, #root {
 [data-outcome='through'] .t-river .md-river__slot:nth-child(2) { transform: translateY(-16px); }
 [data-outcome='through'] .t-river .md-river__slot:nth-child(3) { transform: rotate(7deg) translate(8px, 12px); }
 [data-outcome='through'] .t-track:first-child { --t-pulse: var(--md-cat-path-glow); animation: tPulse 1.6s ease-out both; }
-.t-board[data-outcome='through']::after,
-.t-play[data-outcome='through']::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  background: radial-gradient(ellipse 70% 60% at 50% 40%, var(--md-cat-path-glow), transparent 70%);
-  animation: tBloom 1.6s ease-out both;
-}
 
 @keyframes tBloom {
   0%   { opacity: 0; }
   40%  { opacity: 1; }
   100% { opacity: .55; }
-}
-
-.t-board .t-col, .t-play__board, .t-play__aside { transition: filter 1.4s ease; }
-[data-outcome='lost'] .t-col, [data-outcome='lost'] .t-play__board, [data-outcome='lost'] .t-play__aside {
-  filter: brightness(.38) saturate(.45);
 }
 [data-outcome='lost'] .md-card__light { animation: none; opacity: 0; transition: opacity 1.2s ease; }
 
@@ -1667,10 +1480,6 @@ html, body, #root {
 /* The action bar, and a player's own action panel, rise in for each
    turn rather than sitting there from the last one. */
 .t-rise { animation: tRise 260ms cubic-bezier(.2, .7, .3, 1) both; }
-
-/* The one moment a phone has to be felt: the player's own header pulses
-   gold when the turn is theirs. */
-.t-play .t-panel[data-yours] { --t-pulse: var(--md-cat-path-glow); animation: tPulse 900ms ease-out; }
 
 /* ---------------- the roll, as an object ----------------
    The die tumbles (DieRoll cycles its face; this turns it), stops, and
@@ -1824,19 +1633,6 @@ html, body, #root {
   padding-top: 3px;
 }
 
-.t-log__gm {
-  font-family: var(--md-font-ui);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: var(--md-track-eyebrow);
-  color: var(--md-cat-item-300);
-  border: 1px solid var(--md-cat-item-700);
-  border-radius: 3px;
-  padding: 0 4px;
-  margin-right: 6px;
-  vertical-align: 1px;
-}
-
 .t-seats { display: flex; flex-direction: column; gap: calc(2 * var(--md-u)); }
 
 /* ============================================================
@@ -1852,8 +1648,8 @@ html, body, #root {
   width: 100%;
   /* Wide enough for three steps in a row and all five cards in one —
      both of those breaking to 2+1 and 3+2 reads as an accident. A px
-     value on purpose: this is screen chrome, not print geometry, and
-     .t-main sets its own width the same way. */
+     value on purpose: this is screen chrome, not print geometry, as
+     .t-campaign's width is. */
   max-width: 1040px;
   margin: 0 auto;
   padding: 0 calc(6 * var(--md-u)) calc(16 * var(--md-u));
@@ -2093,81 +1889,6 @@ html, body, #root {
 .t-tab:focus-visible {
   outline: 2px solid var(--md-cat-path-500);
   outline-offset: 2px;
-}
-
-/* ============================================================
-   THE PLAYER'S OWN DEVICE
-
-   Sized by what the viewport can actually do, not by sniffing a
-   user agent: a phone in landscape, a tablet, a desktop window
-   dragged narrow and a phone asking for the desktop site all
-   want the layout that fits, and only one of those four is
-   detectable from the UA string.
-   ============================================================ */
-
-.t-play {
-  display: flex;
-  flex-direction: column;
-  gap: calc(5 * var(--md-u));
-  width: 100%;
-  max-width: 560px;
-  margin: 0 auto;
-  padding: calc(5 * var(--md-u));
-}
-
-.t-play__board,
-.t-play__aside {
-  display: flex;
-  flex-direction: column;
-  gap: calc(5 * var(--md-u));
-  min-width: 0;
-}
-
-/* ScaleToFit needs a plain block to measure: as a flex container the
-   inner row would be sized by the flex algorithm instead of by its own
-   content, and offsetWidth would report the column, not the river. */
-.t-play__fit { display: block; }
-
-.t-play__fit .t-piles { margin-top: calc(5 * var(--md-u)); }
-
-/* Two columns once there is room for them. Below this the phone layout
-   is the right one and stays. */
-@media (min-width: 900px) {
-  .t-play {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    align-items: start;
-    gap: calc(6 * var(--md-u));
-    /* The aside takes 320 and the gap and padding another 68, so the
-       board column is max-width - 388. An `md` river needs 875, so the
-       screen must be at least 1263 wide to reach it; 1290 clears that.
-       (This was 1240 while the size table still claimed md needed 831 —
-       when that was corrected to its measured 875, 1240 left the column
-       at 852 and quietly dropped back to `sm`.) */
-    max-width: 1290px;
-    padding: calc(6 * var(--md-u));
-  }
-
-  .t-play__aside {
-    position: sticky;
-    top: calc(6 * var(--md-u));
-  }
-}
-
-/* ---- touch ----
-   A coarse pointer means fingers. Hover affordances never fire, and
-   worse, a tap leaves the hover state stuck on until you tap elsewhere. */
-
-@media (hover: none), (pointer: coarse) {
-  .t-play .t-river[data-pickable] .md-river__slot::before { opacity: .55; }
-
-  .t-play .t-river[data-pickable] .md-river__slot:hover article,
-  .t-play .t-river[data-pickable] .md-river__slot:focus-within article {
-    transform: none;
-  }
-
-  /* 44px is the smallest target most people can hit reliably. */
-  .t-play .t-btn { min-height: 44px; }
 }
 
 /* ============================================================

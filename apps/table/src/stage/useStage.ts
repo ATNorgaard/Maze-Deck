@@ -48,7 +48,7 @@ export interface Overlay {
    * snap the card flat. Null when it was at rest.
    */
   from: { dx: number; dy: number; s: number; rx: number; ry: number } | null;
-  /** How long the turn takes: an Item turns slowly on the new board. */
+  /** How long the turn takes: an Item turns slowly on the board. */
   flipMs: number;
 }
 
@@ -179,7 +179,7 @@ function measureSlotCard(river: HTMLElement | null, slot: number): Pick<Overlay,
 
 export interface StageOptions {
   /**
-   * The new board's reveal signatures (docs/overhaul.md, phase 6). The
+   * The board's reveal signatures (docs/overhaul.md, phase 6). The
    * one the stage itself times is the Item's slow turn; the rest are the
    * overlay's to draw.
    */

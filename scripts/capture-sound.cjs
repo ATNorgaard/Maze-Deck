@@ -258,7 +258,7 @@ const CLIPS = [
     return false;
   };
 
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('mazedeck.board', 'table'); });
+  await page.evaluate(() => localStorage.clear());
   await page.goto(url);
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: 'Set up a crossing' }).first().click();

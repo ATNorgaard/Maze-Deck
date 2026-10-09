@@ -240,7 +240,7 @@ can be found and reverted alone.
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | **done** — `world/7` |
 | 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | **done** — `world/8` |
 | 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | **done** — `world/9`, except hearing it |
-| 10 | Retire the old board, re-measure, record what was decided along the way | S | all | next |
+| 10 | Retire the old board, re-measure, record what was decided along the way | S | all | **done** — `world/10` |
 
 **Order of execution: 0, 1, 2, 3, then the author's first look, then 4, 5,
 6, 7, 8, 9, 10.** Phases 1–3 together are a vertical slice: the new board,
@@ -1892,3 +1892,163 @@ headless browser plays into nothing. The WAVs are the way in, and then
 the board, with sound on, in each setting.
 
 **Commit:** `git log --grep world/9`.
+
+### world/10 — retire and record
+
+**Changed.**
+- **One board.** `TableScreen` is the GM's board.
+  - `screens/SessionScreen.tsx` and `components/CheckPanel.tsx`, which
+    only it used, are deleted.
+  - `App.tsx` no longer keeps a per-device board choice
+    (`mazedeck.board`): a stored *session* is ignored.
+  - The GM drawer's *Use the old board* is gone.
+- **The old board's CSS is gone from `app.css`:** 34 rules, and 11
+  selector lists trimmed of the parts that could only match it. Pruned
+  with postcss rather than by hand, by dropping every selector that named
+  a class no source file uses any more, then reviewed line by line. What
+  went:
+  - the three-column grid, its one-column collapse and the condensed
+    seats inside it;
+  - the action strip;
+  - the old ending's bloom and dim;
+  - the old player screen's two-column layout and touch rules (phase 8
+    had already carried what the phone needed into `phone.css`);
+  - the GM tag on log lines, and the good/bad roll colours.
+
+  No keyframes were left unused.
+- **The phone's last old class:** `.t-play__fit` is `.t-phone__fit`.
+- **Comments that pointed at the old board are fixed:**
+  - one sent readers to the deleted `SessionScreen`;
+  - `table.css`'s header described the deletion as still to come;
+  - several said *the new board* as though there were two. Where the old
+    board is history that explains a choice ("the old board asked this in
+    a dialog"), it stays;
+  - two comments cited a `.t-main` that had not existed for a long time.
+- **Scripts.**
+  - `--board` is gone from `capture-walk`, `capture-score` and
+    `measure-frames`, and no script sets `mazedeck.board` any more.
+  - `capture-frames.cjs` (phase 0's frame-by-frame watcher) reads
+    `.t-table` now.
+  - `capture-sizes.cjs` (new) measures the size table, so it can be
+    measured again whenever it needs to be.
+  - `capture-phone.cjs --measure` measures the phone's frame budget, which
+    phase 8 left unmeasured.
+- **DECISIONS.md** gains W1–W9, what was decided while building: one
+  board; the art package and the `scene` column as built; `turned`;
+  migrations by hand on a shared database; the local rehearsal; the throw
+  as ceremony; one mood across the layers; haptics on by default. O7 is
+  marked delivered, and D9 is noted as still open.
+- **STATUS.md is rewritten** from scratch for a reader coming in cold.
+  The old one, which had grown into a history of M0 to phase 9, is kept
+  whole as `docs/history/status-to-world-9.md`.
+
+**The size table, re-measured** (`capture-sizes.cjs`, the board with a
+crossing open). It was measured before the deletion and again after, and
+the two tables are identical.
+
+| Viewport | River | Piles | Layout | Scrolls |
+|---|---|---|---|---|
+| 2560 × 1440 | `lg` | `md` | piles flanking | no |
+| 1920 × 1080 | `lg` | `md` | piles flanking | no |
+| 1600 × 1000, chronicle shut or open | `md` | `sm` | piles flanking | no |
+| 1536 × 864 | `md` | `sm` | piles flanking | no |
+| 1440 × 900 | `md` | `sm` | piles flanking | no |
+| 1366 × 768 | `md` | `sm` | piles flanking | no |
+| 1366 × 657 (a 1366 laptop inside a browser), chronicle shut or open | `sm` | `sm` | piles flanking | no |
+| 1280 × 720 | `sm` | `sm` | piles flanking | no |
+| 1024 × 768 | `sm` | `sm` | piles flanking | no |
+| 820 × 1180 (a tablet, upright) | `sm` | `sm` | narrow: piles under the river | no |
+| 390 × 844 (a phone) | `sm` | `sm` | narrow | 569px down, 76px sideways |
+
+It matches world/1's at every size it measured, six phases of vista,
+route, scene band and ceremony later: each was given its space inside
+the fit rather than on top of it. A phone is not where the GM's board is
+used: players have their own screen, and the board's floor is still about
+580px wide. D9 is still what a 1366 laptop is missing.
+
+**The budget, at the end.**
+- **On world/0's terms** (390 × 844 at 3x, 4× CPU, software GL), against
+  the old board's baseline from phase 0:
+
+  | | Idle, world/0 | Idle, now | One turn, world/0 | One turn, now |
+  |---|---|---|---|---|
+  | Dungeon | 0.63 s | 0.21 s | 1.74 s, 1 long frame | 1.99 s, 8 |
+  | Tower | 0.70 s | 0.20 s | 1.90 s, 1 | 2.14 s, 10 |
+  | Deep forest | 0.76 s | 0.20 s | 2.13 s, 1 | 2.35 s, 11 |
+  | Desert | 0.88 s | 0.20 s | 2.80 s, 5 | 2.19 s, 8 |
+  | Undercity | 1.02 s | 0.22 s | 3.01 s, 4 | 2.54 s, 9 |
+  | Frozen pass | 1.03 s | 0.20 s | 3.08 s, 6 | 2.38 s, 11 |
+
+  At rest the board costs a fifth to a third of what it did, the finding
+  phase 3 set out to fix. During a turn the main thread does about as
+  much work as before (more in the light settings, less in the heavy
+  ones), but drops more frames over 33 ms: the board's moments (the lift,
+  the signatures, the flights, the vista) do more than the old board's.
+  This is the GM's board squeezed to phone width at 3x in software, which
+  is its worst case and not how it is used.
+- **The phone's own screen**, for the first time (`capture-phone.cjs
+  --measure`, 390 × 844 at 2x, 4× CPU):
+
+  | | Main-thread task | Worst frame | Frames > 33 ms |
+  |---|---|---|---|
+  | At rest, GPU (world low) | 0.32 s | 17 ms | 0 |
+  | Its own pick (the reveal, the flight, the refill), GPU | 1.15 s | 50 ms | 3 |
+  | At rest, software GL (world still) | 0.24 s | 33 ms | 0 |
+  | Its own pick, software GL | 1.21 s | 133 ms | 7 |
+- **Against the commit before (`world/9`)**, in the same session,
+  alternating, GPU, 1600 × 1000, undercity. Idle: 0.37–0.38 s either way.
+  One turn: 2.34–2.62 s now (mean 2.48) against 2.21–2.38 s (mean 2.32).
+  That lean of 0.16 s is inside the run-to-run scatter, and deleting rules
+  can only make style matching cheaper.
+- **Caveat: today's machine.** Every absolute number above was measured
+  on a busier machine than phase 9's: `world/9` itself measured a turn at
+  2.2–2.4 s today, against 1.2–1.3 s yesterday. Compare rows within a
+  table, not across days.
+
+**Broke / retried.**
+- **The phone script's pick could miss.** It tapped the phone's first
+  card, and when that slot held a blocker left face up from an earlier
+  turn, the tap did nothing. It now taps a face-down card. Its check had
+  also waited for the light to leave the river, which a Wanderer never
+  does (the GM's call stays in the river); now the check is that the GM's
+  table changes at all: its faces, its deck count or its discard.
+- **A race in the phone script.** The phone's poll can land between the
+  server's write and the GM's own render, so "the GM's caption says it is
+  shown" now waits up to three seconds for it.
+- **postcss collapsed long selector lists onto one line** when it trimmed
+  them; they were wrapped again by hand.
+- **The frame numbers came out at twice yesterday's.** The A/B against
+  `world/9` showed the old code equally slow today, so this was the
+  machine, not the change.
+
+**Known, and not fixed here.**
+- **A client that misses a reveal's version plays no flip for it**
+  (world/8 found it). With Realtime on, every change is fetched, so this
+  only bites on the polling fallback.
+- **The GM's scene is drawn when the GM's own client sees the reveal.**
+  On the polling fallback, a player's quick pick can resolve between two
+  of the GM's polls, and that card gets no scene. The `turned` mark would
+  let the GM draw from the log instead, as the phone already does. This
+  is the next thing to fix if hosted games are ever played without
+  Realtime.
+
+**Verified** (headless Chromium).
+- **Full crossing:** 135 reveal samples over 12 reveals, **0px**.
+- **`capture-score`, `capture-weight` and `capture-ceremony`:** all clean.
+  The jam, the feed, the reshuffle, being found and the round each played
+  on cue, and the ceremony's 10 checks passed.
+- **`capture-sound.cjs`:** 36 checks, the board taking the bed over among
+  them.
+- **`capture-phone.cjs`:** 17 checks, against `local-session.mjs`.
+- **`capture-frames.cjs`:** it captured a deal on the board.
+- **The size table:** identical before and after (above).
+- **The served code:** checked with `curl` against the dev server before
+  any capture.
+- **Tests and build:** app tests 31, rules tests 74, typecheck and build
+  clean. The bundle **shrank** 2.5 KB gzipped, and the CSS 0.65 KB.
+
+**Not yet seen by the author.** All of it, phases 1–10, on a real screen,
+a real phone and real speakers. Shipping it is a fast-forward of `main` to
+this branch, as `world/3` was.
+
+**Commit:** `git log --grep world/10`.

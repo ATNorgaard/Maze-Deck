@@ -64,8 +64,6 @@ interface Props {
   /** The testing override: wear another setting on this screen only. */
   previewBiome?: BiomeId | null;
   onPreviewBiome?: (id: BiomeId | null) => void;
-  /** Back to the old board (docs/overhaul.md, D7). */
-  onSwitchBoard: () => void;
   /** Set when a crossing has just been started: the opening plays (phase 7). */
   opening?: number | null;
   /** The opening has finished, or been skipped. */
@@ -142,7 +140,7 @@ function askFor(choice: Choice | null, swapPick: number | null): { title: string
  */
 export function TableScreen({
   view, biome, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
-  hostCode, error, previewBiome = null, onPreviewBiome, onSwitchBoard, opening: openingKey = null, onOpened,
+  hostCode, error, previewBiome = null, onPreviewBiome, opening: openingKey = null, onOpened,
   sharedScene = null, onShare, autoShare = false, onAutoShare,
 }: Props) {
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -905,14 +903,6 @@ export function TableScreen({
               </select>
             </label>
           ) : null}
-          <button
-            type="button"
-            className="t-btn"
-            onClick={onSwitchBoard}
-            title="The board as it was before the overhaul. Remembered on this device."
-          >
-            Use the old board
-          </button>
           {view.phase !== 'over' ? (
             <button
               type="button" className="t-btn t-btn--danger"

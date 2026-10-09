@@ -222,9 +222,8 @@
 }
 
 /* ---------------- the board's moments, on the phone ----------------
-   The old player screen's, carried over from app.css's `.t-play`, which
-   this screen no longer wears (it turns into two columns on a wide
-   screen). */
+   Carried over from the old player screen, retired with the old board
+   in phase 10. */
 .t-phone[data-shake] { animation: tShake 380ms ease-out; }
 .t-phone[data-outcome='through']::after {
   content: '';
@@ -235,8 +234,8 @@
   background: radial-gradient(ellipse 70% 60% at 50% 40%, var(--md-cat-path-glow), transparent 70%);
   animation: tBloom 1.6s ease-out both;
 }
-.t-phone .t-play__fit { display: block; }
-.t-phone .t-play__fit .t-piles { margin-top: calc(4 * var(--md-u)); }
+.t-phone .t-phone__fit { display: block; }
+.t-phone .t-phone__fit .t-piles { margin-top: calc(4 * var(--md-u)); }
 
 /* Fingers: hover never fires, and a tap leaves it stuck on. */
 @media (hover: none), (pointer: coarse) {
