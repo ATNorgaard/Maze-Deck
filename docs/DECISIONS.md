@@ -57,7 +57,7 @@ Taken 2026-10-07, every one as recommended in
 | O3 | **The roll stays a centred, blocking dialog** (feel/3b) and is restaged at the scale of the moment. |
 | O4 | **A WebGL2 canvas replaces the SMIL grounds as the default ambient layer**, with quality tiers and the still picture as the fallback. No dependency. |
 | O5 | **`packages/art`** holds the generators, shared by the atelier and the table, aliased to source. `packages/ui` and the design-sync stay out of it. |
-| O6 | **Sound stays off by default, and the threshold asks once.** |
+| O6 | **Sound stays off by default, and the threshold asks once.** *Delivered in `world/9`: a card at the threshold's foot, the first time on a device; either answer is kept. The one switch covers the voices and each setting's bed.* |
 | O7 | **The new board is built beside the old**, behind a toggle, and the old one is retired at the end. |
 | O8 | **No rules change comes with the overhaul.** Whether a failed check should cost something stays a separate decision ([reference/balance.md](reference/balance.md)). |
 

@@ -13,6 +13,7 @@ import { SeatBaton } from '../components/SeatBaton';
 import { SoundToggle } from '../components/SoundToggle';
 import { Throw } from '../components/Throw';
 import { Vista } from '../components/Vista';
+import { useBed } from '../stage/bed';
 import { buzz, feel, FEEL, canBuzz, useHapticsOn } from '../stage/haptics';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
@@ -160,6 +161,15 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, scene, o
   const found = stage.active?.kind === 'found' || shown.phase === 'encounter';
   const near = shown.strikes > 0 && shown.strikes >= shown.rules.encounterAt - 1;
   const focus = yours ? { name: 'hand', ref: handRef } : shown.phase === 'pick' ? { name: 'river', ref: riverRef } : null;
+  const mood = {
+    threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
+    progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
+    hush: found || near ? 1 : 0,
+    dim: shown.outcome === 'lost' ? 1 : 0,
+    bloom: shown.outcome === 'through' ? 1 : 0,
+  };
+  // The setting's bed, on the same mood, if this phone's owner has sound on.
+  useBed(biome.id, mood);
   const [flash, setFlash] = React.useState<{ key: string; category: CardCategory } | null>(null);
   const turned = shown.phase === 'reveal' && shown.revealed ? `${shown.round}:${shown.turn}:${shown.revealed.slot}` : null;
   React.useEffect(() => {
@@ -213,13 +223,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, scene, o
     >
       <World
         biome={biome}
-        mood={{
-          threat: found ? 1.4 : shown.strikes / Math.max(1, shown.rules.encounterAt),
-          progress: shown.progress / Math.max(1, shown.rules.escapeTarget),
-          hush: found || near ? 1 : 0,
-          dim: shown.outcome === 'lost' ? 1 : 0,
-          bloom: shown.outcome === 'through' ? 1 : 0,
-        }}
+        mood={mood}
         focus={focus}
         flash={flash}
       />

@@ -92,7 +92,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
 
   /* ---------------- the GM opens a room ---------------- */
   await gm.goto(url);
-  await gm.evaluate(() => { localStorage.clear(); localStorage.setItem('mazedeck.board', 'table'); localStorage.setItem('mazedeck.world', 'high'); });
+  await gm.evaluate(() => { localStorage.clear(); localStorage.setItem('mazedeck.sound', 'off'); localStorage.setItem('mazedeck.board', 'table'); localStorage.setItem('mazedeck.world', 'high'); });
   await gm.goto(url);
   await gm.waitForTimeout(500);
   await click(gm, gm.getByRole('button', { name: /Set up a crossing/ }));

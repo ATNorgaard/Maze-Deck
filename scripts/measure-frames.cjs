@@ -30,6 +30,8 @@
                              still or off (phase 3). `off` is the old ground.
        --rows=idle,strike,floor,turn,opening   which rows to measure (all
                              by default); the opening is the new board's
+       --sound               sound on, so the setting's bed plays (phase 9);
+                             answered off otherwise
        --gpu                 draw WebGL on this machine's GPU. Without it
                              headless Chromium uses SwiftShader, software
                              GL, and a canvas's main-thread time is mostly
@@ -69,6 +71,7 @@ const windowMs = Number(flag('window', '4000'));
 const board = flag('board', 'table');
 const world = flag('world', 'auto');
 const gpu = args.includes('--gpu');
+const sound = args.includes('--sound');
 const rows = flag('rows', 'idle,strike,floor,turn,opening').split(',');
 
 const STILL = '.t-app::before { background: var(--md-ink-900) !important; animation: none !important; }';
@@ -76,11 +79,12 @@ const STILL = '.t-app::before { background: var(--md-ink-900) !important; animat
 async function open(browser, biome, worldChoice = world, strikes = 0, ceremony = false) {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
   await page.goto(url);
-  await page.evaluate(([b, w]) => {
+  await page.evaluate(([b, w, s]) => {
     localStorage.clear();
     localStorage.setItem('mazedeck.board', b);
     localStorage.setItem('mazedeck.world', w);
-  }, [board, worldChoice]);
+    localStorage.setItem('mazedeck.sound', s ? 'on' : 'off');
+  }, [board, worldChoice, sound]);
   await page.goto(url);
   await page.waitForTimeout(800);
   await page.getByRole('button', { name: /Set up a crossing/ }).first().click();
@@ -151,8 +155,10 @@ async function playTurn(page) {
 const row = (label, r) => `| ${label} | ${r.task.toFixed(2)} s | ${r.style.toFixed(2)} s | ${r.layout.toFixed(2)} s | ${r.fps.toFixed(0)} | ${r.worst.toFixed(0)} ms | ${r.long} |`;
 
 (async () => {
-  const browser = await chromium.launch(gpu ? { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu'] } : {});
-  console.log(`${board} board, world ${world}${gpu ? ', real GPU' : ', software GL'}, ${W}×${H} at ${dpr}x, ${cpu}× CPU, ${windowMs} ms a row\n`);
+  const browser = await chromium.launch({
+    args: [...(gpu ? ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu'] : []), '--autoplay-policy=no-user-gesture-required'],
+  });
+  console.log(`${board} board, world ${world}${gpu ? ', real GPU' : ', software GL'}${sound ? ', sound on' : ''}, ${W}×${H} at ${dpr}x, ${cpu}× CPU, ${windowMs} ms a row\n`);
   console.log('| | Main-thread task | Style | Layout | fps | Worst frame | Frames > 33 ms |');
   console.log('|---|---|---|---|---|---|---|');
   for (const biome of biomes) {

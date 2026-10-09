@@ -1426,6 +1426,34 @@ html, body, #root {
   to   { opacity: 1; transform: none; }
 }
 
+/* The threshold asks once whether to play with sound (DECISIONS O6).
+   Fixed at the foot, so its coming and going move nothing. */
+.t-soundask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(6 * var(--md-u));
+  z-index: 40;
+  width: min(calc(100% - 32px), calc(118 * var(--md-u)));
+  margin: 0 auto;
+  padding: calc(5 * var(--md-u));
+  border: 1px solid var(--md-cat-path-700);
+  border-radius: calc(3 * var(--md-u));
+  background: var(--md-ink-900);
+  box-shadow: 0 calc(6 * var(--md-u)) calc(18 * var(--md-u)) rgba(0, 0, 0, .55);
+  text-align: center;
+  animation: tRise 600ms cubic-bezier(.2, .7, .3, 1) both;
+}
+.t-soundask__title {
+  margin: 0 0 calc(1.5 * var(--md-u));
+  font-family: var(--md-font-display);
+  font-size: 22px;
+  letter-spacing: .03em;
+  color: var(--md-parchment-100);
+}
+.t-soundask .t-row { margin-top: calc(4 * var(--md-u)); }
+.t-soundask__after { margin-top: calc(3 * var(--md-u)); font-size: 13px; }
+
 @media (prefers-reduced-motion: reduce) {
   .t-app::before, .t-app .md-card__light, .t-log__line { animation: none; }
   .t-river .md-river__slot, .t-board .t-col, .t-play__board, .t-play__aside,
@@ -1433,7 +1461,7 @@ html, body, #root {
   [data-outcome='through'] .t-track:first-child, .t-board[data-outcome='through']::after,
   .t-play[data-outcome='through']::after { animation: none; }
   .t-baton { transition: none; }
-  .t-rise, .t-play .t-panel[data-yours] { animation: none; }
+  .t-rise, .t-play .t-panel[data-yours], .t-soundask { animation: none; }
   .t-river::before, .t-actions::before, .t-hand::before,
   .t-river::after, .t-actions::after, .t-hand::after { animation: none; transition: none; }
   .t-die[data-tumbling], .t-roll--staged[data-landed] .t-roll__mod,

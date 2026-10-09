@@ -7,9 +7,13 @@
    ship — and every voice is short, quiet and low, because it plays
    under conversation at a real table.
 
-   Off by default. One toggle, remembered per device. A player's phone
-   stays silent unless its owner turns it on. `play()` is a no-op while
-   off, so callers never check.
+   Off by default. One toggle, remembered per device, and the threshold
+   asks once (DECISIONS O6). A player's phone stays silent unless its
+   owner turns it on. `play()` is a no-op while off, so callers never
+   check.
+
+   Under the voices, each setting's bed (bed.ts) plays on the same
+   toggle; every voice played here ducks it for a moment.
    ============================================================ */
 
 import * as React from 'react';
@@ -53,12 +57,17 @@ export type Voice =
 const KEY = 'mazedeck.sound';
 
 let enabled = false;
+/** Whether this device has ever said: set by the toggle or the threshold's question. */
+let chosen = false;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 const listeners = new Set<() => void>();
+const playListeners = new Set<(voice: Voice) => void>();
 
 try {
-  enabled = window.localStorage.getItem(KEY) === 'on';
+  const stored = window.localStorage.getItem(KEY);
+  enabled = stored === 'on';
+  chosen = stored === 'on' || stored === 'off';
 } catch { /* storage blocked: stays off */ }
 
 function context(): AudioContext | null {
@@ -78,21 +87,52 @@ function context(): AudioContext | null {
 
 export function isSoundOn(): boolean { return enabled; }
 
+/** Whether this device has been asked, or has answered without being asked. */
+export function isSoundChosen(): boolean { return chosen; }
+
 /** Flip the switch. Call from a user gesture: that is what unlocks audio. */
 export function setSoundOn(on: boolean): void {
   enabled = on;
+  chosen = true;
   try { window.localStorage.setItem(KEY, on ? 'on' : 'off'); } catch { /* fine */ }
   if (on) { context(); play('baton'); }
   for (const l of listeners) l();
 }
 
+/** The context and the master level, made on first use; null where there is no WebAudio. */
+export function audio(): { ctx: AudioContext; master: GainNode } | null {
+  const c = context();
+  return c && master ? { ctx: c, master } : null;
+}
+
+/** Told whenever the switch moves. Returns the unsubscribe. */
+export function subscribeSound(l: () => void): () => void {
+  listeners.add(l);
+  return () => { listeners.delete(l); };
+}
+
+/** Told of every voice that actually plays, as it plays. */
+export function onPlay(l: (voice: Voice) => void): () => void {
+  playListeners.add(l);
+  return () => { playListeners.delete(l); };
+}
+
+// A page reloaded with sound on makes its context without a gesture, and
+// a browser keeps that context suspended. The first tap or key wakes it.
+if (typeof window !== 'undefined') {
+  const wake = () => { if (enabled && ctx?.state === 'suspended') void ctx.resume(); };
+  window.addEventListener('pointerdown', wake, { capture: true });
+  window.addEventListener('keydown', wake, { capture: true });
+}
+
 export function useSoundOn(): [boolean, (on: boolean) => void] {
-  const on = React.useSyncExternalStore(
-    (l) => { listeners.add(l); return () => { listeners.delete(l); }; },
-    isSoundOn,
-    () => false,
-  );
+  const on = React.useSyncExternalStore(subscribeSound, isSoundOn, () => false);
   return [on, setSoundOn];
+}
+
+/** Whether to ask: true until this device has answered once. */
+export function useSoundChosen(): boolean {
+  return React.useSyncExternalStore(subscribeSound, isSoundChosen, () => true);
 }
 
 /* ---------------- voices ---------------- */
@@ -273,4 +313,6 @@ export function play(voice: Voice, delayMs = 0): void {
   try {
     VOICES[voice](c, c.currentTime + delayMs / 1000);
   } catch { /* an odd browser; silence is fine */ }
+  if (delayMs > 0) window.setTimeout(() => { for (const l of playListeners) l(voice); }, delayMs);
+  else for (const l of playListeners) l(voice);
 }

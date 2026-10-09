@@ -5,6 +5,8 @@ import {
 import { BIOMES, biomeOf, cardName } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
 import type { Campaign, Character } from '../campaign';
+import { SoundAsk } from '../components/SoundAsk';
+import { CALM, useBed } from '../stage/bed';
 
 interface Props {
   campaign: Campaign;
@@ -82,6 +84,8 @@ export function CampaignScreen({
   const seats = campaign.roster.length;
   const ready = seats > 0;
   const biome = biomeOf(campaign.biome);
+  // The chosen door's air, at rest (phase 9). Silent unless sound is on.
+  useBed(biome.id, CALM);
 
   // The doors are a strip that scrolls: more settings will come than
   // fit in a row. The chosen one is kept centred, and the arrows only
@@ -421,6 +425,7 @@ export function CampaignScreen({
           </div>
         </div>
       </div>
+      <SoundAsk />
     </>
   );
 }

@@ -192,6 +192,7 @@ const board = (page) => page.evaluate(() => ({
     await page.goto(url);
     await page.evaluate(([w, b]) => {
       localStorage.clear();
+      localStorage.setItem('mazedeck.sound', 'off'); // the threshold's question, answered
       localStorage.setItem('mazedeck.board', b);
       localStorage.setItem('mazedeck.world', w);
     }, [world, boardName]);

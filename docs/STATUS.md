@@ -4,7 +4,7 @@ Rewritten at the end of every session. If you are resuming cold, read this,
 then [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md).
 
-**Last updated:** 2026-10-09 (the overhaul through its phase 8 —
+**Last updated:** 2026-10-09 (the overhaul through its phase 9 —
 see [overhaul.md](overhaul.md))
 
 > **The overhaul is the work now.** [overhaul.md](overhaul.md) is the plan
@@ -286,12 +286,29 @@ describes a 28-card deck or a Monster as an instant loss.
 
 ## Next single action
 
-**[The overhaul's phase 9](overhaul.md#9-sound-as-a-bed): sound as a
-bed.** Each setting gets its own ambience, synthesised in WebAudio like
-the existing voices, with no files: wind on the pass, drips in the
-dungeon, crackle in the undercity, and so on. It moves with the mood:
-threat adds a low pulse and narrows the filter, the far side opens it up,
-and beats duck it. Same toggle as today; the threshold asks once (O6).
+**[The overhaul's phase 10](overhaul.md#10-retire-and-record): retire
+and record.** When the author is happy with the new board, `TableScreen`
+becomes the only board and `SessionScreen` and its CSS go. Then
+re-measure the size table, rewrite this file, and add to DECISIONS.md
+what was decided along the way: the art package, the room's `scene`
+column, and phase 8's `turned` mark. It waits on the author's eyes (and
+now ears) on phases 1–9.
+
+Phase 9 (`world/9`) gave each setting a bed of sound:
+- wind on the pass, drips in a long room in the dungeon, torches over
+  running water in the undercity, leaves and crickets in the forest,
+  hiss and gusts in the desert, and a far bell over the tower, all
+  synthesised;
+- it hears the same mood the world draws: threat narrows it and brings
+  in a low pulse, one strike short it goes still, the far side opens
+  it, through it warms, lost it goes out with the light, and every
+  voice ducks it;
+- the threshold asks once, *Play with sound?* (O6), and the chosen
+  door's air starts with the answer.
+
+`node scripts/capture-sound.cjs` renders and measures every setting in
+every mood and writes them as WAVs in `proof/sound/`. Nobody has heard
+any of it yet: those files are the way in.
 
 **The live database is ready for phase 8.** Its migration
 (`server/migrations/2026-10-09-maze_sessions_scene.sql`, the `scene`
@@ -352,11 +369,11 @@ Phase 5 (`world/5`) made the world keep score:
 `node scripts/capture-score.cjs` stages each of those moments and
 photographs it, because a walk only meets a jam when the deck deals one.
 
-Phases 1–8 still want the author's eyes, moving, on a real screen
+Phases 1–9 still want the author's eyes, moving, on a real screen
 (`cd apps/table && npm run dev`). Phase 5's dark and phase 6's tilt are
 mostly motion — eyes blinking, candles guttering, a card turning under
 the hand — that no headless frame shows. Phase 8 wants a real phone in a real
-room: the vibrations, the flick, Realtime instead of polling.
+room: the vibrations, the flick, Realtime instead of polling. Phase 9 wants ears.
 
 The overhaul lives on the **`overhaul` branch**, not `main`, because a
 push to `main` deploys and the work runs to ten phases; `main`
@@ -371,9 +388,10 @@ an *Atmosphere* setting in the GM drawer whose *Off* is the old ground),
 phase 4 (`world/4` — decisions made on the table, not in dialogs) and
 phase 5 (`world/5` — the route, the dark, round marks, the jam and the
 reshuffle), phase 6 (`world/6` — cards with weight), phase 7
-(`world/7` — the opening, and the crossing told back) and phase 8
-(`world/8` — the phones as windows, and the shared scene). Production
-serves `world/3`; `world/4` to `world/8` are on the branch only.
+(`world/7` — the opening, and the crossing told back), phase 8
+(`world/8` — the phones as windows, and the shared scene) and phase 9
+(`world/9` — each setting's bed of sound). Production serves `world/3`;
+`world/4` to `world/9` are on the branch only.
 
 An open question for the author from phase 1 is
 [D9](overhaul.md#d9--for-the-author): a size step between `sm` and `md`

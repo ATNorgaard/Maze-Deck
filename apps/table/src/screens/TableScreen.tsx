@@ -25,6 +25,7 @@ import { BIOMES, isBiomeId } from '../biomes';
 import type { Biome, BiomeId } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import type { SharedScene } from '../transport/types';
+import { useBed } from '../stage/bed';
 import { MOTION, reducedMotion } from '../stage/motion';
 import { StageOverlay } from '../stage/StageOverlay';
 import { useEnding } from '../stage/useEnding';
@@ -437,6 +438,8 @@ export function TableScreen({
     dim: shown.outcome === 'lost' ? 1 : dawn ? 0.9 : 0,
     bloom: shown.outcome === 'through' ? 1 : 0,
   };
+  // The setting's bed hears the same mood the world draws (phase 9).
+  useBed(biome.id, worldMood);
   // The world's wash: a turned card's colour, or a roll's verdict as it lands.
   const [worldFlash, setWorldFlash] = React.useState<{ key: string; category: CardCategory } | null>(null);
   const revealed = shown.revealed;

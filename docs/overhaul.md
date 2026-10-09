@@ -239,8 +239,8 @@ can be found and reverted alone.
 | 6 | Cards with weight: tilt and sheen, back art in depth, piles with thickness, a signature per category on the reveal | M | 1 | **done** — `world/6` |
 | 7 | Ceremony: the opening, and the chronicle at the end | M | 2 | **done** — `world/7` |
 | 8 | Windows: the phone gets the vista, the shared scene, the hand, a throw, haptics per beat | L | 2, 3, D1 | **done** — `world/8` |
-| 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | next |
-| 10 | Retire the old board, re-measure, record what was decided along the way | S | all | |
+| 9 | Sound as a bed: per-setting ambience, synthesised, moving with the mood | M | 3, D6 | **done** — `world/9`, except hearing it |
+| 10 | Retire the old board, re-measure, record what was decided along the way | S | all | next |
 
 **Order of execution: 0, 1, 2, 3, then the author's first look, then 4, 5,
 6, 7, 8, 9, 10.** Phases 1–3 together are a vertical slice: the new board,
@@ -1736,3 +1736,159 @@ hand, and the signatures at the speed of play.
 vibrations, the flick, Realtime instead of polling.
 
 **Commit:** `git log --grep world/8`.
+
+### world/9 — sound as a bed
+
+**Changed.**
+- **Each setting has its own air** (`stage/bed.ts`), synthesised in
+  WebAudio like the voices, with no files:
+
+  | Setting | The bed |
+  |---|---|
+  | Frozen pass | Wind: a roar that gusts, and a whistle in it now and then |
+  | Tower | A milder wind, and a bell a long way off, struck every 18–40 s, inharmonic as a real one is |
+  | Dungeon | A low room tone, and drips answered by a long room (a 3.8 s reverb) |
+  | Undercity | Water running somewhere below, and torches crackling close by; a drip now and then |
+  | Deep forest | Leaves moving in gusts, and three crickets, each with its own pitch, place and patience |
+  | Desert | A high hiss of sand, and gusts |
+
+  The rooms are impulse responses made from seeded, decaying noise, and
+  every event is drawn from a seeded generator. Events are laid down a
+  second ahead on the audio clock, so a busy main thread never makes the
+  bed stutter.
+- **It moves with the mood the world draws** (one mood, many layers). The
+  board and the phone hand it the same `mood` their world layer gets:
+  - threat narrows the filter and brings in a low pulse, a lub-dub from
+    the first strike that quickens to being found. A triangle an octave
+    up lets a laptop's small speakers carry it;
+  - one strike short, the setting's layers thin and their wandering
+    stills, as the world's air slows;
+  - the far side opens it (the filter and a high shelf);
+  - through, it opens further and a warm chord comes in under it;
+  - lost, it goes out with the light. The opening starts it in the dark,
+    and it comes up with the light.
+- **The voices duck it.** Every voice played (a flip, a slam, the dread,
+  the bell, the roll) pushes the bed down for a moment and lets it back
+  up. `sound.ts` tells listeners which voice played; `bed.ts` decides how
+  far and for how long.
+- **The threshold asks once** (DECISIONS O6). The first time the
+  threshold opens on a device, a card at its foot asks *Play with
+  sound?*, with *Sound on* and *Not now*. Either answer is kept, and it
+  never asks again. *Sound on* is the gesture that unlocks audio, so the
+  chosen door's air starts at once, and choosing another door changes it.
+- **One switch, as before.** The GM drawer's *Sound* (and the phone's)
+  now covers the bed too. A phone plays its own bed only if its owner
+  turns sound on.
+- **A screen that takes a bed over keeps it.** From the threshold to the
+  board, the same setting's bed carries on instead of starting again,
+  jumping to the board's first mood (the opening's dark) as the world's
+  first frame does. Leaving a screen waits a moment before stopping the
+  bed, so the next screen can claim it.
+- **A reloaded page's audio wakes on the first tap or key.** A browser
+  keeps a context made without a gesture suspended, and with sound
+  already on there was nothing to wake it.
+- **A hidden page goes quiet.** The bed fades out, and stops laying down
+  events, while the page is hidden.
+- **Scripts.**
+  - `capture-sound.cjs` (new) renders every setting and every mood
+    offline, measures them, writes them as WAV files, and then checks the
+    live bed in the app.
+  - Every capture script now answers the threshold's question, *off*, as
+    part of its setup.
+  - `measure-frames.cjs` has `--sound`.
+
+**Design notes.**
+- **The graph builds on any `BaseAudioContext`.** That is what lets
+  `renderBed` render it on an `OfflineAudioContext`, at any length, with
+  moods changing at set times and voices ducking it, deterministically.
+  A bed that cannot be listened to in a headless browser can still be
+  measured.
+- **The mapping is pure.** `bedParams(mood)` gives the level, the
+  texture, how much it wanders, the cutoff, the air, the pulse and the
+  warmth, and it is tested on its own (six tests).
+- **Quiet, under conversation.** Each setting at rest renders at −31 to
+  −38 dBFS RMS, with peaks no higher than −15 dBFS. The voices peak
+  around −16 dBFS.
+- **Not on the old board.** It has no mood to give, and phase 10
+  retires it.
+
+**Broke / retried.**
+- **At the far side the cutoff was already at its ceiling**, so there was
+  nothing left for coming through to open. The unit test caught it. The
+  resting cutoff came down from 9 to 7 kHz.
+- **Opening the sound barely moved the pass** (a centroid of 482 → 502
+  Hz). Its wind sits below 2 kHz, where a 6 kHz shelf hardly reaches. The
+  shelf is at 2.5 kHz now (482 → 565 Hz).
+- **The dungeon and the undercity sounded alike** once their hums were
+  lifted into a range small speakers play: 0.08 apart in octave profile.
+  The undercity got running water instead, which is truer to a sewer.
+  The closest pair now is the pass and the tower, 0.38 apart.
+- **Stillness was measured with the pulse in it.** The pulse beats harder
+  in the hush and hid the wind going still. Measured above 250 Hz, the
+  wind moves 0.80 dB against 2.92 dB.
+- **The live checks read a fresh copy of the module.** After a hot
+  reload Vite serves the app's `bed.ts` at a `?t=` address. The script
+  imports the address the page actually loaded.
+- **Handing the bed from the threshold to the board rebuilt it**, and
+  the check read the bed's target rather than what was heard. The bed
+  now carries over (above), and `bedNow()` reports the live gain.
+- **The question's card was translucent**, and the sample cards behind
+  it ghosted through. It is opaque.
+- **Every capture script would have met the question.** On a phone-sized
+  threshold its card sits over the doors. They answer it now.
+
+**Verified** (headless Chromium).
+- **`capture-sound.cjs`, offline:**
+
+  | Setting, at rest | RMS | Peak | Centroid |
+  |---|---|---|---|
+  | Frozen pass | −32.4 dB | −16.9 dB | 482 Hz |
+  | Tower (30 s, with the bell) | −33.9 dB | −17.1 dB | 658 Hz |
+  | Dungeon | −37.0 dB | −23.2 dB | 117 Hz |
+  | Undercity | −37.7 dB | −24.7 dB | 726 Hz |
+  | Deep forest | −33.5 dB | −20.3 dB | 2800 Hz |
+  | Desert | −30.9 dB | −14.8 dB | 1281 Hz |
+
+  - **No two alike:** the closest octave profiles differ by 0.38. The
+    same seed renders the same samples.
+  - **Threat:** the centroid falls 482 → 441 → 143 Hz (calm, one strike,
+    found), and the energy under 120 Hz rises 8.4% → 13.3% → 68.7%.
+  - **One short:** the wind moves 0.80 dB against 2.92 dB.
+  - **The far side:** 482 → 565 Hz. **Through:** the chord's band 44.7% →
+    63.7%. **Lost:** −33.2 → −87.5 dB.
+  - **A voice ducks it:** −36.5 → −46.1 dB under the dread, and back to
+    −33.7 dB.
+- **`capture-sound.cjs`, live:** the threshold asks, and nothing plays
+  until it is answered. *Sound on* starts the chosen door's air with the
+  audio running, and another door changes it. A reload does not ask
+  again, and its first touch wakes the audio. The board takes the same
+  bed over, cut into the opening's dark (heard at 0.23), and it comes up
+  with the light (0.99). The opening's voices ducked it twice. The GM
+  drawer's switch stops it. *Not now* is kept, silent, and not asked
+  again. 36 checks.
+- **The WAVs** are in `proof/sound/` to listen to: each setting at rest,
+  the pass in every mood, and a crossing on the pass in 42 seconds (calm,
+  ground gained, a strike, one short, found, lost).
+- **Full crossings, both boards:** new board, 123 reveal samples over 9
+  reveals, **0px**; old board, 187 over 13, **0px**.
+- **The phone,** against `local-session.mjs`: `capture-phone.cjs`, all
+  17 checks.
+- **The budget**, GPU, 1600 × 1000, 4× CPU, sound off and on:
+
+  | | Off | On |
+  |---|---|---|
+  | Undercity, idle | 0.20 s | 0.21 s |
+  | Deep forest, idle | 0.19 s | 0.22 s |
+  | Undercity, one turn (three runs) | 1.16–1.27 s | 1.21–1.44 s |
+
+  A turn with sound on costs about 0.1 s more on average, the voices
+  included, and that is within the spread between runs. No frames lost
+  at idle.
+- App tests 31 (6 new). The typecheck and the build are clean. The
+  bundle grew 4.0 KB gzipped, and the CSS 0.1 KB.
+
+**Not yet seen by the author.** None of it has been heard by anyone: a
+headless browser plays into nothing. The WAVs are the way in, and then
+the board, with sound on, in each setting.
+
+**Commit:** `git log --grep world/9`.

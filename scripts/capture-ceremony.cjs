@@ -86,6 +86,7 @@ const ev = (n, kind, text, cue) => (cue ? { n, kind, visibility: 'all', text, cu
     await page.goto(url);
     await page.evaluate(() => {
       localStorage.clear();
+      localStorage.setItem('mazedeck.sound', 'off'); // the threshold's question, answered
       localStorage.setItem('mazedeck.board', 'table');
       localStorage.setItem('mazedeck.world', 'high');
     });

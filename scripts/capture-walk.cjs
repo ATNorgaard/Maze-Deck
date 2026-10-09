@@ -136,6 +136,7 @@ const state = (page) => page.evaluate(() => ({
   await page.goto(url);
   await page.evaluate(([b, w]) => {
     localStorage.clear();
+    localStorage.setItem('mazedeck.sound', 'off'); // the threshold's question, answered
     localStorage.setItem('mazedeck.board', b);
     localStorage.setItem('mazedeck.world', w);
   }, [board, world]);
