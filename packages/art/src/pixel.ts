@@ -37,12 +37,40 @@ export interface PixelRamp {
 
 export type SpriteKind = 'mote' | 'dust' | 'firefly' | 'flame' | 'drip' | 'snow' | 'sand' | 'rat';
 
+/**
+ * The world behind the table, drawn as pixels (docs/art-jobs.md, jobs
+ * 1–6): rendered small and scaled up crisp, every colour snapped to a
+ * ramp with a dither. A setting has one once its job is done.
+ */
+export interface PixelWorld {
+  /** CSS pixels per world pixel. */
+  px: number;
+  /** The ground's ink, darkest first. */
+  ink: readonly [string, string, string];
+  /** The light, and its softer step. */
+  light: readonly [string, string];
+  /** What the world snaps to: at most 11 colours (a twelfth is a turned card's wash). */
+  ramp: readonly string[];
+  /** The air's two colours, dim and bright. */
+  air: readonly [string, string];
+  /** How the light moves: 0 breathes, 1 is a torch. */
+  flicker: number;
+  /** Pillars at each side of a wide screen, for the dark to look out from between. */
+  pillars?: number;
+}
+
 export interface PixelLook {
   ramp: PixelRamp;
   /** What lives in the air, how many on a card back, and its colour. */
   air: { kind: SpriteKind; count: number; color: string };
   /** The sun or moon, where the setting has one. */
   disc?: string;
+  /** How far a light lifts the land it falls on, in ramp steps (0: it does not). */
+  landLight?: number;
+  /** The vista is pixel art too, at this many scene units a pixel (AJ6). */
+  vista?: { px: number };
+  /** The world behind the table, in pixels. */
+  world?: PixelWorld;
 }
 
 /**
@@ -59,6 +87,17 @@ export const LOOKS: Record<BiomeId, PixelLook> = {
       rim: '#804C25',
     },
     air: { kind: 'dust', count: 22, color: '#B97337' },
+    landLight: 1.1,
+    vista: { px: 3 },
+    world: {
+      px: 4,
+      ink: ['#0D0907', '#1C1411', '#352215'],
+      light: ['#E8A452', '#F6D58A'],
+      ramp: ['#0D0907', '#1C1411', '#352215', '#553620', '#804C25', '#B97337', '#E8A452', '#F6D58A', '#66161F', '#A93343', '#D9707C'],
+      air: ['#553620', '#B97337'],
+      flicker: 0.85,
+      pillars: 2,
+    },
   },
   tower: {
     ramp: {
@@ -182,9 +221,16 @@ export interface PixelScene {
     h: (u: number) => number;
     from: 'bottom' | 'top';
     depth: number;
+    tone?: number;
+    shadow?: boolean;
+    courses?: number;
     shapes?: readonly Shape[];
   }[];
   sprites: readonly { shapes: readonly Shape[]; color: string; opacity?: number; glow?: string }[];
+  /** More lights in the picture: a torch, a lit doorway. `own` keeps the setting's colour where a scene takes the card's. */
+  lamps?: readonly { x: number; y: number; r: number; own?: boolean }[];
+  /** Sprites the composition places: the rat on the flagstones. */
+  stamps?: readonly { kind: SpriteKind; x: number; y: number }[];
 }
 
 export interface RasterOptions {
@@ -202,56 +248,140 @@ export interface RasterOptions {
   t?: number;
 }
 
+type Box = { x1: number; y1: number; x2: number; y2: number };
+
+function bounds(s: Shape): Box {
+  if (s.kind === 'circle') return { x1: s.cx - s.r, y1: s.cy - s.r, x2: s.cx + s.r, y2: s.cy + s.r };
+  let x1 = Infinity; let y1 = Infinity; let x2 = -Infinity; let y2 = -Infinity;
+  for (const [x, y] of s.pts) { x1 = Math.min(x1, x); y1 = Math.min(y1, y); x2 = Math.max(x2, x); y2 = Math.max(y2, y); }
+  return { x1, y1, x2, y2 };
+}
+
+/** Inside a shape, asking its box first: most pixels are nowhere near most shapes. */
+const within = (s: Shape, b: Box, x: number, y: number) => x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2 && contains(s, x, y);
+
+/**
+ * Mark the pixels whose centres are inside a shape, a row at a time.
+ * The same even-odd rule as `contains`, with the same arithmetic, but
+ * each row's crossings are worked out once and swept, not tested again
+ * at every pixel: a wall with a dozen arches is two hundred edges.
+ */
+function fill(s: Shape, b: Box, into: Int16Array, value: number, cols: number, rows: number, px: number): void {
+  const r0 = Math.max(0, Math.floor(b.y1 / px) - 1); const r1 = Math.min(rows - 1, Math.ceil(b.y2 / px));
+  const c0 = Math.max(0, Math.floor(b.x1 / px) - 1); const c1 = Math.min(cols - 1, Math.ceil(b.x2 / px));
+  if (s.kind === 'circle') {
+    for (let cy = r0; cy <= r1; cy += 1) {
+      for (let cx = c0; cx <= c1; cx += 1) if (within(s, b, (cx + 0.5) * px, (cy + 0.5) * px)) into[cy * cols + cx] = value;
+    }
+    return;
+  }
+  const pts = s.pts;
+  const xs: number[] = [];
+  for (let cy = r0; cy <= r1; cy += 1) {
+    const y = (cy + 0.5) * px;
+    xs.length = 0;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i]![0]; const yi = pts[i]![1]; const xj = pts[j]![0]; const yj = pts[j]![1];
+      if (yi > y !== yj > y) xs.push(((xj - xi) * (y - yi)) / (yj - yi) + xi);
+    }
+    if (!xs.length) continue;
+    xs.sort((a, c) => a - c);
+    // Inside where an odd number of crossings lie at or left of the centre.
+    let k = 0;
+    for (let cx = c0; cx <= c1; cx += 1) {
+      const x = (cx + 0.5) * px;
+      while (k < xs.length && xs[k]! <= x) k += 1;
+      if (k & 1) into[cy * cols + cx] = value;
+    }
+  }
+}
+
 /** The scene as a pixel picture. */
 export function rasterize(sc: PixelScene, look: PixelLook, o: RasterOptions): IndexedImage {
   const cols = Math.max(1, Math.ceil(sc.W / o.px));
   const rows = Math.max(1, Math.ceil(sc.H / o.px));
   const n = cols * rows;
   const { sky, land, rim } = look.ramp;
-  const light = o.light && o.light.length ? o.light : look.ramp.light;
+  const own = look.ramp.light;
+  const light = o.light && o.light.length ? o.light : own;
   const part = o.part;
   const color: string[] = new Array(n);
   const layerAt = new Int16Array(n).fill(-1);
   const front = new Uint8Array(n); // a subject or a sprite covers this pixel
   const glows = sc.sprites.map((sp) => (sp.glow ? boxOf(sp.shapes) : null));
+  const layerBoxes = sc.layers.map((l) => (l.shapes ?? []).map(bounds));
+  const spriteBoxes = sc.sprites.map((sp) => sp.shapes.map(bounds));
   // A light in the picture comes from something: the sun or the moon,
   // where the setting has one, and the light's own place where it does not.
   const lamp = sc.disc ? { x: sc.disc.cx, y: sc.disc.cy, r: sc.light.r * 0.8 } : sc.light;
+  const lamps = [{ ...lamp, ramp: light }, ...(sc.lamps ?? []).map((l) => ({ ...l, ramp: l.own ? own : light }))];
+  const lift = look.landLight ?? 0;
+
+  // Which layer is in front at each pixel: the land's heights a column at
+  // a time, its shapes a row at a time, far to near, the nearest winning.
+  if (part !== 'sky') {
+    sc.layers.forEach((l, i) => {
+      for (let cx = 0; cx < cols; cx += 1) {
+        const hh = l.h(((cx + 0.5) * o.px) / sc.W);
+        for (let cy = 0; cy < rows; cy += 1) {
+          const v = ((cy + 0.5) * o.px) / sc.H;
+          if (l.from === 'bottom' ? v >= 1 - hh : v <= hh) layerAt[cy * cols + cx] = i;
+        }
+      }
+      (l.shapes ?? []).forEach((shape, k) => fill(shape, layerBoxes[i]![k]!, layerAt, i, cols, rows, o.px));
+    });
+  }
 
   for (let cy = 0; cy < rows; cy += 1) {
     for (let cx = 0; cx < cols; cx += 1) {
       const p = cy * cols + cx;
       const x = (cx + 0.5) * o.px; const y = (cy + 0.5) * o.px;
-      const u = x / sc.W; const v = y / sc.H;
+      const v = y / sc.H;
       const b = BAYER[(cy & 3) * 4 + (cx & 3)]!;
 
       // The sky, stepping down its ramp to the horizon.
       let c = step(sky, v / 0.8, b);
-      // The light: rings of its own ramp, dithered at each edge.
-      const d = Math.hypot(x - lamp.x, y - lamp.y) / lamp.r;
-      const fall = Math.max(0, 1 - d);
-      const q = fall * fall * light.length * 1.5 + (b - 0.5) * 0.9;
-      const li = Math.floor(q);
-      if (li >= 1) c = light[Math.min(li - 1, light.length - 1)]!;
+      // The lights: rings of their own ramps, dithered at each edge; the
+      // brightest ring at a pixel wins.
+      let best = 0;
+      let lit = 0;
+      for (const L of lamps) {
+        const fall = Math.max(0, 1 - Math.hypot(x - L.x, y - L.y) / L.r);
+        if (fall > lit) lit = fall;
+        const li = Math.floor(fall * fall * L.ramp.length * 1.5 + (b - 0.5) * 0.9);
+        if (li > best) { best = li; c = L.ramp[Math.min(li - 1, L.ramp.length - 1)]!; }
+      }
       if (sc.disc && Math.hypot(x - sc.disc.cx, y - sc.disc.cy) <= sc.disc.r + (b - 0.5) * o.px) {
         c = look.disc ?? light[light.length - 1]!;
       }
 
       if (part !== 'sky') {
-        sc.layers.forEach((l, i) => {
-          let inside = l.from === 'bottom' ? v >= 1 - l.h(u) : v <= l.h(u);
-          if (!inside && l.shapes) for (const s of l.shapes) if (contains(s, x, y)) { inside = true; break; }
-          if (inside) layerAt[p] = i;
-        });
         const L = layerAt[p]!;
         if (L >= 0) {
-          const depth = sc.layers[L]!.depth;
-          c = land[Math.min(land.length - 1, Math.floor(depth * (land.length - 1) + 1e-6))]!;
+          const layer = sc.layers[L]!;
+          const base = (layer.tone ?? layer.depth) * (land.length - 1);
+          if (lift && !layer.shadow) {
+            // Lit stone: a light lifts the land it falls on up the ramp, and
+            // past its lightest step into the light's own warm middle.
+            // A tone sits in the middle of its step, so unlit stone is flat.
+            let at = base + 0.5 - lit * lit * lift * land.length + (b - 0.5) * 0.9;
+            // Stone laid in courses: a joint is a step darker, wherever it is lit.
+            const ch = layer.courses ?? 0;
+            if (ch >= 3 * o.px) {
+              const row = Math.floor(y / ch);
+              const jx = (x + (row % 2) * ch) % (2 * ch);
+              if (y - row * ch < o.px || jx < o.px) at += 1;
+            }
+            c = at < 0 ? own[Math.min(1 + Math.floor(-at), own.length - 1)]! : land[Math.min(land.length - 1, Math.floor(at))]!;
+          } else {
+            c = land[Math.min(land.length - 1, Math.floor(base + 1e-6))]!;
+          }
         }
         // The card's subject, in front of everything; a glow is a dithered halo.
         sc.sprites.forEach((sp, si) => {
           let hit = false;
-          for (const s of sp.shapes) if (contains(s, x, y)) { hit = true; break; }
+          const boxes = spriteBoxes[si]!;
+          for (let k = 0; k < sp.shapes.length; k += 1) if (within(sp.shapes[k]!, boxes[k]!, x, y)) { hit = true; break; }
           if (hit) {
             if (sp.opacity === undefined || sp.opacity >= 1 || b < sp.opacity) { c = sp.color; front[p] = 1; }
           } else if (glows[si]) {
@@ -276,29 +406,32 @@ export function rasterize(sc: PixelScene, look: PixelLook, o: RasterOptions): In
     }
   }
 
-  // What lives in the air, stamped by seed, in front of the land.
+  // Sprites, in front of the land: what lives in the air, stamped by
+  // seed, and what the composition places.
+  const stamp = (kind: SpriteKind, sx: number, sy: number, phase: number, tint: string) => {
+    const def = SPRITES[kind];
+    const frame = def.frames[def.fps ? Math.floor((o.t ?? 0) * def.fps + phase) % def.frames.length : 0]!;
+    frame.forEach((line, fy) => {
+      for (let fx = 0; fx < line.length; fx += 1) {
+        const key = line[fx]!;
+        if (key === '.') continue;
+        const xx = sx + fx - (line.length >> 1); const yy = sy + fy - (frame.length >> 1);
+        if (xx < 0 || yy < 0 || xx >= cols || yy >= rows) continue;
+        const q = yy * cols + xx;
+        color[q] = key === 'a' && !def.colors.a ? tint : def.colors[key] ?? tint;
+        front[q] = 1;
+      }
+    });
+  };
   const air = look.air;
-  const def = SPRITES[air.kind];
-  const airOn = part === undefined || part === 'near';
-  if (airOn) {
+  if (part === undefined || part === 'near') {
     const r = rngFor(o.seed, `air:${air.kind}`);
     const count = Math.round(air.count * Math.sqrt((cols * rows) / (96 * 134)));
     for (let i = 0; i < count; i += 1) {
       const sx = int(r, 0, cols - 1); const sy = int(r, 0, Math.floor(rows * 0.92));
-      const phase = range(r, 0, 10);
-      const frame = def.frames[def.fps ? Math.floor((o.t ?? 0) * def.fps + phase) % def.frames.length : 0]!;
-      frame.forEach((line, fy) => {
-        for (let fx = 0; fx < line.length; fx += 1) {
-          const key = line[fx]!;
-          if (key === '.') continue;
-          const xx = sx + fx - (line.length >> 1); const yy = sy + fy - (frame.length >> 1);
-          if (xx < 0 || yy < 0 || xx >= cols || yy >= rows) continue;
-          const p = yy * cols + xx;
-          color[p] = key === 'a' && !def.colors.a ? air.color : def.colors[key] ?? air.color;
-          front[p] = 1;
-        }
-      });
+      stamp(air.kind, sx, sy, range(r, 0, 10), air.color);
     }
+    for (const st of sc.stamps ?? []) stamp(st.kind, Math.round(st.x / o.px), Math.round(st.y / o.px), 0, air.color);
   }
 
   // Indices, with the fade mixed into the palette rather than laid over it.

@@ -6,7 +6,7 @@ import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { BIOMES, FALLBACK_PALETTE, vocabOf } from '../src/biomes';
 import type { BiomeId } from '../src/biomes';
-import { LOOKS, SPRITES, rasterize, toRgba } from '../src/pixel';
+import { LOOKS, SPRITES, contains, rasterize, toRgba } from '../src/pixel';
 import type { PixelScene } from '../src/pixel';
 import { base64, encodePng, pngDataUri } from '../src/png';
 import type { IndexedImage } from '../src/png';
@@ -130,5 +130,138 @@ describe('the pixel style', () => {
     const mons = FALLBACK_PALETTE.cat.mons;
     const img = rasterize(sc, LOOKS.tower, { px: 3, seed: 's', ink: '#0A0F12', light: [mons[700], mons[500], mons[300]] });
     expect(img.palette.map((c) => c.toUpperCase())).toContain(mons[500].toUpperCase());
+  });
+});
+
+/* The keeper's vault (job 1): what the dungeon added to the rasteriser,
+   all of it opt-in, and the dungeon's own pictures. */
+
+/** A look that makes inside and outside plain: black sky, white land, no air. */
+const PLAIN = {
+  ramp: { sky: ['#000000'], land: ['#FFFFFF'], light: ['#110000', '#220000', '#330000'], rim: '#FFFFFF' },
+  air: { kind: 'dust' as const, count: 0, color: '#000000' },
+};
+const none = () => 0;
+const scene = (over: Partial<PixelScene>): PixelScene => ({
+  W: 96, H: 64, light: { x: -500, y: -500, r: 1 }, layers: [], sprites: [], ...over,
+});
+const colourAt = (img: IndexedImage, x: number, y: number) => img.palette[img.data[y * img.w + x]!]!.toUpperCase();
+
+describe('the pixel style, for the vault', () => {
+  it('fills a shape a row at a time exactly as the even-odd test would, pixel by pixel', () => {
+    // A wall with arches, vertices on pixel centres and between them, and a circle.
+    const wall = {
+      kind: 'poly' as const,
+      pts: [[0, 64], [0, 0], [96, 0], [96, 64], [70.5, 64], [70.5, 30], [62, 18.5], [54, 30], [54, 64], [30, 64], [30, 21], [21, 9.25], [12, 21], [12, 64]] as [number, number][],
+    };
+    const ring = { kind: 'circle' as const, cx: 40.3, cy: 50, r: 7.7 };
+    for (const px of [1, 2, 2.5, 3]) {
+      const img = rasterize(scene({ layers: [{ h: none, from: 'bottom', depth: 0, shapes: [wall, ring] }] }), PLAIN, { px, seed: 's', ink: '#000000' });
+      for (let y = 0; y < img.h; y += 1) {
+        for (let x = 0; x < img.w; x += 1) {
+          const cx = (x + 0.5) * px; const cy = (y + 0.5) * px;
+          // Below the bottom edge is land, as the land's height has always counted it.
+          const inside = cy / 64 >= 1 || contains(wall, cx, cy) || contains(ring, cx, cy);
+          expect(colourAt(img, x, y), `px ${px} at ${x},${y}`).toBe(inside ? '#FFFFFF' : '#000000');
+        }
+      }
+    }
+  });
+
+  const stone = {
+    ramp: { sky: ['#000000'], land: ['#444444', '#333333', '#222222', '#111111'], light: ['#550000', '#880000', '#BB0000', '#EE0000'], rim: '#010101' },
+    air: { kind: 'dust' as const, count: 0, color: '#000000' },
+    landLight: 1.1,
+  };
+  const block = { kind: 'poly' as const, pts: [[0, 0], [96, 0], [96, 64], [0, 64]] as [number, number][] };
+  const wallOf = (extra: object = {}) => scene({
+    layers: [{ h: none, from: 'bottom', depth: 1, tone: 2 / 3, shapes: [block], ...extra }],
+    lamps: [{ x: 10, y: 32, r: 60, own: true }],
+  });
+
+  it('lifts stone a light falls on, up the ramp and into the light, and leaves it flat where none does', () => {
+    const img = rasterize(wallOf(), stone, { px: 2, seed: 's', ink: '#000000' });
+    expect(['#880000', '#BB0000']).toContain(colourAt(img, 5, 16));
+    // Far from the lamp, unlit stone is one colour, not a dither.
+    const far = new Set([0, 1, 2, 3].map((d) => colourAt(img, 44 + (d & 1), 4 + (d >> 1))));
+    expect([...far]).toEqual(['#222222']);
+  });
+
+  it('leaves a silhouette dark, however near the light', () => {
+    const img = rasterize(wallOf({ shadow: true, tone: 1 }), stone, { px: 2, seed: 's', ink: '#000000' });
+    expect(colourAt(img, 5, 16)).toBe('#111111');
+  });
+
+  it('lays stone in courses: every joint a step darker', () => {
+    const plain = rasterize(wallOf(), stone, { px: 2, seed: 's', ink: '#000000' });
+    const laid = rasterize(wallOf({ courses: 8 }), stone, { px: 2, seed: 's', ink: '#000000' });
+    // A joint along the top of every course, 8 units (4 pixels) apart.
+    for (const y of [0, 4, 8]) expect(colourAt(laid, 44, y), `row ${y}`).toBe('#111111');
+    expect(colourAt(laid, 45, 2)).toBe(colourAt(plain, 45, 2));
+  });
+
+  it('keeps a lamp of the setting its own colour where a scene is lit by the card', () => {
+    const img = rasterize(scene({ lamps: [{ x: 48, y: 32, r: 30, own: true }] }), stone, {
+      px: 2, seed: 's', ink: '#000000', light: ['#000011', '#000022', '#000033'],
+    });
+    expect(colourAt(img, 24, 16)).toBe('#EE0000');
+  });
+
+  it('stamps what the composition places, where it places it', () => {
+    const img = rasterize(scene({ stamps: [{ kind: 'rat', x: 40, y: 40 }] }), PLAIN, { px: 2, seed: 's', ink: '#000000' });
+    // Centred on pixel (20, 20): the body through the middle row, the eye at its end.
+    expect(colourAt(img, 20, 20)).toBe('#241D25');
+    expect(colourAt(img, 23, 20)).toBe('#B97337');
+  });
+});
+
+describe('the dungeon: the keeper’s vault', () => {
+  const params = (frame: 'back' | 'vista', aspect = 1) => ({
+    category: 'monster' as const, frame, aspect, seed: 'vault', style: 'pixel' as const, px: 2.5,
+    relief: 1, haze: 0.6, band: false, subject: frame === 'vista', fade: 0,
+  });
+
+  it('lights the back from a torch off the frame to the left, with a rat on the floor', () => {
+    const sc = buildScene(params('back'), FALLBACK_PALETTE, vocabOf('dungeon')) as unknown as PixelScene;
+    expect(sc.lamps?.some((l) => l.own && l.x < 0)).toBe(true);
+    expect(sc.stamps?.map((s) => s.kind)).toEqual(['rat']);
+    // The chains hang in the near layer, black, so they part from the corridor when the card tilts.
+    expect(sc.layers.at(-1)!.depth).toBe(1);
+    expect(sc.layers.at(-1)!.shadow).toBe(true);
+  });
+
+  it('turns a wide vista into an arcade, a torch burning in some of its bays', () => {
+    const sc = buildScene(params('vista', 6), FALLBACK_PALETTE, vocabOf('dungeon')) as unknown as PixelScene;
+    const flames = sc.stamps!.filter((s) => s.kind === 'flame');
+    expect(flames.length).toBeGreaterThanOrEqual(2);
+    expect(flames.length % 2).toBe(0); // in pairs, either side of the corridor
+    expect(sc.lamps!.filter((l) => l.own).length).toBe(flames.length);
+  });
+
+  it('draws a vista fast enough to draw on every reveal', () => {
+    const sc = buildScene(params('vista', 6.5), FALLBACK_PALETTE, vocabOf('dungeon')) as unknown as PixelScene;
+    const t0 = performance.now();
+    for (let i = 0; i < 5; i += 1) rasterize(sc, LOOKS.dungeon, { px: 3, seed: 'vault', ink: '#0A0F12' });
+    // About 6 ms on a desktop; generous, for a slow machine running tests.
+    expect((performance.now() - t0) / 5).toBeLessThan(60);
+  });
+
+  it('gives the world a ramp of the setting, and no other card family', () => {
+    const world = LOOKS.dungeon.world!;
+    expect(world.ramp.length).toBeLessThanOrEqual(11);
+    for (const c of [...world.ink, ...world.light, ...world.air]) expect(world.ramp).toContain(c);
+    // Teal, blue and violet are the other cards' colours: none of them is in the dungeon.
+    const hue = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16);
+      const [r, g, b] = [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+      const mx = Math.max(r, g, b); const d = mx - Math.min(r, g, b);
+      if (!d || d / mx < 0.3 || mx < 0.18) return null;
+      const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    for (const c of world.ramp) {
+      const h = hue(c);
+      if (h !== null) expect(h < 60 || h > 330, `${c} at ${h.toFixed(0)}`).toBe(true);
+    }
   });
 });

@@ -18,6 +18,7 @@ import type { CardCategory } from '@maze-deck/ui';
 import { alpha, mix } from './biomes';
 import type { BiomeVocab, CatKey, Palette, Terrain } from './biomes';
 import { LOOKS, rasterize } from './pixel';
+import type { SpriteKind } from './pixel';
 import { pngDataUri } from './png';
 import { fbm1d, int, pick, range, rngFor } from './rng';
 import type { Rng } from './rng';
@@ -100,8 +101,14 @@ interface Layer {
   h: (u: number) => number;
   from: 'bottom' | 'top';
   color: string;
-  /** 0 far, 1 near. Sets the hatch density. */
+  /** 0 far, 1 near. Sets the hatch density, and which layer of a back it moves with. */
   depth: number;
+  /** Where on the land ramp the pixel style colours it, if not by its depth: dark bars far away. */
+  tone?: number;
+  /** A silhouette: the pixel style's lights do not lift it. */
+  shadow?: boolean;
+  /** Laid in stone courses this tall, blocks twice as wide (the pixel style draws the joints). */
+  courses?: number;
   /**
    * Things standing on the height line that a height line cannot say:
    * anything with an overhang, like a canopy above a trunk. Same
@@ -146,6 +153,10 @@ interface Sprite {
 interface Scene {
   W: number;
   H: number;
+  /** More lights in the picture (the pixel style draws them); `own` keeps the setting's colour. */
+  lamps?: { x: number; y: number; r: number; own?: boolean }[];
+  /** Sprites the composition places (the pixel style draws them). */
+  stamps?: { kind: SpriteKind; x: number; y: number }[];
   skyTop: string;
   skyBottom: string;
   light: { x: number; y: number; r: number; color: string; glow: string };
@@ -364,12 +375,201 @@ function focal(category: CardCategory, W: number, H: number, floor: number, pal:
   }
 }
 
+/* ---------- the dungeon: the keeper's vault (docs/art-jobs.md, job 1) ----------
+   Doorway after doorway: walls across the whole frame, each with an
+   arched opening, nearer and wider each time, to a lowered portcullis
+   lit from behind. A torch off to the left rakes across the stone;
+   chains hang near; a rat keeps to the flagstones. On a wide vista the
+   near wall is an arcade, a torch in each side arch. Each wall is one
+   polygon (the openings reach the floor), so every style can draw it,
+   and the walls sort by depth, so a back's layers part down the
+   corridor when the card tilts. */
+
+type Arch = { cx: number; hw: number; top: number };
+
+/** A wall across the whole frame with arched openings down to the floor, as one polygon. */
+function archedWall(W: number, H: number, holes: Arch[]): Shape {
+  const pts: [number, number][] = [[0, H], [0, 0], [W, 0], [W, H]];
+  for (const h of [...holes].sort((a, b) => b.cx - a.cx)) {
+    pts.push([h.cx + h.hw, H], [h.cx + h.hw, h.top + h.hw]);
+    for (let i = 1; i < 16; i++) {
+      const a = (Math.PI * i) / 16;
+      pts.push([h.cx + h.hw * Math.cos(a), h.top + h.hw - h.hw * Math.sin(a)]);
+    }
+    pts.push([h.cx - h.hw, h.top + h.hw], [h.cx - h.hw, H]);
+  }
+  return { kind: 'poly', pts };
+}
+
+/** The wall's thickness where an opening cuts it: one jamb and half the arch, thinning to the crown. */
+function reveal(h: Arch, H: number, t: number, side: 1 | -1): Shape {
+  const oy = h.top + h.hw;
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= 8; i++) {
+    const a = (Math.PI / 2) * (1 - i / 8);
+    pts.push([h.cx + side * h.hw * Math.cos(a), oy - h.hw * Math.sin(a)]);
+  }
+  pts.push([h.cx + side * h.hw, H], [h.cx + side * (h.hw - t), H]);
+  for (let i = 8; i >= 0; i--) {
+    const a = (Math.PI / 2) * (1 - i / 8);
+    const rr = h.hw - t * (1 - 0.7 * Math.sin(a));
+    pts.push([h.cx + side * rr * Math.cos(a), oy - rr * Math.sin(a)]);
+  }
+  return { kind: 'poly', pts };
+}
+
+function vaultScene(p: SceneParams, pal: Palette, W: number, H: number, r: Rng): Scene {
+  const c = pal.cat[CAT_KEY[p.category]];
+  const wide = W / H > 1.2;
+  const s = Math.min(W, H * 0.75);
+  const cx = W / 2;
+  const vy = H * (wide ? 0.62 : 0.58);
+  const floor = H * 0.88;
+  const none = () => 0;
+  const ink = (t: number) => mix(mix(pal.ink[700], pal.ink[500], 0.35), pal.ink[900], t);
+  const layers: Layer[] = [];
+  const lamps: { x: number; y: number; r: number; own?: boolean }[] = [];
+  const stamps: { kind: SpriteKind; x: number; y: number }[] = [];
+
+  // The far end: a wall with a small opening, and the portcullis in it,
+  // black against the light behind.
+  const end = { cx, hw: 0.06 * s, top: vy - 0.17 * s };
+  const endFloor = vy + 0.03 * s;
+  layers.push({ from: 'bottom', h: none, depth: 0.15, tone: 1, color: ink(0.1), shapes: [archedWall(W, H, [end])] });
+  const bars: Shape[] = [];
+  for (let i = -2; i <= 2; i++) bars.push(rectShape(cx + i * end.hw * 0.4 - 0.006 * s, end.top + end.hw * 0.4, cx + i * end.hw * 0.4 + 0.006 * s, endFloor));
+  bars.push(rectShape(cx - end.hw, end.top + end.hw * 1.2, cx + end.hw, end.top + end.hw * 1.2 + 0.01 * s));
+  layers.push({ from: 'bottom', h: none, depth: 0.18, tone: 1, shadow: true, color: pal.ink[900], shapes: bars });
+
+  // The floor, running away to the far end, with its joints.
+  layers.push({
+    from: 'bottom', h: none, depth: 0.5, tone: 2 / 3, color: ink(0.5),
+    shapes: [{ kind: 'poly', pts: [[0, H], [W, H], [cx + end.hw * 1.4, endFloor], [cx - end.hw * 1.4, endFloor]] }],
+  });
+  const joints: Shape[] = [];
+  for (let j = 1; j <= 4; j++) {
+    const y = endFloor + (H - endFloor) * Math.pow(j / 5, 1.7);
+    const k = (y - endFloor) / (H - endFloor);
+    const half = end.hw * 1.4 + (W / 2 - end.hw * 1.4) * k;
+    joints.push(rectShape(cx - half, y, cx + half, y + Math.max(0.012 * s, 1)));
+  }
+  layers.push({ from: 'bottom', h: none, depth: 0.5, tone: 1, shadow: true, color: ink(0.9), shapes: joints });
+
+  // Doorway after doorway, nearer and wider each time, the torch catching
+  // the right side of each opening. On a wide vista the nearest wall is an
+  // arcade, a torch burning in every third bay from the middle out.
+  const steps = [0.3, 0.52, 0.76, 1];
+  steps.forEach((f, k) => {
+    const t = (k + 1) / steps.length;
+    const holes: Arch[] = [{ cx, hw: 0.42 * s * f, top: vy - 0.62 * s * f }];
+    if (k === steps.length - 1 && wide) {
+      const side = 0.2 * s;
+      for (let d = holes[0]!.hw + side + 0.14 * s, n = 0; cx + d + side < W - 2; d += 2 * side + 0.4 * s, n += 1) {
+        for (const x of [cx - d, cx + d]) {
+          holes.push({ cx: x, hw: side, top: vy - 0.4 * s });
+          if (n % 3) continue;
+          stamps.push({ kind: 'flame', x, y: vy - 0.16 * s });
+          lamps.push({ x, y: vy - 0.16 * s, r: 0.34 * s, own: true });
+        }
+      }
+    }
+    const depth = 0.3 + 0.7 * t;
+    const thick = 0.07 * s * f;
+    // Blocks at least three pixels high on the nearest wall, smaller down the corridor.
+    const courses = Math.max(0.07 * s, 3.2 * p.px) * f;
+    layers.push({ from: 'bottom', h: none, depth, tone: 2 / 3, courses, color: ink(0.25 + 0.75 * t), shapes: [archedWall(W, H, holes)] });
+    layers.push({ from: 'bottom', h: none, depth, tone: (2 - t) / 3, color: ink(0.1 + 0.5 * t), shapes: holes.map((h) => reveal(h, H, thick, 1)) });
+    layers.push({ from: 'bottom', h: none, depth, tone: 1, color: pal.ink[900], shapes: holes.map((h) => reveal(h, H, thick, -1)) });
+  });
+
+  // Chains in the near layer, black against the corridor's light.
+  const chains: Shape[] = [];
+  for (const [ux, len] of [[0.34, 0.3], [0.68, 0.22]] as const) {
+    const x = cx + (ux - 0.5) * s * 0.84 * (wide ? 1 : 1.1);
+    const bottom = H * len + (wide ? 0 : 0.05 * H);
+    for (let y = 0; y < bottom; y += 0.032 * s) chains.push(rectShape(x - 0.007 * s, y, x + 0.007 * s, y + 0.02 * s));
+    chains.push({ kind: 'circle', cx: x, cy: bottom + 0.025 * s, r: 0.02 * s });
+  }
+  layers.push({ from: 'bottom', h: none, depth: 1, tone: 1, shadow: true, color: pal.ink[900], shapes: chains });
+
+  // The torch, off the frame to the left, raking across the arches. A
+  // wide vista is lit by its own bays instead.
+  if (!wide) lamps.push({ x: cx - 0.62 * s, y: vy - 0.28 * s, r: 0.85 * s, own: true });
+  stamps.push({ kind: 'rat', x: cx + (p.subject ? 0.36 : 0.12) * s, y: H * (wide ? 0.93 : 0.87) });
+
+  return {
+    W, H,
+    skyTop: pal.ink[700],
+    skyBottom: pal.ink[800],
+    light: { x: cx, y: vy - 0.08 * s, r: 0.4 * s, color: c[500], glow: c.glow },
+    layers,
+    sprites: p.subject ? dungeonFocal(p.category, W, H, floor, pal, r) : [],
+    floor,
+    lamps,
+    stamps,
+  };
+}
+
+/** What stands in the vault: the dungeon's own subject for each card, where it has one. */
+function dungeonFocal(category: CardCategory, W: number, H: number, floor: number, pal: Palette, r: Rng): Sprite[] {
+  const c = pal.cat[CAT_KEY[category]];
+  const s = Math.min(W, H) / 64;
+  const cx = W / 2;
+  const fy = floor;
+  const rect = rectShape;
+  switch (category) {
+    case 'obstacle': {
+      // A portcullis down across the way.
+      const bars: Shape[] = [];
+      for (let i = -3; i <= 3; i++) bars.push(rect(cx + i * 4 * s - 0.7 * s, fy - 26 * s, cx + i * 4 * s + 0.7 * s, fy - 2 * s));
+      bars.push(rect(cx - 13 * s, fy - 22 * s, cx + 13 * s, fy - 20.6 * s), rect(cx - 13 * s, fy - 12 * s, cx + 13 * s, fy - 10.6 * s));
+      const spikes: Shape[] = [];
+      for (let i = -3; i <= 3; i++) spikes.push({ kind: 'poly', pts: [[cx + i * 4 * s - 1.2 * s, fy - 2 * s], [cx + i * 4 * s + 1.2 * s, fy - 2 * s], [cx + i * 4 * s, fy]] });
+      return [{ shapes: bars, color: c[500] }, { shapes: spikes, color: c[300] }];
+    }
+    case 'wanderer': {
+      // Someone with a lantern, coming the other way.
+      return [
+        { shapes: [{ kind: 'poly', pts: [[cx - 4 * s, fy - 19 * s], [cx + 3 * s, fy - 19 * s], [cx + 6 * s, fy], [cx - 7 * s, fy]] }], color: c[700] },
+        { shapes: [{ kind: 'circle', cx: cx - 0.5 * s, cy: fy - 23 * s, r: 3 * s }], color: c[500] },
+        { shapes: [rect(cx + 3 * s, fy - 17 * s, cx + 9 * s, fy - 16 * s), rect(cx + 8.5 * s, fy - 17 * s, cx + 9.5 * s, fy - 13 * s)], color: c[700] },
+        { shapes: [rect(cx + 7 * s, fy - 13 * s, cx + 11 * s, fy - 8 * s)], color: c[300], glow: c[500] },
+      ];
+    }
+    case 'item': {
+      // A chest, left open, something in it catching the light.
+      return [
+        { shapes: [{ kind: 'poly', pts: [[cx - 10 * s, fy - 9 * s], [cx + 10 * s, fy - 9 * s], [cx + 8 * s, fy - 17 * s], [cx - 8 * s, fy - 17 * s]] }], color: c[700] },
+        { shapes: [rect(cx - 6 * s, fy - 12 * s, cx + 6 * s, fy - 9 * s)], color: c[300], glow: c[500] },
+        { shapes: [rect(cx - 11 * s, fy - 9 * s, cx + 11 * s, fy)], color: c[700] },
+        { shapes: [rect(cx - 11 * s, fy - 6 * s, cx + 11 * s, fy - 5 * s), rect(cx - 1 * s, fy - 8 * s, cx + 1 * s, fy - 4 * s)], color: c[500] },
+      ];
+    }
+    case 'monster': {
+      // Something behind bars that are not going to hold: black on the
+      // dark, the bars the vault's own iron.
+      const e = 2.2 * s;
+      const { sky, land } = LOOKS.dungeon.ramp;
+      const bars: Shape[] = [];
+      for (let i = -3; i <= 3; i++) bars.push(rect(cx + i * 5 * s - 0.8 * s, fy - 30 * s, cx + i * 5 * s + 0.8 * s, fy));
+      return [
+        { shapes: [{ kind: 'poly', pts: [[cx - 15 * s, fy], [cx - 13 * s, fy - 19 * s], [cx - 6 * s, fy - 27 * s], [cx + 6 * s, fy - 27 * s], [cx + 14 * s, fy - 18 * s], [cx + 15 * s, fy]] }], color: sky[0]! },
+        { shapes: [{ kind: 'circle', cx: cx - 5 * s, cy: fy - 18 * s, r: e }, { kind: 'circle', cx: cx + 5 * s, cy: fy - 18 * s, r: e }], color: c[300], glow: c[500] },
+        { shapes: bars, color: land[1]! },
+      ];
+    }
+    default:
+      return focal(category, W, H, floor, pal, r);
+  }
+}
+
 export function buildScene(p: SceneParams, pal: Palette, vocab: BiomeVocab): Scene {
   const W = p.frame === 'arch' ? ARCH_W
     : p.frame === 'vista' ? Math.round(140 * Math.max(1.2, Math.min(12, p.aspect ?? 4)))
     : 240;
   const H = p.frame === 'arch' ? ARCH_H : p.frame === 'back' ? 335 : 140;
   const r = rngFor(p.seed, `scene:${vocab.id}:${p.frame}`);
+  if (vocab.id === 'dungeon') return vaultScene(p, pal, W, H, r);
   const c = pal.cat[CAT_KEY[p.category]];
   const far = mix(pal.ink[700], pal.ink[500], p.haze * 0.6);
   const mid = mix(pal.ink[800], pal.ink[700], p.haze * 0.6);

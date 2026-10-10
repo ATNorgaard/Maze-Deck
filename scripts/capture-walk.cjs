@@ -66,6 +66,10 @@ const revealOffset = (page) => page.evaluate(() => {
   const fly = document.querySelector('.t-fly');
   const covered = document.querySelector('.t-river')?.dataset.covered;
   if (!fly || covered === undefined) return null;
+  // A card that leaves (a Monster, a Clear Path) sets off for the discard
+  // after its flip and hold, inside the sampling window: on its way, it is
+  // meant to be off its slot.
+  if (fly.style.transform && fly.style.transform !== 'none') return null;
   const slot = Number(covered.split(' ')[0]);
   // Against where the card RESTS, read through its slot as the stage
   // reads it. The card itself may still be dropping back from the

@@ -15,6 +15,11 @@
    The main thread's whole job per frame is to ease a few numbers
    towards the mood and set them as uniforms. No React, no DOM beyond
    the canvas. See docs/overhaul.md, phase 3.
+
+   A setting whose art job is done draws as pixel art (docs/art-jobs.md):
+   a canvas a quarter of the size, scaled up crisp, every colour snapped
+   to the setting's ramp through the same ordered dither as its card
+   backs, and the air in whole pixels.
    ============================================================ */
 
 import type { Particle } from '@maze-deck/art';
@@ -77,6 +82,17 @@ export interface Mood {
   parallax: { x: number; y: number };
 }
 
+/** The world as pixel art: what it snaps to, its air, how its light moves, what stands at its sides. */
+export interface PixelGround {
+  /** At most 12 colours. */
+  ramp: readonly Rgb[];
+  air: readonly [Rgb, Rgb];
+  /** 0 the light breathes, 1 it flickers like a torch. */
+  flicker: number;
+  /** Pillars each side of a wide screen. */
+  pillars: number;
+}
+
 const KINDS: Record<Particle, number> = { dust: 0, motes: 1, sand: 2, drips: 3, snow: 4, embers: 5 };
 
 const GROUND_VS = `#version 300 es
@@ -100,6 +116,10 @@ uniform vec2 u_par;       // parallax, px
 uniform vec3 u_eyes;
 uniform vec3 u_eyeC, u_edgeC;
 uniform float u_reach, u_rime, u_storm, u_gutter;
+// Pixel art (PixelGround): the ramp (none: smooth), the torch, the pillars.
+uniform vec3 u_ramp[12];
+uniform int u_rampN;
+uniform float u_flicker, u_pillars;
 out vec4 o;
 
 float hash(vec2 p) {
@@ -116,6 +136,12 @@ float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
   for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; }
   return v;
+}
+// The 4 x 4 ordered dither the card backs are drawn with.
+float bayer(vec2 f) {
+  const float m[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+  ivec2 i = ivec2(mod(f, 4.0));
+  return (m[i.y * 4 + i.x] + 0.5) / 16.0;
 }
 
 void main() {
@@ -152,7 +178,11 @@ void main() {
   float r = u_pool.z * max(aspect, 1.0) * (1.0 + 0.06 * sin(t * 0.571)) * (1.0 + 0.12 * u_progress);
   float d = length(p - pc) / r;
   float pool = mix(0.15, 0.045, smoothstep(0.0, 0.45, d)) * (1.0 - smoothstep(0.45, 1.0, d));
-  pool *= 1.0 + 0.1 * sin(t * 0.898) + 0.6 * u_bloom;
+  // A torch does not breathe, it flickers, quick and slow at once, and
+  // it burns lower as the dark comes.
+  float flick = 0.2 * (noise(vec2(t * 2.3, 0.5)) - 0.5) + 0.1 * (noise(vec2(t * 6.1, 2.5)) - 0.5);
+  pool *= 1.0 + mix(0.1 * sin(t * 0.898), flick, u_flicker) + 0.6 * u_bloom;
+  pool *= 1.0 - 0.3 * u_flicker * th;
   pool *= 1.0 - u_gutter * th * (0.35 * noise(vec2(t * 6.0, 1.3)) + 0.25 * noise(vec2(t * 15.0, 4.1)));
   col = mix(col, light, pool * (1.0 - u_dim));
 
@@ -162,7 +192,26 @@ void main() {
   col = mix(col, light, u_focusAmt * 0.05 * exp(-fd * fd * 6.0) * (1.0 - u_dim));
 
   // A card turned: its colour washes out from the river, and goes.
-  col = mix(col, u_flashC, u_flash * 0.16 * exp(-fd * fd * 3.0));
+  float wash = u_flash * exp(-fd * fd * 3.0);
+  if (u_rampN == 0) col = mix(col, u_flashC, wash * 0.16);
+
+  // Pillars at the sides of a wide screen, where the table is not: dark
+  // stone, the side toward the light catching it. The eyes look out from
+  // between them.
+  float pillar = 0.0;
+  if (u_pillars > 0.0 && aspect > 1.2) {
+    float side = uv.x < 0.5 ? 1.0 : -1.0;
+    float x = (uv.x < 0.5 ? uv.x : 1.0 - uv.x) * aspect - side * par.x * 1.4;
+    for (int i = 0; i < 3; i++) {
+      if (float(i) >= u_pillars) break;
+      float c = 0.07 + 0.17 * float(i);
+      float inside = step(abs(x - c), 0.034);
+      // Round stone: dark on the side away from the light, umber toward it.
+      float k = clamp((x - c) / 0.068 + 0.5, 0.0, 1.0);
+      pillar = max(pillar, inside);
+      col = mix(col, mix(u_ink0 * 0.8, u_ink2, k * k * 0.9), inside);
+    }
+  }
 
   // Grain, fixed to the page like the paper it stands for.
   col = mix(col, u_parch, (hash(floor(gl_FragCoord.xy)) - 0.5) * u_grain);
@@ -220,11 +269,35 @@ void main() {
     g += 0.18 * exp(-dot(dd, dd) / (er * er * 50.0));
     eyeA += g * shown * open;
   }
-  col = mix(col, u_eyeC, clamp(eyeA, 0.0, 1.0) * smoothstep(0.0, 0.25, vig) * (1.0 - u_dim));
+  float eye = clamp(eyeA, 0.0, 1.0) * smoothstep(0.0, 0.25, vig) * (1.0 - u_dim) * (1.0 - pillar);
+  // In pixel art an eye is a slit of its colour, edged in a darker red,
+  // and no glow: a faint pink would snap to the torch's orange.
+  if (u_rampN > 0) col = eye > 0.45 ? u_eyeC : eye > 0.25 ? u_threatC * 0.6 : col;
+  else col = mix(col, u_eyeC, eye);
 
   // Through: gold rises over everything. Lost: the light goes out.
   col = mix(col, u_light, u_bloom * 0.22 * exp(-dot(p - pc, p - pc) * 1.2));
   col *= 1.0 - 0.62 * u_dim;
+
+  // Pixel art: every colour snapped to the ramp through the dither. A
+  // turned card's colour washes out as a dither of its own: the ramp
+  // would swallow a faint tint.
+  if (u_rampN > 0) {
+    float b = bayer(gl_FragCoord.xy);
+    // A small spread: flat ground stays one colour, and only a change of
+    // colour is dithered.
+    vec3 c = col + (b - 0.5) * 0.025;
+    float best = 1e9;
+    vec3 pick = col;
+    for (int i = 0; i < 12; i++) {
+      if (i >= u_rampN) break;
+      vec3 d = c - u_ramp[i];
+      float e = dot(d * d, vec3(0.3, 0.59, 0.11));
+      if (e < best) { best = e; pick = u_ramp[i]; }
+    }
+    col = pick;
+    if (wash * 0.3 > b) col = u_flashC * 0.45;
+  }
 
   o = vec4(col, 1.0);
 }`;
@@ -232,7 +305,7 @@ void main() {
 const AIR_VS = `#version 300 es
 precision highp float;
 in vec4 a_r;              // four random numbers per particle
-uniform float u_time, u_scale;
+uniform float u_time, u_scale, u_snap;
 uniform int u_kind;
 uniform vec2 u_res, u_pool, u_par;
 out float v_a;
@@ -275,7 +348,8 @@ void main() {
   // Nearer particles move further with the pointer.
   vec2 pos = vec2(x, y) + u_par / u_res * (0.4 + s);
   gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
-  gl_PointSize = size * u_scale;
+  // In pixel art a particle is a whole pixel or two.
+  gl_PointSize = u_snap > 0.5 ? max(1.0, floor(size * u_scale + 0.5)) : size * u_scale;
   v_a = alpha; v_shape = shape; v_size = size * u_scale; v_tint = w;
 }`;
 
@@ -286,10 +360,16 @@ in float v_shape;
 in float v_size;
 in float v_tint;
 uniform vec3 u_c0, u_c1;
-uniform float u_fade;
+uniform float u_fade, u_hard;
 out vec4 o;
 
 void main() {
+  if (u_hard > 0.5) {
+    // Pixel art: there or not, one of two colours from the ramp.
+    if (v_a * u_fade < 0.16) discard;
+    o = vec4(mix(u_c0, u_c1, step(0.75, v_tint)), 1.0);
+    return;
+  }
   vec2 pc = gl_PointCoord - 0.5;
   float a;
   float line = 1.2 / max(v_size, 1.0);   // a streak is about a pixel wide
@@ -351,6 +431,7 @@ export class WorldRenderer {
   private pool: [number, number, number] = [0.5, 0.08, 0.55];
   private colors: WorldColors | null = null;
   private edge: Edge = NO_EDGE;
+  private pix: PixelGround | null = null;
   private scale = 1;
   /** The constants need sending again (see `constants`). */
   private dirty = true;
@@ -382,10 +463,11 @@ export class WorldRenderer {
     this.air = program(gl, AIR_VS, AIR_FS);
     for (const n of ['u_res', 'u_time', 'u_ink0', 'u_ink1', 'u_ink2', 'u_parch', 'u_light', 'u_threatC', 'u_flashC',
       'u_pool', 'u_focus', 'u_focusAmt', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_grain', 'u_fog', 'u_vignette', 'u_par',
-      'u_progress', 'u_eyes', 'u_eyeC', 'u_edgeC', 'u_reach', 'u_rime', 'u_storm', 'u_gutter']) {
+      'u_progress', 'u_eyes', 'u_eyeC', 'u_edgeC', 'u_reach', 'u_rime', 'u_storm', 'u_gutter',
+      'u_ramp', 'u_rampN', 'u_flicker', 'u_pillars']) {
       this.u[n] = gl.getUniformLocation(this.ground, n);
     }
-    for (const n of ['u_time', 'u_scale', 'u_kind', 'u_res', 'u_pool', 'u_par', 'u_c0', 'u_c1', 'u_fade']) {
+    for (const n of ['u_time', 'u_scale', 'u_kind', 'u_res', 'u_pool', 'u_par', 'u_c0', 'u_c1', 'u_fade', 'u_snap', 'u_hard']) {
       this.ua[n] = gl.getUniformLocation(this.air, n);
     }
     const vao = gl.createVertexArray();
@@ -412,10 +494,15 @@ export class WorldRenderer {
     return /swiftshader|llvmpipe|software/i.test(name);
   }
 
-  /** The setting: its colours, what is in its air, where its light hangs, how its dark comes. */
-  setting(id: string, colors: WorldColors, particle: Particle, poolY: number, count: number, edge: Edge = NO_EDGE): void {
+  /**
+   * The setting: its colours, what is in its air, where its light hangs,
+   * how its dark comes, and whether it is drawn as pixel art.
+   */
+  setting(id: string, colors: WorldColors, particle: Particle, poolY: number, count: number, edge: Edge = NO_EDGE,
+    pixel: PixelGround | null = null): void {
     this.colors = colors;
     this.edge = edge;
+    this.pix = pixel;
     this.kind = KINDS[particle];
     this.pool = [0.5, poolY, 0.55];
     const r = seeded(`${id}:air`);
@@ -521,7 +608,13 @@ export class WorldRenderer {
     gl.uniform3fv(u.u_threatC!, c.threat);
     gl.uniform3fv(u.u_flashC!, this.flashColor);
     gl.uniform3fv(u.u_pool!, this.pool);
-    gl.uniform1f(u.u_grain!, 0.05);
+    const px = this.pix;
+    // The dither is the pixel world's grain.
+    gl.uniform1f(u.u_grain!, px ? 0 : 0.05);
+    gl.uniform1i(u.u_rampN!, px ? Math.min(12, px.ramp.length) : 0);
+    if (px) gl.uniform3fv(u.u_ramp!, new Float32Array(px.ramp.slice(0, 12).flat()));
+    gl.uniform1f(u.u_flicker!, px?.flicker ?? 0);
+    gl.uniform1f(u.u_pillars!, px?.pillars ?? 0);
     gl.uniform1f(u.u_fog!, 0.5);
     gl.uniform1f(u.u_vignette!, 0.55);
     const e = this.edge;
@@ -536,12 +629,14 @@ export class WorldRenderer {
     gl.useProgram(this.air);
     gl.uniform1f(a.u_scale!, this.scale);
     gl.uniform1i(a.u_kind!, this.kind);
+    gl.uniform1f(a.u_snap!, px ? 1 : 0);
+    gl.uniform1f(a.u_hard!, px ? 1 : 0);
     gl.uniform2f(a.u_res!, canvas.width, canvas.height);
     gl.uniform2f(a.u_pool!, this.pool[0], this.pool[1]);
     const k = this.kind;
     // What each kind is made of, as the grounds drew it.
-    const [c0, c1] =
-      k === 4 ? [c.parchment100, c.parchment100]
+    const [c0, c1] = px ? px.air
+      : k === 4 ? [c.parchment100, c.parchment100]
       : k === 5 ? [c.light, c.lightSoft]
       : k === 1 || k === 3 ? [c.lightSoft, c.lightSoft]
       : k === 2 ? [c.parchment400, c.parchment400]

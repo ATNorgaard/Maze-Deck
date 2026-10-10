@@ -5,7 +5,8 @@ Rewritten at the end of every session. Coming in cold: read this, then
 [reference/canonical-rules.md](reference/canonical-rules.md). Before touching
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md).
 
-**Last updated:** 2026-10-09, with the overhaul finished (`world/10`) and live.
+**Last updated:** 2026-10-11, with the dungeon's art job done (`art/1`, on the
+`front-door` branch). The overhaul (`world/10`) is live.
 
 ## Where we are
 
@@ -54,9 +55,11 @@ deploys.
   the threshold as a ritual, a forecast for the dials). Decisions F1–F6.
 - [art-jobs.md](art-jobs.md): the card backs and the world, rebranded.
   **Decided: the pixel diorama, sky high and table low** (AJ1–AJ6). Job 0,
-  the pixel renderer, is done (`art/0`), and every card back is pixel art
-  now. **Next: Job 1, the dungeon** (the default setting), then the others,
-  one setting at a time: its props, its light, its world and its vista.
+  the pixel renderer, is done (`art/0`), and every card back is pixel art.
+  **Job 1, the dungeon, is done** (`art/1`): the keeper's vault on its back
+  and in its vista, and a pixel world of torchlight, pillars and eyes, within
+  the luminance budget and level with `art/0` on the frame budget. **Next:
+  Job 2, the tower**, then the others, one setting at a time.
 
 Both are on the `front-door` branch.
 
@@ -102,7 +105,7 @@ laptops with about 657px of viewport, which get `sm` today. It is a change to
 cd packages/rules && npm test              # 74 tests, ~12s, no browser
 cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev               # the board, http://localhost:5180, no backend needed
-cd apps/table && npm test                  # 31 tests
+cd apps/table && npm test                  # 41 tests
 cd apps/table && npm run build             # tsc --noEmit && vite build
 cd packages/ui && npm run build            # tsup + the CSS flattening step
 npx vercel dev                             # app + /api/session/*, http://localhost:3000
@@ -129,6 +132,7 @@ gitignored.
 | `capture-sound.cjs` | Phase 9: every setting's bed rendered offline, measured and written as WAVs, then the live bed |
 | `capture-frames.cjs` | A deal, frame by frame |
 | `check-deck-parity.mjs` | The deck composition agrees in its three places |
+| `check-art.cjs` | The art jobs: the luminance budget behind the words at five sizes, the colour reservation, a thumbnail sheet of the backs |
 
 Frame numbers drift between runs and between days. Judge a change against
 the commit before it, measured in the same session, alternating.
