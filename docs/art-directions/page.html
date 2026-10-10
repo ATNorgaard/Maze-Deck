@@ -1,0 +1,402 @@
+<title>Maze Deck Art Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Inter:wght@500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: a judging table. Six settings down the page; each shows two
+   directions side by side as the board, the back and the vista, with a
+   place to choose under them. */
+:root {
+  --bg: #0B1013;
+  --panel: #111A1E;
+  --line: #24343B;
+  --fg: #EDE5D2;
+  --muted: #A99F86;
+  --gold: #D6A24E;
+  --gold-soft: rgba(214, 162, 78, .14);
+  --ok: #7FC0AC;
+  --display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --body: "Spectral", "Iowan Old Style", Georgia, serif;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #F1EADB; --panel: #E8DFCA; --line: #CDBF9F; --fg: #1B2226; --muted: #5D5644;
+    --gold: #8A5E1E; --gold-soft: rgba(138, 94, 30, .12); --ok: #235347;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #F1EADB; --panel: #E8DFCA; --line: #CDBF9F; --fg: #1B2226; --muted: #5D5644;
+  --gold: #8A5E1E; --gold-soft: rgba(138, 94, 30, .12); --ok: #235347;
+  color-scheme: light;
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.55; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 64px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: .04em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.08; }
+h2 { font-size: clamp(24px, 3vw, 32px); }
+h3 { font-size: 22px; }
+p { margin: 0; max-width: 68ch; }
+.kicker { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.btn {
+  font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: .03em;
+  padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer;
+}
+.btn:hover { border-color: var(--gold); }
+.btn[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); color: var(--gold); }
+.btn:focus-visible, .pick input:focus-visible + span, textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+header.top { display: flex; flex-direction: column; gap: 14px; }
+header.top .lede { font-size: 19px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* The jobs at a glance. */
+.index { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.index a { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--fg); text-decoration: none; min-width: 0; }
+.index a:hover { border-color: var(--gold); }
+.index .n { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.index .t { font-family: var(--display); font-size: 16px; }
+.index .s { font-family: var(--ui); font-size: 12px; color: var(--muted); }
+.index .s[data-picked] { color: var(--gold); }
+
+/* A setting. */
+.job { display: flex; flex-direction: column; gap: 22px; padding-top: 30px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.job-head { display: flex; flex-direction: column; gap: 6px; }
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.dir { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.dir-head { display: flex; align-items: baseline; gap: 12px; }
+.letter { font-family: var(--display); font-size: 30px; color: var(--gold); line-height: 1; }
+.pitch { font-size: 17px; }
+
+/* The board: the world full-bleed, the game's furniture over it, drawn in the game's own colours. */
+.board { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 10px; overflow: hidden; background: #0A0F12; container-type: inline-size; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.35); }
+.board canvas { position: absolute; image-rendering: pixelated; display: block; }
+.board .world { inset: 0; width: 100%; height: 100%; }
+.board .vista { left: 1.2%; width: 97.6%; top: 6.7%; height: 24.6%; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.m { position: absolute; color: #C9BC9C; font-family: "Spectral", Georgia, serif; pointer-events: none; }
+.m-title { left: 1.2%; top: 1.4%; font-family: "Cinzel", Georgia, serif; font-size: 1.15cqw; color: #F2EBDA; letter-spacing: .04em; }
+.m-meta { left: 1.2%; top: 3.6%; font-size: .85cqw; color: #9B8F74; }
+.m-track { left: 28%; right: 38%; top: 4.6%; height: 1px; background: rgba(201,188,156,.35); }
+.m-threat { right: 27%; top: 1.3%; width: 9%; height: 4%; border: 1px solid rgba(201,188,156,.25); border-radius: 3px; background: rgba(10,15,18,.6); }
+.m-btns { right: 1.2%; top: 1.4%; display: flex; gap: .5cqw; }
+.m-btns i { display: block; width: 5.5cqw; height: 2.4cqw; border: 1px solid rgba(201,188,156,.3); border-radius: 3px; background: rgba(10,15,18,.55); }
+.m-kick { left: 0; right: 0; top: 32%; text-align: center; font-family: "Inter", sans-serif; font-weight: 600; font-size: .75cqw; letter-spacing: .25em; text-transform: uppercase; }
+.m-line { left: 10%; right: 10%; top: 34.4%; text-align: center; font-size: 1.15cqw; color: #E4D9BF; }
+.m-card { position: absolute; border-radius: .8cqw; overflow: hidden; background: #0C1215; box-shadow: 0 .4cqw 1.2cqw rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.5); }
+.m-card canvas { position: absolute; inset: 4%; width: 92%; height: 92%; }
+.m-card canvas.fr { image-rendering: auto; }
+.m-slot { position: absolute; top: 79.6%; font-family: "Cinzel", serif; font-size: .62cqw; letter-spacing: .2em; color: #9B8F74; transform: translateX(-50%); }
+.m-hand { left: 31%; width: 38%; top: 85.5%; height: 18%; display: flex; gap: .45cqw; }
+.m-hand i { flex: 1; border-radius: .5cqw; background: linear-gradient(#141D22, #0E1519); box-shadow: 0 0 0 1px rgba(201,188,156,.18) inset; }
+.m-seats { left: 1.4%; top: 88.5%; display: flex; gap: 1.1cqw; }
+.m-seats i { display: block; width: 2.3cqw; height: 2.3cqw; border-radius: 50%; border: 1px solid rgba(242,235,218,.6); }
+.m-seats i:first-child { box-shadow: 0 0 0 .3cqw rgba(214,162,78,.35); }
+.m-log { right: 1.4%; top: 89%; text-align: right; font-size: .9cqw; line-height: 1.5; color: #F2EBDA; }
+.m-log span { color: #9B8F74; }
+
+/* The back and the vista, larger. */
+.pair { display: grid; grid-template-columns: minmax(0, 0.36fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+figcaption { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.card { position: relative; aspect-ratio: 5 / 7; max-width: 100%; border-radius: 12px; overflow: hidden; background: #0C1215; box-shadow: 0 10px 28px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4); }
+.card canvas { position: absolute; inset: 4%; width: 92%; height: 92%; image-rendering: pixelated; }
+.card canvas.fr { image-rendering: auto; }
+.vbox { position: relative; aspect-ratio: 192 / 72; max-width: 100%; border-radius: 8px; overflow: hidden; background: #0A0F12; }
+.vbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cats .btn { padding: 5px 10px; font-size: 12px; }
+.cats .btn i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+.notes { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 15px; }
+.notes dt { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.notes dd { margin: 0; }
+.ramp { display: flex; flex-wrap: wrap; gap: 3px; }
+.ramp span { width: 18px; height: 18px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.3) inset; }
+
+/* Choosing. */
+.choose { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 14px; align-items: start; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { position: relative; }
+.pick input { position: absolute; opacity: 0; pointer-events: none; }
+.pick span { display: inline-block; font-family: var(--ui); font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; }
+.pick input:checked + span { border-color: var(--gold); background: var(--gold-soft); color: var(--gold); }
+textarea { width: 100%; min-height: 64px; resize: vertical; font: 15px/1.45 var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; box-sizing: border-box; }
+.saved { font-family: var(--ui); font-size: 12px; color: var(--muted); min-height: 1.2em; }
+.saved[data-ok] { color: var(--ok); }
+
+footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28px; border-top: 1px solid var(--line); }
+
+@media (max-width: 1000px) {
+  .dirs { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+  .index { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .wrap { padding-inline: 16px; gap: 48px; }
+  .index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .pair figure:first-child { max-width: 220px; }
+  .choose { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="kicker">Art jobs 1–6 · designs before building</span>
+    <h1>Two ways to draw each setting</h1>
+    <p class="lede">The first dungeon was built and taken back, so nothing is built from here until you have chosen. Each setting has two directions. Each is shown as the board you would play on, the card back, and the vista with every card's subject in it. Pick one, or neither, and say what you like or don't.</p>
+    <p class="small muted">Everything here is drawn on this page, from the briefs and the game's palette. The pictures are the design; the builds will match them, at the game's own sizes.</p>
+    <div class="row">
+      <button class="btn" id="motion" type="button" aria-pressed="true">Motion on</button>
+      <span class="small muted" id="store-note"></span>
+    </div>
+  </header>
+
+  <nav class="index" id="index" aria-label="The settings"></nav>
+  <div id="jobs"></div>
+
+  <footer class="next">
+    <span class="kicker">What happens next</span>
+    <p>Once a setting has a pick, I build that direction for it: its back (whole, and in layers for the tilt), its vista with all five subjects, and its world, each checked against the luminance budget and the frame budget before it reaches the board. A setting marked "Neither" gets new directions first.</p>
+    <p class="small muted">Job 7 (the landing's panorama) is made from the six picks. Job 8 (the print deck's backs) waits on them too.</p>
+  </footer>
+</div>
+
+<script>
+/*PX*/
+</script>
+<script>
+/*SCENES*/
+</script>
+<script>
+(() => {
+  'use strict';
+  const { CATEGORIES, CARD, frame } = PX;
+  const SETTINGS = [
+    ['dungeon', 1, 'Dungeon'], ['tower', 2, 'Tower'], ['deep-forest', 3, 'Deep forest'],
+    ['desert', 4, 'Desert'], ['undercity', 5, 'Undercity'], ['frozen-pass', 6, 'Frozen pass'],
+  ];
+  const LINES = {
+    monster: 'Scratches on the wall at exactly the height of your throat, and they are fresh.',
+    obstacle: 'A lock with no keyhole and seven brass rings, each carved with a different animal.',
+    wanderer: 'A miner, three weeks lost, still carrying a full pack and refusing to open it.',
+    item: 'A sealed jar of something that moves when nobody is looking at it.',
+    'clear-path': 'The air moves. Somewhere ahead, the way is open.',
+  };
+  const CAT_HEX = { mons: '#D9707C', obst: '#7FC0AC', wand: '#A6C0D4', item: '#C08FCE', path: '#F2CB8A' };
+  const designs = (window.DESIGNS || []);
+
+  /* ---------- pictures: a painter drawn into a canvas, animated while on screen ---------- */
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let motion = !reduced;
+  const live = new Set();
+
+  function picture(canvas, make, animate) {
+    const pic = { canvas, make, animate, visible: true, made: null, img: null, ctx: canvas.getContext('2d') };
+    pic.remake = () => {
+      try { pic.made = make(); } catch (e) { console.error(e); return; }
+      const { p } = pic.made;
+      canvas.width = p.w; canvas.height = p.h;
+      pic.img = pic.ctx.createImageData(p.w, p.h);
+      draw(pic, animate && motion ? now() : 0.5);
+    };
+    if (animate) {
+      live.add(pic);
+      new IntersectionObserver((es) => { pic.visible = es[0].isIntersecting; }, { rootMargin: '200px' }).observe(canvas);
+    }
+    pic.remake();
+    return pic;
+  }
+  function draw(pic, t) {
+    if (!pic.made) return;
+    pic.made.p.resolve(t, pic.img);
+    if (pic.made.over) pic.made.over(pic.img, t);
+    pic.ctx.putImageData(pic.img, 0, 0);
+  }
+  const now = () => performance.now() / 1000;
+  let last = 0;
+  function tick(ms) {
+    requestAnimationFrame(tick);
+    if (!motion || ms - last < 80) return;
+    last = ms;
+    const t = ms / 1000;
+    for (const pic of live) if (pic.visible) draw(pic, t);
+  }
+  requestAnimationFrame(tick);
+
+  const backs = new Map();
+  /** A card back: the picture, and the game's frame over it at the card's own resolution. */
+  function cardBack(host, d) {
+    const art = document.createElement('canvas');
+    const fr = document.createElement('canvas'); fr.className = 'fr';
+    host.append(art, fr);
+    // A back is still: built once per direction, however many cards show it.
+    picture(art, () => { if (!backs.has(d.id)) backs.set(d.id, d.back(96, 134)); return backs.get(d.id); }, false);
+    const sizeFrame = () => {
+      const r = fr.getBoundingClientRect();
+      if (r.width < 2) return;
+      const k = Math.min(2, devicePixelRatio || 1);
+      fr.width = Math.round(r.width * k); fr.height = Math.round(r.height * k);
+      frame(fr.getContext('2d'), fr.width, fr.height);
+    };
+    new ResizeObserver(sizeFrame).observe(fr);
+  }
+
+  /* ---------- the board ---------- */
+  function board(host, d, state) {
+    const world = document.createElement('canvas'); world.className = 'world';
+    const vista = document.createElement('canvas'); vista.className = 'vista';
+    host.append(world, vista);
+    host.insertAdjacentHTML('beforeend', `
+      <div class="m m-title">The Ashen Tower</div>
+      <div class="m m-meta">${d.name} · Round 1 · 20 cards left · DC 15</div>
+      <div class="m m-track"></div><div class="m m-threat"></div>
+      <div class="m m-btns"><i></i><i></i></div>
+      <div class="m m-kick"></div><div class="m m-line"></div>
+      <div class="m m-hand"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="m m-seats"><i></i><i></i><i></i><i></i></div>
+      <div class="m m-log">Brakka takes the centre path.<br><span>The deck is shuffled. 3 paths lie ahead.</span></div>`);
+    const cards = [[16.6, 49.5, 9.2], [32.3, 43, 16.3], [50, 43, 16.3], [67.7, 43, 16.3]];
+    cards.forEach(([cx, top, w], i) => {
+      const c = document.createElement('div'); c.className = 'm-card';
+      Object.assign(c.style, { left: `${cx - w / 2}%`, top: `${top}%`, width: `${w}%`, aspectRatio: '5 / 7' });
+      host.append(c);
+      cardBack(c, d);
+      if (i) host.insertAdjacentHTML('beforeend', `<div class="m-slot" style="left:${cx}%">${['', 'LEFT', 'CENTRE', 'RIGHT'][i]}</div>`);
+    });
+    const discard = document.createElement('div'); discard.className = 'm-card';
+    Object.assign(discard.style, { left: '79.2%', top: '49.5%', width: '9.2%', aspectRatio: '5 / 7', background: 'transparent', boxShadow: '0 0 0 1px rgba(201,188,156,.18) inset' });
+    host.append(discard);
+    picture(world, () => d.world(320, 200), true);
+    const vpic = picture(vista, () => d.vista(312, 62, state.cat), true);
+    const kick = host.querySelector('.m-kick'); const line = host.querySelector('.m-line');
+    return () => {
+      vpic.remake();
+      const [, label, ramp] = CATEGORIES.find((c) => c[0] === state.cat);
+      kick.textContent = label; kick.style.color = CAT_HEX[ramp];
+      line.textContent = LINES[state.cat];
+    };
+  }
+
+  /* ---------- a direction ---------- */
+  function direction(d) {
+    const el = document.createElement('article');
+    el.className = 'dir';
+    el.innerHTML = `
+      <div class="dir-head"><span class="letter">${d.key}</span><h3>${d.title}</h3></div>
+      <p class="pitch">${d.pitch}</p>
+      <div class="board" role="img" aria-label="${d.name}, ${d.title}: the board with this world, vista and back"></div>
+      <div class="pair">
+        <figure><div class="card" role="img" aria-label="The card back"></div><figcaption>The back</figcaption></figure>
+        <figure><div class="vbox" role="img" aria-label="The vista"><canvas></canvas></div>
+          <figcaption>The vista, with the card that was turned</figcaption>
+          <div class="cats" role="group" aria-label="Which card was turned"></div></figure>
+      </div>
+      <dl class="notes">${d.notes.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+      <div class="ramp" aria-label="The palette">${d.palette.map((c) => `<span style="background:${c}" title="${c}"></span>`).join('')}</div>`;
+    const state = { cat: 'monster' };
+    const refreshBoard = board(el.querySelector('.board'), d, state);
+    cardBack(el.querySelector('.card'), d);
+    const vbig = picture(el.querySelector('.vbox canvas'), () => d.vista(192, 72, state.cat), true);
+    const cats = el.querySelector('.cats');
+    for (const [id, label, ramp] of CATEGORIES) {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.type = 'button'; b.setAttribute('aria-pressed', String(id === state.cat));
+      b.innerHTML = `<i style="background:${CAT_HEX[ramp]}"></i>${label}`;
+      b.addEventListener('click', () => {
+        state.cat = id;
+        cats.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        vbig.remake(); refreshBoard();
+      });
+      cats.append(b);
+    }
+    refreshBoard();
+    return el;
+  }
+
+  /* ---------- choosing, kept in the page's store ---------- */
+  let db = null;
+  const pickers = {};
+  function chooser(setting, label, dirs) {
+    const el = document.createElement('form');
+    el.className = 'choose';
+    el.innerHTML = `
+      <div class="picks" role="radiogroup" aria-label="Your pick for ${label}">
+        ${dirs.map((d) => `<label class="pick"><input type="radio" name="pick-${setting}" id="pick-${setting}-${d.key}" value="${d.key}"><span>${d.key}: ${d.title}</span></label>`).join('')}
+        <label class="pick"><input type="radio" name="pick-${setting}" id="pick-${setting}-none" value="neither"><span>Neither</span></label>
+      </div>
+      <textarea id="note-${setting}" placeholder="What you like, what you don't, what to change"></textarea>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button class="btn" type="submit">Save</button>
+        <span class="saved" aria-live="polite"></span>
+      </div>`;
+    const saved = el.querySelector('.saved');
+    const btn = el.querySelector('button');
+    el.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pick = el.querySelector('input:checked')?.value || null;
+      const note = el.querySelector('textarea').value.trim();
+      if (!db) { saved.textContent = 'Not saved: this view has no store. Tell Claude in chat instead.'; return; }
+      if (!pick && !note) { saved.textContent = 'Pick a direction or write a note first.'; return; }
+      btn.disabled = true; saved.removeAttribute('data-ok'); saved.textContent = 'Saving…';
+      try {
+        await db.doc(`choices/${setting}`).set({ pick, note, at: new Date().toISOString() });
+        saved.textContent = 'Saved'; saved.setAttribute('data-ok', '');
+      } catch (err) {
+        saved.textContent = err && err.code === 'invalid_argument' ? 'Only the owner can save choices here.' : 'Could not save. Try again in a moment.';
+      } finally { btn.disabled = false; }
+    });
+    pickers[setting] = (data) => {
+      if (data.pick) { const r = el.querySelector(`input[value="${data.pick}"]`); if (r) r.checked = true; }
+      if (typeof data.note === 'string' && document.activeElement !== el.querySelector('textarea')) el.querySelector('textarea').value = data.note;
+      if (data.at) { saved.textContent = `Saved ${new Date(data.at).toLocaleString()}`; saved.setAttribute('data-ok', ''); }
+    };
+    return el;
+  }
+
+  /* ---------- the page ---------- */
+  const jobs = document.getElementById('jobs');
+  const index = document.getElementById('index');
+  for (const [id, n, label] of SETTINGS) {
+    const dirs = designs.filter((d) => d.setting === id);
+    index.insertAdjacentHTML('beforeend', `<a href="#${id}"><span class="n">Job ${n}</span><span class="t">${label}</span><span class="s" id="status-${id}">${dirs.length ? 'Not chosen yet' : 'Drawing…'}</span></a>`);
+    const sec = document.createElement('section');
+    sec.className = 'job'; sec.id = id;
+    sec.innerHTML = `<div class="job-head"><span class="kicker">Job ${n}</span><h2>${label}</h2></div>`;
+    if (!dirs.length) { sec.insertAdjacentHTML('beforeend', '<p class="muted">Its two directions are still being drawn.</p>'); jobs.append(sec); continue; }
+    const row = document.createElement('div'); row.className = 'dirs';
+    dirs.forEach((d) => row.append(direction(d)));
+    sec.append(row, chooser(id, label, dirs));
+    jobs.append(sec);
+  }
+
+  const btnMotion = document.getElementById('motion');
+  const syncMotion = () => { btnMotion.setAttribute('aria-pressed', String(motion)); btnMotion.textContent = motion ? 'Motion on' : 'Motion off'; };
+  btnMotion.addEventListener('click', () => { motion = !motion; syncMotion(); });
+  syncMotion();
+
+  const note = document.getElementById('store-note');
+  (async () => {
+    db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) { note.textContent = 'Choices cannot be saved in this view; tell Claude in chat.'; return; }
+    note.textContent = 'Your choices are saved on this page, and Claude reads them.';
+    db.collection('choices').onSnapshot((snap) => {
+      for (const doc of snap.docs) {
+        const data = doc.data() || {};
+        if (pickers[doc.id]) pickers[doc.id](data);
+        const s = document.getElementById(`status-${doc.id}`);
+        if (s) {
+          const d = designs.find((x) => x.setting === doc.id && x.key === data.pick);
+          s.textContent = data.pick === 'neither' ? 'Neither: new directions' : d ? `${d.key}: ${d.title}` : 'Note left';
+          s.setAttribute('data-picked', '');
+        }
+      }
+    }, () => { note.textContent = 'Choices could not be loaded; tell Claude in chat.'; });
+  })();
+})();
+</script>

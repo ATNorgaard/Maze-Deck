@@ -216,6 +216,10 @@ it drawn: the back, the vista with a card's subject in it, and the world
 behind a board, as mock-ups. They choose between directions or send it
 back. The briefs below are where a design starts, not what it must be.
 
+The designs for jobs 1–6, two directions each, are in
+[art-directions/](art-directions/README.md) and published for the author at
+<https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>, where the picks are saved.
+
 ### Job 0 — the pixel renderer (foundation)
 
 Upgrade the `pixel` style in `packages/art` from "flat on a grid" to a pixel

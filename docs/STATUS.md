@@ -57,8 +57,10 @@ deploys.
   **Decided: the pixel diorama, sky high and table low** (AJ1–AJ6). Job 0,
   the pixel renderer, is done (`art/0`), and every card back is pixel art
   now. A first dungeon (`art/1`) was built and taken back: the author was
-  not keen. **Next: a design up front for each of jobs 1–6**, as mock-ups to
-  choose from, and nothing built until one is approved.
+  not keen. **The designs are ready** (2026-10-11): two directions for each
+  of jobs 1–6, in [art-directions/](art-directions/README.md) and on
+  <https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>. **Next: the author
+  picks one per setting** (saved on that page); nothing is built until then.
 
 Both are on the `front-door` branch.
 
