@@ -48,6 +48,16 @@ real screen with sound on, and with a real phone or two in a hosted room:
 Then say what to change. Work goes on a branch, since a push to `main`
 deploys.
 
+**Planned next, waiting on the author's decisions:**
+- [front-door.md](front-door.md): the landing, the threshold and the join
+  screen, brought up to the board (a living setting, a turn you can play,
+  the threshold as a ritual, a forecast for the dials). Decisions F1–F6.
+- [art-jobs.md](art-jobs.md): the card backs and the world, rebranded, as
+  seven jobs in one house style. Decisions AJ1–AJ6, the first being the
+  style itself.
+
+Both are on the `front-door` branch.
+
 Also waiting on the author: **D9**, a size step between `sm` and `md` for
 laptops with about 657px of viewport, which get `sm` today. It is a change to
 `packages/ui` and its design-sync ([overhaul.md](overhaul.md#d9--for-the-author)).
