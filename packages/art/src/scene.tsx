@@ -17,6 +17,8 @@ import type { ReactNode } from 'react';
 import type { CardCategory } from '@maze-deck/ui';
 import { alpha, mix } from './biomes';
 import type { BiomeVocab, CatKey, Palette, Terrain } from './biomes';
+import { LOOKS, rasterize } from './pixel';
+import { pngDataUri } from './png';
 import { fbm1d, int, pick, range, rngFor } from './rng';
 import type { Rng } from './rng';
 import type { Style } from './style';
@@ -62,8 +64,8 @@ export interface SceneParams {
  * are the terrain either side of depth 0.6 on a transparent ground,
  * with the fade mixed into their colours rather than laid over them,
  * so it does not fill the gaps between them. The three stacked are the
- * whole picture. Only the `flat` style draws parts; the others draw the
- * whole picture whatever `part` says.
+ * whole picture. The `flat` and `pixel` styles draw parts; the others
+ * draw the whole picture whatever `part` says.
  */
 export type ScenePart = 'sky' | 'far' | 'near';
 
@@ -415,17 +417,6 @@ function shapePath(s: Shape): string {
   return `M${s.pts.map(([x, y]) => `${f2(x)},${f2(y)}`).join(' L')} Z`;
 }
 
-function contains(s: Shape, x: number, y: number): boolean {
-  if (s.kind === 'circle') return (x - s.cx) ** 2 + (y - s.cy) ** 2 <= s.r * s.r;
-  let inside = false;
-  const p = s.pts;
-  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-    const [xi, yi] = p[i], [xj, yj] = p[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
 function spriteBox(sp: Sprite): { cx: number; cy: number; r: number } {
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   for (const s of sp.shapes) {
@@ -559,59 +550,26 @@ function renderEngraving(sc: Scene, pal: Palette, id: string): ReactNode {
   );
 }
 
-const BAYER = [[0, 0.5], [0.75, 0.25]];
-
-function renderPixel(sc: Scene, px: number, pal: Palette): ReactNode {
-  const cols = Math.ceil(sc.W / px);
-  const rows = Math.ceil(sc.H / px);
-  const bands = [0, 1 / 3, 2 / 3, 1].map((t) => mix(sc.skyTop, sc.skyBottom, t));
-  const lightTint = [0, 0.14, 0.3, 0.5].map((t) => bands.map((b) => mix(b, sc.light.color, t)));
-  const rects: ReactNode[] = [];
-
-  const sample = (cx: number, cy: number, bayer: number): string => {
-    const x = (cx + 0.5) * px, y = (cy + 0.5) * px;
-    const u = x / sc.W, v = y / sc.H;
-    // Sky: four bands, dithered at the seams.
-    const band = Math.max(0, Math.min(3, Math.floor(v * 3 + (bayer - 0.5) * 0.8 + 0.5)));
-    const d = Math.hypot(x - sc.light.x, y - sc.light.y) / sc.light.r + (bayer - 0.5) * 0.22;
-    const lvl = d < 0.3 ? 3 : d < 0.55 ? 2 : d < 0.82 ? 1 : 0;
-    let color = lightTint[lvl][band];
-    if (sc.disc && (x - sc.disc.cx) ** 2 + (y - sc.disc.cy) ** 2 <= sc.disc.r ** 2) color = mix(color, sc.disc.color, 0.6);
-    for (const l of sc.layers) {
-      let inside = l.from === 'bottom' ? v >= 1 - l.h(u) : v <= l.h(u);
-      if (!inside && l.shapes) {
-        for (const s of l.shapes) if (contains(s, x, y)) { inside = true; break; }
-      }
-      if (inside) color = l.color;
-    }
-    for (const sp of sc.sprites) {
-      for (const s of sp.shapes) {
-        if (contains(s, x, y)) {
-          color = sp.opacity !== undefined && sp.opacity < 1 ? mix(color, sp.color, sp.opacity) : sp.color;
-          break;
-        }
-      }
-    }
-    return color;
-  };
-
-  for (let cy = 0; cy < rows; cy++) {
-    let runStart = 0;
-    let runColor = sample(0, cy, BAYER[cy % 2][0]);
-    for (let cx = 1; cx <= cols; cx++) {
-      const c = cx < cols ? sample(cx, cy, BAYER[cy % 2][cx % 2]) : '';
-      if (c !== runColor) {
-        rects.push(<rect key={`${cy}-${runStart}`} x={runStart * px} y={cy * px} width={(cx - runStart) * px} height={px} fill={runColor} />);
-        runStart = cx;
-        runColor = c;
-      }
-    }
-  }
+/**
+ * The pixel style (pixel.ts): the setting's ramps, dithered light, a lit
+ * rim on the near land, sprites in the air, as one indexed PNG drawn
+ * pixelated. A card back is lit by the setting's own light; a scene by
+ * the turned card's colour, as the other styles light it.
+ */
+function renderPixel(sc: Scene, p: SceneParams, pal: Palette, vocab: BiomeVocab): ReactNode {
+  const look = LOOKS[vocab.id];
+  const c = pal.cat[CAT_KEY[p.category]];
+  const ownLight = p.frame === 'back' && !p.subject;
+  const img = rasterize(sc, look, {
+    px: p.px, seed: p.seed, ink: pal.ink[900], fade: p.fade,
+    ...(p.part ? { part: p.part } : {}),
+    ...(ownLight ? {} : { light: [c[700], c[500], c[300]] }),
+  });
   return (
-    <g shapeRendering="crispEdges">
-      <rect width={sc.W} height={sc.H} fill={pal.ink[900]} />
-      {rects}
-    </g>
+    <image
+      href={pngDataUri(img)} x={0} y={0} width={sc.W} height={sc.H}
+      preserveAspectRatio="none" imageRendering="optimizeSpeed" style={{ imageRendering: 'pixelated' }}
+    />
   );
 }
 
@@ -634,16 +592,17 @@ function renderFlatPart(sc: Scene, id: string, part: ScenePart, fade: number, in
 
 export function SceneArt({ p, pal, vocab, id }: { p: SceneParams; pal: Palette; vocab: BiomeVocab; id: string }) {
   const sc = buildScene(p, pal, vocab);
-  const part = p.style === 'flat' ? p.part : undefined;
+  const part = p.style === 'flat' || p.style === 'pixel' ? p.part : undefined;
   const body =
-    p.style === 'pixel' ? renderPixel(sc, p.px, pal)
+    p.style === 'pixel' ? renderPixel(sc, p, pal, vocab)
     : p.style === 'line' ? renderLine(sc, pal)
     : p.style === 'engraving' ? renderEngraving(sc, pal, id)
     : part ? renderFlatPart(sc, id, part, p.fade, pal.ink[900])
     : renderFlat(sc, id);
   const bandColor = pal.cat[CAT_KEY[p.category]][300];
-  // A part off the sky is see-through, and carries its fade in its colours.
-  const fade = p.fade > 0 && (!part || part === 'sky')
+  // A part off the sky is see-through, and carries its fade in its colours;
+  // a pixel picture carries it in its palette.
+  const fade = p.fade > 0 && p.style !== 'pixel' && (!part || part === 'sky')
     ? <rect width={sc.W} height={sc.H} fill={pal.ink[900]} opacity={p.fade} />
     : null;
 

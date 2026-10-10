@@ -360,7 +360,7 @@ judged by a script before anyone's eyes.
 | F3 | Does the forecast show the chance of getting through, which is 100% as the rules stand? | **Not yet.** Show length and encounters. Revisit with D8 (a cost for failure), which would make the number mean something. |
 | F4 | May a join link show the crossing's name and setting before a seat is taken? | **Yes.** Everyone holding the code sees them a moment later anyway, and a wrong code still reveals nothing. |
 | F5 | Does the threshold become steps on every size, or a single page with steps only on a phone? | **One page with numbered sections on a laptop, a screen per step on a phone.** A GM who only changes the setting should not click through three steps to do it. |
-| F6 | Which art direction from [art-jobs.md](art-jobs.md) does the front door wear? | Decided there (its A1), and both screens take it as each job lands. |
+| F6 | Which art direction from [art-jobs.md](art-jobs.md) does the front door wear? | **Decided there: A, pixel diorama** (AJ1, 2026-10-10). Both screens take it as each job lands; the threshold's doors already wear the pixel backs (`art/0`). |
 
 ## Constraints held throughout
 

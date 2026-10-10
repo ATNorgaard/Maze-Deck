@@ -12,3 +12,5 @@ export * from './rng';
 export * from './biomes';
 export * from './style';
 export * from './scene';
+export * from './pixel';
+export * from './png';

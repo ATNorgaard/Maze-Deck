@@ -52,9 +52,11 @@ deploys.
 - [front-door.md](front-door.md): the landing, the threshold and the join
   screen, brought up to the board (a living setting, a turn you can play,
   the threshold as a ritual, a forecast for the dials). Decisions F1–F6.
-- [art-jobs.md](art-jobs.md): the card backs and the world, rebranded, as
-  seven jobs in one house style. Decisions AJ1–AJ6, the first being the
-  style itself.
+- [art-jobs.md](art-jobs.md): the card backs and the world, rebranded.
+  **Decided: the pixel diorama, sky high and table low** (AJ1–AJ6). Job 0,
+  the pixel renderer, is done (`art/0`), and every card back is pixel art
+  now. **Next: Job 1, the dungeon** (the default setting), then the others,
+  one setting at a time: its props, its light, its world and its vista.
 
 Both are on the `front-door` branch.
 

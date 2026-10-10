@@ -1,7 +1,9 @@
 # Art jobs: the card backs and the world
 
-**Status:** proposals, written 2026-10-10, for the author to choose from.
-Nothing here is started.
+**Status:** decided 2026-10-10: the house style is **A, pixel diorama**
+(AJ1), and daylight is **sky high, table low** (AJ2); AJ3–AJ6 as
+recommended. **Job 0, the pixel renderer, is done** (`art/0`, log below).
+Jobs 1–6 are next, one setting at a time.
 
 These are briefs for rebranding the art that sets each crossing's mood:
 - **the card back** of each setting: the face-down cards in the river, the
@@ -385,9 +387,100 @@ survive at card size in print; an engraving does.
 
 | # | Question | Recommended |
 |---|---|---|
-| AJ1 | The house style: A (pixel diorama), B (lantern-lit painting) or C (engraving and glow)? | **A**, with C for the print deck. Your references are four pixel pieces and two lighting studies; A takes both. |
-| AJ2 | Daylight settings: sky high and table low, or everything at dusk? | **Sky high, table low.** It keeps what makes the desert and the pass worth having, under a budget a script enforces. |
-| AJ3 | Generated (as now), hand-made by an artist you commission, or from an image model? | **Generated**, as W2 holds: seeded, animatable, at any size, and clearly ours. A commissioned artist could later hand-finish the six backs; that changes the overhaul's "no image assets" but not A7. Model-made images have unclear provenance, and several of the references look like them; this plan does not use them as assets. |
-| AJ4 | Keep the category colours reserved, even where a reference wants violet or rose? | **Yes.** A background that shares a card family's colour blurs what the cards mean, and that is the one thing the art must never do. |
-| AJ5 | Do the backs move (fireflies blinking on a face-down card), or only the world? | **Only the world, and the backs' depth on tilt.** A river of three animated backs pulls the eye from the faces, which are the point. |
-| AJ6 | Does the vista (the scene drawn above the river for each card turned) take the pixel treatment too? | **Yes, with A.** The back and the scene a card turns into then look like one place. The card faces keep their glyphs, frames and words. |
+| AJ1 | The house style: A (pixel diorama), B (lantern-lit painting) or C (engraving and glow)? | **Decided: A** (2026-10-10). C stays the route for the print deck. |
+| AJ2 | Daylight settings: sky high and table low, or everything at dusk? | **Decided: sky high, table low** (2026-10-10). |
+| AJ3 | Generated (as now), hand-made by an artist you commission, or from an image model? | **Decided as recommended: generated**, as W2 holds: seeded, animatable, at any size, and clearly ours. A commissioned artist could later hand-finish the six backs; that changes the overhaul's "no image assets" but not A7. Model-made images have unclear provenance, and several of the references look like them; this plan does not use them as assets. |
+| AJ4 | Keep the category colours reserved, even where a reference wants violet or rose? | **Decided as recommended: yes.** A background that shares a card family's colour blurs what the cards mean, and that is the one thing the art must never do. |
+| AJ5 | Do the backs move (fireflies blinking on a face-down card), or only the world? | **Decided as recommended: only the world, and the backs' depth on tilt.** A river of three animated backs pulls the eye from the faces, which are the point. |
+| AJ6 | Does the vista (the scene drawn above the river for each card turned) take the pixel treatment too? | **Decided as recommended: yes**, setting by setting in jobs 1–6, each measured on a phone. The back and the scene a card turns into then look like one place. The card faces keep their glyphs, frames and words. |
+
+## Log
+
+### art/0 — the pixel renderer
+
+**Changed.**
+- **`packages/art/src/pixel.ts` (new): the pixel style, drawn as pixel art.**
+  - Each setting's **look**: ramps for sky, land, light and rim, from this
+    document's palettes, and what lives in its air.
+  - A **sprite library**: mote, dust, snow, sand, drip, firefly (three
+    frames), flame (three) and rat (two), each a few hand-placed pixels,
+    with frame rates for whoever animates them.
+  - **`rasterize()`** draws the existing scene model on a grid, which stays
+    the one description of a picture:
+    - the sky steps down its ramp with a 4 × 4 ordered dither;
+    - the light is dithered rings of its own ramp, from the sun or moon
+      where the setting has one;
+    - the land takes its ramp by depth, and near land catches a rim along
+      its top edge;
+    - the card's subject stands in front, with a dithered halo;
+    - the air's sprites are stamped by seed.
+  - It also draws **one depth alone** (sky, far, near) for backs that tilt,
+    and gives RGBA bytes (`toRgba`) for the world to use as a texture
+    later.
+- **`packages/art/src/png.ts` (new): a PNG encoder in plain TypeScript.**
+  Indexed colour, one transparent entry, stored deflate blocks, and its own
+  CRC, Adler and base64. A picture's bytes are the same everywhere.
+- **`scene.tsx`'s pixel style is the new rasteriser**, drawn as an indexed
+  PNG inside the SVG with `image-rendering: pixelated`. A back is lit by its
+  setting's light; a card's scene by the card's colour, as the other styles
+  light it. Pixel pictures now draw parts, like flat ones.
+- **The atelier has a Pixel bench.** It shows the setting's ramps, every
+  sprite with its frames, animated, and the back at its true size, at three
+  times, and as its three layers on a checkerboard, with its size. The Back
+  bench offers layers for pixel too.
+- **`bake-art.cjs pixel`** bakes every back whole and in layers. The old
+  grounds (the world's *Off* picture) are baked only in the flat style.
+- **Every card back in the game is pixel art now:** all 24 files (six
+  backs, each with three layers) rebaked, in the river, on the deck and on
+  the threshold's doors.
+- **`capture-atelier.cjs`** photographs every setting's pixel back and its
+  Pixel bench.
+- **Tests:** nine in `packages/art/test/pixel.test.ts`, the package's
+  first. The PNG is decoded back with Node's zlib and matched byte for
+  byte, and base64 matches Node's. A picture is the same for the same seed,
+  and each setting draws only from its own ramps and sprites. The fade
+  changes the palette and not the pixels; layers are opaque or clear as
+  they should be; a back stays under 40 KB; a scene takes the card's
+  light.
+
+**Design notes.**
+- **An indexed PNG, not a rect per run.** The old pixel style wrote one SVG
+  rectangle per run of pixels. Dither makes runs short, and at back size
+  that is hundreds of kilobytes. A 96 × 134 back with 8–11 colours is 17.1 KB
+  as a data URI, smaller than the flat backs it replaced (24–25 KB).
+- **The fade is mixed into the palette,** so a faded back is the same
+  pixels in sunk colours, and a layer's transparency stays clean.
+- **A light in the picture comes from something.** Where a setting has a
+  sun or moon, the light's rings centre on it. Otherwise the light keeps
+  its place in the scene.
+- **The vista keeps the flat style for now.** A vista is drawn live on
+  every reveal, and a wide one in pixel is tens of thousands of pixels. It
+  moves to pixel in jobs 1–6, one setting at a time, each measured on a
+  phone (AJ6).
+
+**Broke / retried.**
+- **The desert and the pass had two suns:** the setting's light at the top
+  and the disc beside it. The light now comes from the disc.
+- **`Ramp` was already a type in `biomes.ts`**; the pixel one is
+  `PixelRamp`.
+- **A shell heredoc ate an apostrophe** in the atelier's bench list, as my
+  notes warn they do. Fixed with an edit.
+
+**Verified.**
+- **The Pixel bench, every setting:** 96 × 134 pixels, 8–11 colours, 17.1 KB
+  each, no page errors.
+- **The bake:** 24 files at 17 KB each; the grounds untouched.
+- **In the game:** the river's backs, the deck and the doors are pixel art.
+  The tilt still moves the layers in depth (`capture-weight.cjs`), and a
+  full crossing reveals 10 cards over 118 samples at **0px**.
+- **The contact sheet:** 47 shots, no errors. Card scenes in pixel take each
+  card's colour inside the arch.
+- **Tests and build:** art tests 9 (new), app tests 41, and the table and the
+  atelier typecheck. The build is clean, and the bundle grew 2.1 KB gzipped.
+
+**Not yet.** What only jobs 1–6 add: each setting's props (chains, candles,
+mushrooms, spires), its light sources in the picture, its vista in pixel,
+and its world retuned to the ramps. The world's texture path (`toRgba`) is
+ready, and nothing uses it yet.
+
+**Commit:** `git log --grep art/0`.

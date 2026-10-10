@@ -1,7 +1,7 @@
 /* ============================================================
    The atelier.
 
-   Four benches, one seed. The biome and the style are global —
+   Five benches, one seed. The biome and the style are global —
    they are the two axes the whole tool is built on — and every
    bench draws with the real palette read off biomes.css.
    ============================================================ */
@@ -9,6 +9,7 @@
 import { BackBench } from './benches/BackBench';
 import { GroundBench } from './benches/GroundBench';
 import { PaletteBench } from './benches/PaletteBench';
+import { PixelBench } from './benches/PixelBench';
 import { SceneBench } from './benches/SceneBench';
 import { BIOMES, DEFAULT_BIOME, vocabOf, STYLES } from '@maze-deck/art';
 import type { BiomeId, Style } from '@maze-deck/art';
@@ -16,12 +17,13 @@ import { Seed, Segmented, Select } from './ui/controls';
 import { useStored } from './ui/store';
 import { usePalette } from './ui/usePalette';
 
-type Bench = 'back' | 'ground' | 'scene' | 'palette';
+type Bench = 'back' | 'ground' | 'scene' | 'pixel' | 'palette';
 
 const BENCHES: readonly { id: Bench; name: string; blurb: string }[] = [
   { id: 'back', name: 'Back', blurb: 'The card back\'s field tile.' },
   { id: 'scene', name: 'Scene', blurb: 'What stands in the doorway.' },
   { id: 'ground', name: 'Ground', blurb: 'The page behind the table.' },
+  { id: 'pixel', name: 'Pixel', blurb: 'The pixel style’s ramps, sprites and backs.' },
   { id: 'palette', name: 'Palette', blurb: 'A new biome\'s colours.' },
 ];
 
@@ -49,6 +51,7 @@ export function App() {
         {g.bench === 'back' ? <BackBench {...common} /> : null}
         {g.bench === 'scene' ? <SceneBench {...common} /> : null}
         {g.bench === 'ground' ? <GroundBench {...common} /> : null}
+        {g.bench === 'pixel' ? <PixelBench biome={g.biome} seed={g.seed} palette={palette} vocab={vocab} /> : null}
         {g.bench === 'palette' ? <PaletteBench current={palette} vocab={vocab} /> : null}
       </main>
     </div>

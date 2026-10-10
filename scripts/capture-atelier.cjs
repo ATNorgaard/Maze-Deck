@@ -62,7 +62,9 @@ const STYLES = ['flat', 'line', 'pixel', 'engraving'];
   await select('deep-forest'); await select('passages'); await shot('back-deep-forest-passages-flat');
   await select('scene');
   for (const biome of BIOMES) { await select(biome); await shot(`back-${biome}-scene-flat`); }
-  await select('pixel'); await select('frozen-pass'); await shot('back-frozen-pass-scene-pixel');
+  // The house style (docs/art-jobs.md, AJ1): every setting's back in pixel.
+  await select('pixel');
+  for (const biome of BIOMES) { await select(biome); await shot(`back-${biome}-scene-pixel`); }
   await select('engraving'); await select('tower'); await shot('back-tower-scene-engraving');
   await select('flat'); await select('walls');
   await select('dungeon');
@@ -92,6 +94,11 @@ const STYLES = ['flat', 'line', 'pixel', 'engraving'];
     await select(biome); await select(style); await shot(`ground-${biome}-${style}`);
   }
   await select('dungeon'); await select('flat');
+
+  // The pixel toolkit (Job 0): each setting's ramps, sprites, back and layers.
+  await tab('Pixel');
+  for (const biome of BIOMES) { await select(biome); await shot(`pixel-${biome}`); }
+  await select('dungeon');
 
   await tab('Palette');
   await shot('palette-default');

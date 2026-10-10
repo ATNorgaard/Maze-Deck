@@ -84,6 +84,20 @@ laptops with about 657px of viewport. It is a change to `packages/ui` and its
 design-sync, so it is the author's call
 ([overhaul.md](overhaul.md#d9--for-the-author)).
 
+## The art
+
+Taken 2026-10-10 from [art-jobs.md](art-jobs.md), which has the reasoning,
+the references read, and the jobs.
+
+| # | Decision |
+|---|---|
+| AJ1 | **The house style is the pixel diorama:** each setting a small stage drawn from its own ramps, dithered light, lit edges and sprites, generated in `packages/art` (`pixel.ts`). The engraving style stays the route for the print deck. |
+| AJ2 | **Sky high, table low.** A daylight setting keeps its daylight above the horizon, in the vista's sky and on its back, and falls to under the luminance budget (0.023 behind the faintest text) where the board puts words. |
+| AJ3 | **Generated and seeded**, as W2; no image assets from elsewhere, and none from image models. |
+| AJ4 | **The card families' colours are reserved:** a setting lights itself with its own family, and any other family's hue stays under about 5% of a picture. |
+| AJ5 | **The backs keep still; the world moves.** Backs move only in depth, on tilt. |
+| AJ6 | **The vista takes the pixel style too**, setting by setting, each measured on a phone before it ships. |
+
 ## Build order
 
 Sliced so every milestone ends with something that runs, because sessions will

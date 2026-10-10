@@ -126,7 +126,7 @@ export function BackBench({ biome, style, seed, palette, vocab }: {
             <Slider label="Fade" value={s.fade} min={0} max={0.8} onChange={(fade) => set({ fade })} hint="Sink the picture towards the ink, so the seal stays the brightest thing." />
             {style === 'pixel' ? <Slider label="Pixel" value={s.px} min={1.5} max={6} step={0.25} onChange={(px) => set({ px })} hint="In field units; the back is 240 across." /> : null}
             <Toggle label="A doorway of light in front" value={s.subject} onChange={(subject) => set({ subject })} />
-            {style === 'flat' ? <Select label="Layer" value={s.part} options={PARTS} onChange={(part) => set({ part })} /> : null}
+            {style === 'flat' || style === 'pixel' ? <Select label="Layer" value={s.part} options={PARTS} onChange={(part) => set({ part })} /> : null}
           </Section>
         </aside>
 
