@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { LOOKS, hexToRgb, mix, readPalette, vocabOf } from '@maze-deck/art';
-import type { Palette, PixelWorld } from '@maze-deck/art';
+import { hexToRgb, mix, readPalette, vocabOf } from '@maze-deck/art';
+import type { Palette } from '@maze-deck/art';
 import type { CardCategory } from '@maze-deck/rules';
 import type { Biome } from '../biomes';
 import { reducedMotion } from '../stage/motion';
 import { NO_EDGE, WorldRenderer } from './renderer';
-import type { Edge, Mood, PixelGround, Rgb, WorldColors } from './renderer';
+import type { Edge, Mood, Rgb, WorldColors } from './renderer';
 import { startingTier, useWorldChoice } from './settings';
 import type { Tier } from './settings';
 
@@ -28,8 +28,8 @@ const rgb = (hex: string): Rgb => {
   return [r / 255, g / 255, b / 255];
 };
 
-function colorsOf(pal: Palette, light: keyof Palette['cat'], world?: PixelWorld): WorldColors {
-  const base = {
+function colorsOf(pal: Palette, light: keyof Palette['cat']): WorldColors {
+  return {
     ink900: rgb(pal.ink[900]),
     ink800: rgb(pal.ink[800]),
     ink700: rgb(pal.ink[700]),
@@ -40,19 +40,6 @@ function colorsOf(pal: Palette, light: keyof Palette['cat'], world?: PixelWorld)
     lightSoft: rgb(pal.cat[light][300]),
     threat: rgb(pal.cat.mons[500]),
   };
-  // A setting drawn as pixel art takes its ink and its light from its ramp.
-  if (!world) return base;
-  return {
-    ...base,
-    ink900: rgb(world.ink[0]), ink800: rgb(world.ink[1]), ink700: rgb(world.ink[2]),
-    light: rgb(world.light[0]), lightSoft: rgb(world.light[1]),
-  };
-}
-
-/** The world as pixel art, once the setting's art job is done (docs/art-jobs.md). */
-function pixelOf(world: PixelWorld | undefined): PixelGround | null {
-  if (!world) return null;
-  return { ramp: world.ramp.map(rgb), air: [rgb(world.air[0]), rgb(world.air[1])], flicker: world.flicker, pillars: world.pillars ?? 0 };
 }
 
 /** Where each setting hangs its light, as its ground did (bake-art.cjs). */
@@ -118,8 +105,7 @@ const NEXT_DOWN: Record<Tier, Tier> = { high: 'low', low: 'still', still: 'still
  * resolution with fewer particles; `still` draws one frame whenever
  * something changes and never runs a loop — the tier for reduced
  * motion, and the floor an `auto` world steps down to. `off`, or no
- * WebGL2, leaves the old animated ground on the page. A setting drawn as
- * pixel art is drawn at its own pixel size on every tier.
+ * WebGL2, leaves the old animated ground on the page.
  */
 export function World({ biome, mood, focus, flash }: Props) {
   const ref = React.useRef<HTMLCanvasElement>(null);
@@ -135,7 +121,6 @@ export function World({ biome, mood, focus, flash }: Props) {
   // world stepped aside should be able to bring it back.
   React.useEffect(() => { setFailed(false); }, [choice]);
   const live = tier !== null && !failed;
-  const world = (LOOKS as Partial<Record<string, { world?: PixelWorld }>>)[biome.id]?.world;
 
   // Read by the loop every frame; written by every render.
   const target = React.useRef<Mood>({ ...mood, focus: null, parallax: { x: 0, y: 0 } });
@@ -186,14 +171,11 @@ export function World({ biome, mood, focus, flash }: Props) {
     const pal = readPalette(canvas);
     const vocab = vocabOf(biome.id);
     const area = Math.sqrt((window.innerWidth * window.innerHeight) / (1920 * 1080));
-    const edge = edgeOf(biome.id, pal);
-    // Eyes a pixel across would be lost at a quarter of the size.
-    const eyes = world ? { ...edge, eyes: { ...edge.eyes, size: edge.eyes.size * 1.6 } } : edge;
-    r.setting(biome.id, colorsOf(pal, vocab.light, world), vocab.particle, POOL_Y[biome.id] ?? 0.08,
-      Math.round(AIR[tier] * Math.max(0.5, Math.min(1.6, area))), eyes, pixelOf(world));
+    r.setting(biome.id, colorsOf(pal, vocab.light), vocab.particle, POOL_Y[biome.id] ?? 0.08,
+      Math.round(AIR[tier] * Math.max(0.5, Math.min(1.6, area))), edgeOf(biome.id, pal));
 
     const size = () => r.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight,
-      world ? 1 / world.px : Math.min(window.devicePixelRatio || 1, 1.5) * SCALE[tier]);
+      Math.min(window.devicePixelRatio || 1, 1.5) * SCALE[tier]);
     size();
 
     // The still tier draws on demand, at a fixed moment.
@@ -284,5 +266,5 @@ export function World({ biome, mood, focus, flash }: Props) {
   }, [tier, stillKey]);
 
   if (!live) return null;
-  return <canvas ref={ref} className="t-world" data-live="" data-tier={tier ?? undefined} data-pixel={world ? '' : undefined} aria-hidden="true" />;
+  return <canvas ref={ref} className="t-world" data-live="" data-tier={tier ?? undefined} aria-hidden="true" />;
 }

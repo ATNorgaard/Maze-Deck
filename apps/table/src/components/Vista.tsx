@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { CardCategory } from '@maze-deck/rules';
-import { FALLBACK_PALETTE, LOOKS, SceneArt, readPalette, vocabOf } from '@maze-deck/art';
-import type { BiomeVocab, LightKey, Palette, PixelLook, SceneParams, Style } from '@maze-deck/art';
+import { FALLBACK_PALETTE, SceneArt, readPalette, vocabOf } from '@maze-deck/art';
+import type { BiomeVocab, LightKey, Palette, SceneParams } from '@maze-deck/art';
 import type { Biome } from '../biomes';
 import type { DrawnPrompt } from '../tables';
 import { MOTION, reducedMotion } from '../stage/motion';
@@ -37,12 +37,9 @@ interface Layer {
 }
 
 function paramsFor(biome: Biome, vocab: BiomeVocab, prompt: DrawnPrompt | null, aspect: number): SceneParams {
-  // A setting whose art job is done draws its vista as pixel art, like its
-  // backs (docs/art-jobs.md, AJ6); the rest keep the flat style until then.
-  const pixel = (LOOKS as Partial<Record<string, PixelLook>>)[biome.id]?.vista;
   const base = {
-    frame: 'vista' as const, style: (pixel ? 'pixel' : 'flat') as Style, aspect,
-    px: pixel?.px ?? 2, relief: 1, haze: 0.6, band: false, fade: 0,
+    frame: 'vista' as const, style: 'flat' as const, aspect,
+    px: 2, relief: 1, haze: 0.6, band: false, fade: 0,
   };
   // Seeded by the ENTRY, not the draw: the same line always comes with the
   // same picture, in every crossing, so a table that meets it twice knows it.

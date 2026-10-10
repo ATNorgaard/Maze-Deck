@@ -5,8 +5,8 @@ Rewritten at the end of every session. Coming in cold: read this, then
 [reference/canonical-rules.md](reference/canonical-rules.md). Before touching
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md).
 
-**Last updated:** 2026-10-11, with the dungeon's art job done (`art/1`, on the
-`front-door` branch). The overhaul (`world/10`) is live.
+**Last updated:** 2026-10-11: the first dungeon (`art/1`) taken back; designs
+up front next. The overhaul (`world/10`) is live.
 
 ## Where we are
 
@@ -55,11 +55,10 @@ deploys.
   the threshold as a ritual, a forecast for the dials). Decisions F1–F6.
 - [art-jobs.md](art-jobs.md): the card backs and the world, rebranded.
   **Decided: the pixel diorama, sky high and table low** (AJ1–AJ6). Job 0,
-  the pixel renderer, is done (`art/0`), and every card back is pixel art.
-  **Job 1, the dungeon, is done** (`art/1`): the keeper's vault on its back
-  and in its vista, and a pixel world of torchlight, pillars and eyes, within
-  the luminance budget and level with `art/0` on the frame budget. **Next:
-  Job 2, the tower**, then the others, one setting at a time.
+  the pixel renderer, is done (`art/0`), and every card back is pixel art
+  now. A first dungeon (`art/1`) was built and taken back: the author was
+  not keen. **Next: a design up front for each of jobs 1–6**, as mock-ups to
+  choose from, and nothing built until one is approved.
 
 Both are on the `front-door` branch.
 

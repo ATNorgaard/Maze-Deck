@@ -600,9 +600,6 @@
   pointer-events: none;
 }
 
-/* Pixel art: a small canvas, scaled up crisp. */
-.t-world[data-pixel] { image-rendering: pixelated; }
-
 .t-app:has(.t-world[data-live])::before {
   background: var(--md-ink-900);
   animation: none;

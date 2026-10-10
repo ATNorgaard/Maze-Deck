@@ -2,9 +2,10 @@
 
 **Status:** decided 2026-10-10: the house style is **A, pixel diorama**
 (AJ1), and daylight is **sky high, table low** (AJ2); AJ3–AJ6 as
-recommended. **Job 0, the pixel renderer, is done** (`art/0`), and **Job 1,
-the dungeon, is done** (`art/1`); logs below. Jobs 2–6 are next, one setting
-at a time.
+recommended. **Job 0, the pixel renderer, is done** (`art/0`, log below).
+A first dungeon (`art/1`) was built and **taken back** on 2026-10-11: the
+author was not keen on it. From here, **every job is designed up front** and
+the design approved before any of it is built (see *The jobs*).
 
 These are briefs for rebranding the art that sets each crossing's mood:
 - **the card back** of each setting: the face-down cards in the river, the
@@ -210,6 +211,11 @@ retuned, the edge as threat rises, the vista's subjects). Job 0 comes first;
 jobs 1–6 can go in any order; jobs 7–8 serve the front door and the print
 deck.
 
+**A design first** (from 2026-10-11). Before a job is built, the author sees
+it drawn: the back, the vista with a card's subject in it, and the world
+behind a board, as mock-ups. They choose between directions or send it
+back. The briefs below are where a design starts, not what it must be.
+
 ### Job 0 — the pixel renderer (foundation)
 
 Upgrade the `pixel` style in `packages/art` from "flat on a grid" to a pixel
@@ -235,8 +241,6 @@ deterministic by seed; `bake-art.cjs pixel` writes the backs and their
 layers; each back is under ~40 KB.
 
 ### Job 1 — Dungeon: *The keeper's vault*
-
-**Done** (`art/1`, log below).
 
 - **Reference:** the painted vault (chains, portcullises, rats).
 - **Mood:** you are not the first through here, and something keeps the
@@ -488,156 +492,26 @@ ready, and nothing uses it yet.
 
 **Commit:** `git log --grep art/0`.
 
-### art/1 — the dungeon: *The keeper's vault*
+### art/1 — the dungeon, built and taken back
 
-**Changed.**
-- **The vault, in `scene.tsx`.** The dungeon has its own composition now, in
-  every frame and style: doorway after doorway across the whole picture,
-  each nearer and wider, down to a lowered portcullis lit from behind.
-  - Each wall is **one polygon** with its arches cut down to the floor, so
-    every style can draw it and the walls sort by depth. On a back, the
-    layers part down the corridor when the card tilts.
-  - Every opening has its **thickness**: the right side catches the torch,
-    the left side stays in shadow. That is what makes the arches read as
-    stone, not cut-outs.
-  - **A torch off the frame to the left** rakes across the near arches.
-    **Two chains** hang black in the near layer, a **rat** keeps to the
-    flagstones, and dust hangs in the air.
-  - **On a wide vista the nearest wall is an arcade.** A torch burns in
-    every third bay out from the middle (a flame sprite and its own light),
-    and the courses of the stone run between them.
-  - **The dungeon's subjects:**
-    - an Obstacle is a portcullis down across the way;
-    - a Wanderer is someone with a lantern, coming the other way;
-    - an Item is an open chest, something in it catching the light;
-    - a Monster is a shape behind bars, its eyes the card's red;
-    - a Clear Path is the corridor opening, as the back is.
-- **The rasteriser learned what the vault needed** (`pixel.ts`). Each of these
-  is opt-in, so the other five settings draw exactly as before:
-  - **more lights than one**, each keeping the setting's colour (`own`) where
-    a scene is otherwise lit by the card;
-  - **lit stone** (`landLight`): a light lifts the land it falls on up the
-    ramp and on into the light's warm middle. A tone sits in the middle of
-    its ramp step, so unlit stone is one flat colour, not a dither;
-  - a layer's **tone** (where it sits on the land ramp), separate from its
-    depth (which layer of a back it moves with);
-  - **silhouettes** (`shadow`) that no light lifts: the bars, the chains, the
-    joints of the floor;
-  - **stone courses**: each joint drawn a step darker, wherever it is lit;
-  - **stamps**: sprites the composition places (the rat, the flames).
-- **The rasteriser fills shapes a row at a time.** It works out where each
-  row crosses a polygon once, then sweeps the row, where it used to test
-  every polygon at every pixel. It is the same even-odd rule and the same
-  arithmetic, and a test holds it to the old per-pixel test, pixel by pixel.
-  A desktop vista went from 165–200 ms to 6 ms, a phone's from 40 ms to 5 ms.
-- **The world draws as pixel art** where a setting has a `world` in its look
-  (only the dungeon so far). Its canvas is a quarter of the size, scaled up
-  crisp.
-  - Every colour snaps to the dungeon's ramp through the same 4 × 4 dither
-    as the backs, with a small spread, so flat ground stays one colour.
-  - The ink is umber, and the pool is torchlight: it **flickers** on two
-    noises, quick and slow, and **burns lower** as threat rises (the old
-    guttering stays).
-  - **Pillars** stand at either side of a wide screen, round stone lit on
-    the side toward the light. **The eyes look out from between them**, and
-    are hidden where a pillar stands.
-  - In pixel art an eye is a red slit edged in darker red: a faint pink
-    glow snapped to the torch's orange, and read as a lamp.
-  - A turned card's colour washes out as a dither of its own, since the
-    ramp would swallow a faint tint.
-  - Dust is whole pixels, there or not, in the ramp's two dust colours.
-  - The other settings' worlds are unchanged.
-- **The vista is pixel art in the dungeon** (AJ6), three scene units a
-  pixel, the same size on screen as the world's pixels.
-- **The dungeon's back, rebaked:** 96 × 134 pixels, 9 colours, 17.8 KB.
-  It shows in the river, on the deck and on the threshold's door.
-- **`check-art.cjs` (new): the art judged by numbers.**
-  - **The luminance budget.** Everything but the world is hidden and the
-    screen is read in 12 px blocks behind the caption band, the hand, the
-    rail, the top bar and the ticker, at five sizes.
-  - **The colour reservation** of the back and of each world frame.
-  - **A thumbnail sheet** of every back at the river's size and at a small
-    size, side by side.
-- **`capture-walk.cjs` no longer measures a card on its way to the
-  discard.** A Monster leaves the river 1.14 s after it turns, inside the
-  1.6 s the reveal is sampled. This walk was the first to turn one, and
-  reported its trip as 596 px off its slot.
+The keeper's vault was built to the brief (`f25eec7`): arch after arch down
+to a lit portcullis, brick courses, a torch off the frame, chains and a rat,
+an arcade of torches in a wide vista, and a pixel world of umber torchlight,
+pillars and eyes. It passed every number: the luminance budget, the colour
+reservation, the frame budget level with `art/0`. **The author was not keen
+on how it looks, and it was reverted.** The numbers do not say whether a
+picture is liked. That is why every job now starts as a design the author
+approves (*The jobs*, above).
 
-**Design notes.**
-- **The world's pixel art is made in its shader, not uploaded as an
-  image.** The ground moves all the time (the fog, the flicker, the dark
-  drawing in), and snapping it to the ramp is one pass over a sixteenth of
-  the pixels. The texture path from Job 0 (`toRgba`) is still unused.
-- **The arcade lights one bay in three.** A torch in every bay, across a
-  vista six times wider than tall, was a row of identical lamps and read as
-  a pattern rather than a place.
-- **The pillars appear only on screens wider than 1.2 : 1.** On a phone the
-  sides are the table, and a column there would only be clutter.
-- **Monster red stays off the dungeon's stone.** The ramp is umber and
-  rust, kept under 60° of hue, and the reds in the world's ramp are the
-  dark's own colours, used only for the eyes. At one strike, the reservation
-  still finds 0.0% Monster red in the world frame.
+Two things from it stay, since they judge pictures rather than make them:
+- `scripts/check-art.cjs`: the luminance budget behind the words at five
+  sizes, the colour reservation, and a thumbnail sheet of the backs;
+- `capture-walk.cjs` no longer counts a card on its way to the discard as
+  standing off its slot.
 
-**Broke / retried.**
-- **The first world was a checker of purple and brown** over the whole
-  table. The dither's spread was larger than the gap between the ramp's dark
-  steps, and the ramp's cool dark (`#241D25`) read violet. The world's ramp
-  is umber only now, and its spread is 0.025.
-- **The first pillars were thin bright lines**, which read as part of the
-  interface. They are rounded stone now, shaded across their width.
-- **The first stone was washed out.** A lit grey covered the near walls, and
-  the arches had no edges. Thickness on the openings, flat tones and a
-  smaller torch fixed it.
-- **The vista skipped its stone courses:** at three units a pixel they were
-  under the three-pixel minimum. Courses are now at least three pixels high
-  on the nearest wall.
-- **The pixel vista first cost a phone a 430–480 ms frame** on every reveal
-  (against 150–270 ms before). It was the per-pixel polygon test. With the
-  row-at-a-time fill, the turn measures level with the commit before.
-- **A long heredoc failed again in Git Bash**, as my notes warn. The edits
-  went in through files.
+What was learned, for whichever dungeon comes next, is in `f25eec7`'s log:
+the rasteriser's row-at-a-time fill (a vista from about 200 ms to 6 ms,
+byte-identical), lit stone, silhouettes, stone courses, and a world drawn as
+pixel art in its shader.
 
-**Verified.**
-- **The bake:** only the dungeon's four files changed. The other 20 backs
-  and the 6 grounds are byte-identical. After the row-at-a-time fill, all
-  30 files rebaked byte-identical, which shows the fill draws exactly the
-  pixels the old test did.
-- **`check-art.cjs`, at 1600 × 1000, 1366 × 768, 1920 × 1080, 768 × 1024
-  and 390 × 844, on the GPU:**
-  - every block behind the words is within budget; the worst behind the
-    caption is 0.0196 against 0.023;
-  - the back is 13.1% the dungeon's own gold and 0.0% every other family;
-  - each world frame is 3.2–12.1% its own gold and 0.0% every other family,
-    at no strike and at one.
-- **The frame budget** (`measure-frames.cjs --gpu`, a phone at 4× CPU),
-  alternating against `art/0` served from a worktree in the same session:
-  - idle is 0.24–0.25 s per 4 s against 0.24, and 0.23–0.27 s at one
-    strike against 0.23–0.24;
-  - one turn is 1.37–1.54 s against 1.31–1.50 s, and its worst frame
-    117–167 ms against 117–183 ms.
-- **Walks:**
-  - a full crossing at 390 × 844 revealed 11 cards over 102 samples, and one
-    at 1600 × 1000 revealed 14 over 182, both at **0px**, with no errors;
-  - the dark and being found, staged (`capture-score.cjs`), show the eyes
-    as slits between the pillars;
-  - under reduced motion the still world shows the arcade, the pillars and a
-    pair of eyes;
-  - the tilt still parts a back's layers (`capture-weight.cjs`).
-- **The atelier's contact sheet:** no errors. The vault draws in the line
-  and engraving styles too.
-- **Tests and build:**
-  - art tests 19, ten of them new: the fill against the per-pixel test at
-    four pixel sizes, lit stone, silhouettes, courses, a lamp keeping its
-    colour, stamps, the back's torch and rat and chains, the arcade's
-    flames, a vista's time, and the world's ramp;
-  - app tests 41, rules 74, and the table and the atelier typecheck;
-  - the build is clean; the bundle grew 3.8 KB gzipped (139.8 → 143.6 KB).
-
-**Not yet.**
-- **The chains do not swing on their own.** They move with the near layer
-  when a card tilts, as all of it does. A one-pixel swing would need its own
-  layer.
-- **Not seen on a real screen:** the torch's flicker, and how the dither
-  holds up at a real display's density, are for the author's eye.
-
-**Commit:** `git log --grep art/1`.
+**Commit:** `git log --grep "art/1"`.
