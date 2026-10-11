@@ -1,5 +1,6 @@
 /* The Mire: the swamp, outside only. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -994,7 +995,7 @@
         mirror(p, { base: y + 0.5, u, zs: [Z.sub], x0: cxw(D) - 52 * u, x1: cxw(D) + 64 * u, y1: y + 14 * u, seed: 9, dim: 1.1, gap: 0.28, dash: 5, fade: 0.1 });
         p.tint(cxw(D) + 30 * u, y - 4 * u, 5 * u, hex, 0.3, flicker(0.5, 0.12, 0.6));
         ringsAt = bubbles.map(([x, by], k) => [x, by, 6 * u, k * 0.27]);
-      } else {
+      } else if (cat === 'clear-path') {
         // Firm ground across the far end, the dry path over it into the dawn.
         bank(p, gx, yh + 0.5, u, W, Z.mid + 1);
         mirror(p, { base: yh + 0.5, u, zs: [Z.mid + 1], seed: 13, dim: 1.6, gap: 0.3 });
@@ -1121,5 +1122,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A]);
-})();
+
+export default [A];

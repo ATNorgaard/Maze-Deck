@@ -1,5 +1,6 @@
 /* Job 6, the frozen pass: two directions. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, flicker, SUBJECT, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -436,7 +437,7 @@
       } else if (cat === 'obstacle') {
         avalanche(p, gx, colY + 2 * u, u, ramp, 6);
         p.tint(gx + 4 * u, colY + 4 * u, 34 * u, hex, 0.3, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         // The sun stands in the col and lays its light down the snowfield.
         const sx = gx; const sy = colY - 14 * u; const sr = 5 * u;
         p.shade(null, (x, y) => {
@@ -892,7 +893,7 @@
         p.cells(shape, { size: 8 * u, sx: 0.8, sy: 1.4, joint: 0.9, jointV: -1, vary: 0.8, bevel: 0.8, seed: 8, z: 5 });
         lip(p, 5, 1.4, [[0, -1]]);
         p.tint(gx, 50 * u, 38 * u, hex, 0.4, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         // The one way opening: a fissure splitting the falls, glowing gold.
         const fis = [];
         for (let i = 0; i <= 14; i += 1) { const t = i / 14; fis.push([gx + (hash(i, 5, 3) - 0.5) * 4 * u - lerp(1, 7, t ** 1.5) * u, lerp(6 * u, floorY + 4 * u, t)]); }
@@ -981,5 +982,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

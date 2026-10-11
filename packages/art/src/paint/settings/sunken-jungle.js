@@ -1,5 +1,6 @@
 /* The Sunken Jungle, a new setting (2026-10-11): outside, the canopy and the pyramid; inside, the temple within it. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -818,7 +819,7 @@
         const gt = floor - 40 * u; const gb = floor - 14 * u;
         p.fill(C.poly([[gx - g.sw0 * 0.8, gb], [gx - g.sw0 * 0.6, gt + 4 * u], [gx - g.sw0 * 0.2, gt], [gx + g.sw0 * 0.3, gt + 3 * u], [gx + g.sw0 * 0.75, gt + 1 * u], [gx + g.sw0 * 0.9, gb]]), 'shadow', 0.6, 6);
         rubble(p, gx, fy + 1 * u, 36 * u, 32 * u, ramp, 7, 'av-rubble', u);
-      } else {
+      } else if (cat === 'clear-path') {
         // The sun stands over the temple and pours down the stair.
         const sx = gx; const sy = g.ry - 1 * u; const sr = 7 * u;
         p.shade(null, (x, y, i) => {
@@ -1345,5 +1346,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

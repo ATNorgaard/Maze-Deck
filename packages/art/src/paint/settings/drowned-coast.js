@@ -1,5 +1,6 @@
 /* The Drowned Coast: the storm outside, the smugglers' cave inside. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -1374,5 +1375,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

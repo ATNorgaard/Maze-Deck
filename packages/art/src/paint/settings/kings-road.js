@@ -1,5 +1,6 @@
 /* The King's Road: one direction, outside. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -891,7 +892,7 @@
       } else if (cat === 'obstacle') {
         const t = turnpike(p, gx, fy + 1 * u, u, ramp, 6);
         p.tint(t.lockX, t.lockY, 7 * u, CARD[ramp][4], 0.45, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         litFig = false;
         // The sun's last edge where the road meets the horizon, its light laid down the road.
         const sx = gx; const sy = hor + 1.2 * u; const sr = 7.5 * u;
@@ -1031,5 +1032,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A]);
-})();
+
+export default [A];

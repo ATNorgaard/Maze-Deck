@@ -1,5 +1,6 @@
 /* Job 3, the deep forest: two directions. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, flicker, SUBJECT, CARD, hash, rng, clamp, lerp, hexRgb, BAYER } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -1519,5 +1520,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B, Cdesign]);
-})();
+
+export default [A, B, Cdesign];

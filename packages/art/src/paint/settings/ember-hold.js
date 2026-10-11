@@ -1,5 +1,6 @@
 /* The Ember Hold: a dwarven forge under a volcano. A: the lava fields outside; B: the forge hall inside. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -1399,5 +1400,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

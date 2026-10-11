@@ -1,5 +1,6 @@
 /* New setting, the Underdark: one direction, inside only. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -772,7 +773,7 @@
           anchors: [[0, gx + 19 * u, fy - 34 * u], [7, gx - 15 * u, fy - 24 * u], [3, gx + 8 * u, fy], [5, gx - 8 * u, fy], [10, gx - 12 * u, 20 * u], [12, gx + 12 * u, 26 * u]],
         });
         for (const [dx, dy, w, h] of [[-8, -40, 2.2, 4], [8, -16, 2, 3.4], [2, -50, 1.6, 2.6]]) p.fill(C.ellipse(gx + dx * u, fy + dy * u, w * u, h * u, 12), 'silk', (x) => 6 + (x < gx + dx * u ? 1.5 : 0), 6);
-      } else {
+      } else if (cat === 'clear-path') {
         p.light(gx, fy + 6 * u, 30 * u, 3, flicker(0.4, 0.06, 0.3), { zMin: 3, zMax: 3, sy: 0.4 });
       }
       vignette(p, W, H, 1.6, 0.42);
@@ -902,5 +903,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A]);
-})();
+
+export default [A];

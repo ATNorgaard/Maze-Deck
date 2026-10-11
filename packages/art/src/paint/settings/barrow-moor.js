@@ -1,5 +1,6 @@
 /* The Barrow Moor, the edge of the Shadowfell: the moor outside, the barrow inside. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -801,7 +802,7 @@
       } else if (cat === 'obstacle') {
         const s = seal(p, gx, top, hw, floor, u, ramp, 7);
         p.tint(gx, s.cy, s.R * 1.3, hex, 0.35, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         // The way between the stones opens: dawn-gold sky beyond them over the far moor, and a lit path
         // running in from it between the stones toward you.
         const hz = 66 * u; const PA = p.ri('path'); const HI = p.ri('hill');
@@ -1281,7 +1282,7 @@
       } else if (cat === 'obstacle') {
         const s = seal(p, gx, top, hw, floor, u, ramp, 6);
         p.tint(gx, s.cy, s.R * 1.3, hex, 0.35, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         // The way on: the passage beyond lit gold, its walls and floor running in to the light.
         const fi = (floor - top) * 0.34; const wf = hw * 0.4; const PA = p.ri('path');
         p.each(tri.open, (x, y, i) => {
@@ -1355,5 +1356,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

@@ -1,5 +1,6 @@
 /* Job 1, the dungeon: two directions. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, SPRITES, particles, flicker, SUBJECT, CARD, hash, clamp, lerp } = PX;
 
   const FLAME = { a: '#7E3A12', b: '#E08A2E', c: '#FFE08A', d: '#3A2010' };
@@ -982,5 +983,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B, C3]);
-})();
+
+export default [A, B, C3];

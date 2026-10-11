@@ -1,5 +1,6 @@
 /* New setting, the High Road: a mountain pass in a summer storm, and the cave under it. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -1481,7 +1482,7 @@
         p.each(heap, (x, y, i) => { if (p.z[i] === 7 && p.v[i] < 0.6 && hash(x >> 1, y >> 1, 9) < 0.4 && y < fy - 6 * u) { p.r[i] = p.ri(ramp); p.v[i] = 2.6 + hash(x >> 1, y >> 1, 3) * 1.2; } });
         p.backlit(7, 'quartz', 3.5, ramp, 3.4);
         p.tint(gx, fy - 22 * u, 12 * u, hex, 0.35, flicker(0.5, 0.12, 0.6));
-      } else {
+      } else if (cat === 'clear-path') {
         // The way through: gold pouring out of the passage, across the floor and the stream.
         p.light(gx, fy, 40 * u, 4, flicker(0.2, 0.06, 0.4), { zMin: 1, zMax: 1, sy: 0.4 });
         p.tint(gx, fy + 1 * u, 16 * u, CARD.path[3], 0.4, flicker(0.2, 0.08, 0.4));
@@ -1589,5 +1590,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
-})();
+
+export default [A, B];

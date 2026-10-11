@@ -505,12 +505,17 @@ const PX = (() => {
     wand: ['#1C2834', '#34495C', '#6B8CA6', '#A6C0D4', '#E3EEF6'],
     item: ['#2A1231', '#4E2359', '#8B4F9C', '#C08FCE', '#EBD3F2'],
     mons: ['#330A10', '#66161F', '#A93343', '#D9707C', '#F4C2C8'],
+    // The expansions' families: a Dead End is drawn as an Obstacle in grey, a Trap in its acid green.
+    dead: ['#1E1D1B', '#45443F', '#7C7B78', '#B2B1AD', '#E2E1DE'],
+    trap: ['#232809', '#4E5718', '#97A63A', '#C7D477', '#EEF3C9'],
   };
   const CATEGORIES = [
     ['monster', 'Monster', 'mons'], ['obstacle', 'Obstacle', 'obst'], ['wanderer', 'Wanderer', 'wand'],
     ['item', 'Item', 'item'], ['clear-path', 'Clear Path', 'path'],
+    // Before any card is turned: the place, with nothing in it.
+    ['none', 'Nothing yet', 'path'],
   ];
 
   return { BAYER, hexRgb, clamp, lerp, rng, hash, C, Painter, put, sprite, SPRITES, particles, flicker, SUBJECT, frame, CARD, CATEGORIES };
 })();
-if (typeof module !== 'undefined') module.exports = PX;
+export default PX;

@@ -14,3 +14,4 @@ export * from './style';
 export * from './scene';
 export * from './pixel';
 export * from './png';
+export * from './paint';

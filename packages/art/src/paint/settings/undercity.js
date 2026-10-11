@@ -1,5 +1,6 @@
 /* Job 5, the undercity: two directions. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, particles, SUBJECT, CARD, hash, clamp, lerp, rng, BAYER } = PX;
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
 
@@ -1474,5 +1475,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B, Cd]);
-})();
+
+export default [A, B, Cd];

@@ -329,7 +329,7 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     cardBack(el.querySelector('.card'), d);
     const vbig = picture(el.querySelector('.vbox canvas'), () => d.vista(192, 72, state.cat), true);
     const cats = el.querySelector('.cats');
-    for (const [id, label, ramp] of CATEGORIES) {
+    for (const [id, label, ramp] of CATEGORIES.filter((c) => c[0] !== 'none')) {
       const b = document.createElement('button');
       b.className = 'btn'; b.type = 'button'; b.setAttribute('aria-pressed', String(id === state.cat));
       b.innerHTML = `<i style="background:${CAT_HEX[ramp]}"></i>${label}`;

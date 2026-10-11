@@ -1,5 +1,6 @@
 /* Job 4, the desert: two directions. */
-(() => {
+import PX from '../px.js';
+
   const { C, Painter, put, sprite, SPRITES, particles, flicker, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
@@ -1399,5 +1400,5 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B, DC]);
-})();
+
+export default [A, B, DC];

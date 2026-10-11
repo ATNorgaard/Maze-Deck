@@ -22,8 +22,8 @@ fs.mkdirSync(out, { recursive: true });
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.setContent('<body style="margin:0;background:#000"></body>');
-  await page.addScriptTag({ content: fs.readFileSync(path.join(dir, 'px.js'), 'utf8') });
-  await page.addScriptTag({ content: fs.readFileSync(path.join(dir, 'scenes', `${setting}.js`), 'utf8') });
+  const { designsScript } = await import('../../scripts/lib/paint.mjs');
+  await page.addScriptTag({ content: await designsScript([setting]) });
   const shots = await page.evaluate(([setting, t]) => {
     const res = [];
     const render = (made, k) => {
