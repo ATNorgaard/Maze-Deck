@@ -2,7 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 const dir = __dirname;
-const order = ['dungeon', 'tower', 'deep-forest', 'desert', 'undercity', 'frozen-pass'];
+const order = ['dungeon', 'tower', 'deep-forest', 'desert', 'undercity', 'frozen-pass',
+  'kings-road', 'mire', 'high-road', 'drowned-coast', 'barrow-moor', 'ember-hold', 'underdark', 'sunken-jungle'];
 const only = process.argv[2];
 const set = only ? only.split(',') : null;
 const scenes = order

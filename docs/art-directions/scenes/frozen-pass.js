@@ -317,7 +317,7 @@
 
   const A = {
     job: 6, setting: 'frozen-pass', key: 'A', id: 'frozen-pass-a', side: 'outside',
-    revised: "You loved both: the peaks are the outside and the ice cave the inside. The ice cave’s back now looks out on the pass, its ridges and a cairn.",
+    revised: 'You loved both: the peaks are the outside and the ice cave the inside.',
     name: 'Frozen pass', title: 'The white teeth',
     pitch: 'High in the range at noon. Sunlit peaks stand round a col like teeth, the wind tears snow off their ridges, and whatever the card is waits on the pass, dark against the white.',
     notes: [
@@ -509,15 +509,15 @@
 
   const RAMPS_B = {
     ice: ['#03070C', '#06101A', '#0B1926', '#112436', '#183149', '#21415F', '#2C5077', '#3F6A94', '#588FBC', '#7FB5D8', '#A8E1F7', '#D2F0FA'],
-    out: ['#6E9FC6', '#8DBCDA', '#ACD5EA', '#C8E6F3', '#DDF1F9', '#EEF8FC', '#FCFEFE'],
-    pass: ['#2C5077', '#3F6A94', '#588FBC', '#76A8CF', '#94C2E0', '#B4D9EE', '#CFE9F6', '#E6F5FB', '#FCFEFE'],
+    glow: ['#0B1926', '#183149', '#2C5077', '#3F6A94', '#588FBC', '#7FB5D8', '#A8E1F7', '#C8EEFA', '#E6F8FD', '#FCFEFE'],
     floor: ['#020509', '#050C14', '#09141F', '#0F1E2D', '#162A3E', '#1F3A54', '#2C5077', '#4A7BA6', '#84BDD8', '#C8EAF6'],
     snow: ['#0B1520', '#132233', '#1C3249', '#2C5077', '#3E6996', '#588FBC', '#78ADD2', '#9CCDE8', '#C8EAF6', '#E3F6FB', '#FCFEFE'],
     shadow: ['#020407', '#05090E', '#09111A', '#0F1A26', '#16243A'],
     wood: ['#0C0A09', '#17120F', '#231B16', '#30251D', '#3F3025', '#4F3D2F'],
     ...CARD,
   };
-  // Layers: 1 the wall and floor, 2 the ring of thin ice round an opening, 3 the outside, 4 icicles, 6+ the card.
+  // Layers: 1 the walls and floor, 2 columns and the falls, 3 alcoves and the tunnel, 4 icicles and crystals, 6+ the card.
+  // No daylight anywhere: every light here is the ice's own glow ('glow' is emissive).
 
   /** An irregular arch: straight-ish sides, a squashed round top, every point but the base nudged. */
   function archPts(cx, top, hw, bottom, o = {}) {
@@ -560,76 +560,21 @@
     });
   }
 
-  /** The pass beyond, in a blizzard: white air, a far ridge half lost in it, drifts, wind streaks. */
-  function beyond(p, shape, cx, top, sill, u, o = {}) {
-    const seed = o.seed || 1; const h = sill - top; const dim = o.dim || 0;
-    const ridge = (x) => {
-      const a = 1 - Math.abs(frac(x / (23 * u) + seed * 0.37) * 2 - 1); const b = 1 - Math.abs(frac(x / (9 * u) + seed * 0.71) * 2 - 1);
-      return sill - h * (0.2 + 0.16 * a + 0.06 * b);
-    };
-    p.fill(shape, 'out', (x, y) => {
-      let v = lerp(3.4, 5.8, clamp((y - top) / (h * 0.78), 0, 1) ** 0.8);
-      const ry = ridge(x);
-      if (y > ry) {
-        const sl = ridge(x + 1) - ridge(x - 1); // rising to the right: the face toward the sun
-        v = (sl > 0 ? 2.2 : 4.2) - (y - ry) / h * 0.6;
-      }
-      const gy = sill - h * (0.08 + 0.03 * Math.sin(x / (7 * u) + seed));
-      if (y > gy) v = 5.4 - ((y - gy) / h) * 2.4;
-      if (n2(x / (9 * u), y / (0.9 * u), seed + 5) > 0.68) v += 0.8;
-      return v - dim;
-    }, 3);
+  /** Glowing seams: thin strata in the old ice catching the glow, showing only where the ice is thin enough. */
+  function seams(p, shape, o) {
+    const u = o.u; const gap = o.gap * u;
+    p.shade(shape, (x, y) => {
+      const w = y + Math.sin(x / (o.per * u) + o.seed) * o.amp * u + (n1(x / (11 * u), o.seed) - 0.5) * 3 * u;
+      const k = Math.round(w / gap);
+      if (Math.abs(w - k * gap) >= 0.55) return 0;
+      return n1(x / (o.patch * u) + k * 3.7, o.seed + 1) > o.thresh ? o.k * (o.at ? o.at(x, y) : 1) : 0;
+    }, o.z);
   }
 
-  /**
-   * The pass seen out of the cave on the back: the blizzard thinning to a
-   * bright patch of sky low over the col, three ridges stepping back in paler
-   * blues and all dipping toward it, the snowfield running out to them with
-   * the sun's glare lying down it, footprints and a cairn leading from the
-   * cave toward the col, and streaks of snow blowing across.
-   */
-  function passBeyond(p, shape, cx, top, sill, u) {
-    const sunX = cx + 4 * u; const sunY = 70 * u;
-    const ridgeAt = (base, amp, per, ph, notch) => (x) => {
-      const a = 1 - Math.abs(frac(x / (per * u) + ph) * 2 - 1);
-      const b = 1 - Math.abs(frac(x / (per * 0.41 * u) + ph * 1.7) * 2 - 1);
-      return base * u - amp * u * (0.65 * a + 0.35 * b) + notch * u * Math.max(0, 1 - Math.abs(x - sunX) / (13 * u));
-    };
-    // Back to front: each ridge flat, a step darker than the one behind it, its skyline rimmed by the sun.
-    const ridges = [
-      { at: ridgeAt(72, 10, 25, 0.13, 7), v: 6.1 },
-      { at: ridgeAt(80, 9, 18, 0.62, 6), v: 5.1 },
-      { at: ridgeAt(88, 8, 14, 0.31, 5), v: 4.1 },
-    ];
-    const groundAt = (x) => 91 * u + Math.sin(x / (6 * u)) * 0.7 * u;
-    p.fill(shape, 'pass', (x, y) => {
-      const d = Math.hypot((x - sunX) / 1.25, y - sunY) / (34 * u);
-      let v = Math.max(lerp(8.2, 4.1, clamp(d, 0, 1) ** 0.75), lerp(4.4, 7.1, clamp((y - top - 6 * u) / (52 * u), 0, 1)));
-      for (const R of ridges) {
-        const ry = R.at(x);
-        if (y + 0.5 >= ry) v = R.v + (y + 0.5 - ry < 1 ? 1.4 : 0);
-      }
-      const gy = groundAt(x);
-      if (y + 0.5 >= gy) {
-        const t = clamp((y - gy) / (sill - gy), 0, 1);
-        v = 7.1 - t * 1.6 + 1.2 * Math.max(0, 1 - Math.abs(x - sunX + (y - gy) * 0.35) / (5 * u)) * (1 - t * 0.6);
-        if (frac((y - gy) / (2.6 * u) + Math.sin(x / (5 * u)) * 0.2) < 0.2) v -= 1;
-      }
-      return v;
-    }, 3);
-    // Snow streaming across: a few long thin streaks, slanting up with the wind.
-    for (const [y0, x0, len] of [[36, -14, 24], [47, 2, 18], [58, -8, 26], [66, 6, 14], [83, -12, 20]]) {
-      p.shade(shape, (x, y) => {
-        const t = (x - (cx + x0 * u)) / (len * u);
-        return t > 0 && t < 1 && Math.abs(y - (y0 * u - t * 2 * u)) < 0.5 ? 1.5 * Math.sin(Math.PI * t) + 0.3 : 0;
-      }, 3);
-    }
-    // Footprints from the cave mouth out to the col, a cairn beside them, two poles beyond.
-    trail(p, [[cx - 3 * u, sill, 1.4], [cx + 3 * u, 100 * u, 1.1], [cx - 1 * u, 95 * u, 0.8], [sunX, 91.5 * u, 0.5]], u, -2.4, 3);
-    const PR = p.ri('pass'); const mark = (x, y, w, h, v) => p.each(C.rect(Math.round(x), Math.round(y), w, h), (px, py, i) => { if (p.z[i] === 3) { p.r[i] = PR; p.v[i] = v; } });
-    const kx = cx + 9 * u; const ky = 99 * u;
-    mark(kx - 2, ky - 2, 5, 2, 1.1); mark(kx - 1, ky - 4, 4, 2, 1.6); mark(kx, ky - 5, 2, 1, 2.1); mark(kx - 1, ky - 5, 3, 1, 6.1); mark(kx - 2, ky - 3, 1, 1, 5.1);
-    mark(cx + 6 * u, 94.5 * u - 3 * u, 1, 3 * u, 2.1); mark(sunX + 3 * u, 92 * u - 2 * u, 1, 2 * u, 3.1);
+  /** Thin ice: soft patches where more of the glow comes through, in two clean steps. */
+  function thinIce(p, shape, o) {
+    const u = o.u;
+    p.shade(shape, (x, y) => { const g = n2(x / (o.size * u), y / (o.size * 0.7 * u), o.seed); return g > 0.7 ? 2 * o.k : g > 0.56 ? o.k : 0; }, o.z);
   }
 
   /** Icicles hanging from hangAt(x) between x0 and x1: tapering, lit down their left edge, longest in the middle. */
@@ -654,42 +599,112 @@
     return null;
   };
 
-  /**
-   * A mouth in the ice wall: an irregular opening onto the pass, a ring of
-   * thin ice round it glowing where the daylight comes through, its lip
-   * brightest; the wall round it lit. Returns the opening's shapes.
-   */
-  function mouth(p, cx, top, hw, sill, u, o = {}) {
-    const sq = o.squash ?? 0.7;
-    const outer = archPts(cx, top, hw, sill, { jit: 3.4 * u, seed: o.seed, squash: sq });
-    const inner = archPts(cx + hw * 0.04, top + hw * 0.18, hw * 0.8, sill, { jit: 2.4 * u, seed: (o.seed || 1) + 7, squash: sq });
-    const k = o.glow ?? 1;
-    p.light(cx, (top + sill) / 2, hw * 2.3, 5.2 * k, null, { zMin: 1, zMax: 1, sy: 1.05, hard: true });
-    p.light(cx, (top + sill) / 2, hw * 5, 2.2 * k, null, { zMin: 1, zMax: 1, sy: 1.1 });
-    p.fill(outer, 'ice', (x, y) => 5.4 + 2.6 * k * clamp(1.2 - Math.hypot((x - cx) / hw, (y - (top + sill) / 2) / ((sill - top) / 2)), 0, 1), 2);
-    scallops(p, outer, { size: 3.5 * u, seed: (o.seed || 1) + 3, z: 2, lightAt: () => [cx, (top + sill) / 2], bevel: 0.7, jointV: 0.6, joint: 0.8 });
-    beyond(p, inner, cx, top + hw * 0.18, sill, u, { seed: o.seed, dim: o.dim });
-    p.backlit(2, 'out', 0, 'ice', 10.4 * Math.min(1, 0.4 + k * 0.6));
-    return { outer, inner };
+  /** The rim of a shape: its pixels on layer z with a neighbour on a lower layer take +dv. */
+  function lip(p, z, dv, sides = [[-1, 0], [1, 0], [0, -1]]) {
+    const hit = [];
+    for (let y = 1; y < p.h - 1; y += 1) {
+      for (let x = 1; x < p.w - 1; x += 1) {
+        const i = y * p.w + x;
+        if (p.z[i] !== z) continue;
+        for (const [dx, dy] of sides) if (p.z[i + dy * p.w + dx] < z) { hit.push(i); break; }
+      }
+    }
+    for (const i of hit) p.v[i] += dv;
   }
 
-  /** A drift blown in through an opening: a tongue of snow over the sill and out across the floor, ragged at its tip. */
-  function drift(p, cx, sill, hw, reach, u, o = {}) {
-    const seed = typeof o.seed === 'string' ? [...o.seed].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 9973 : (o.seed || 3);
-    const x0 = cx - hw * 1.1; const x1 = cx + hw * 1.8; const k = o.k ?? 1;
-    // The mound's front edge: a low bell leaning the way the wind blows, rippled into tongues.
-    const edgeAt = (x) => {
-      const t = (x - x0) / (x1 - x0);
-      if (t <= 0 || t >= 1) return sill;
-      const bell = Math.sin(Math.PI * t ** 0.8);
-      return sill + reach * bell * (0.62 + 0.38 * n1(x / (4.5 * u), seed));
+  /** A cluster of ice crystals: tall pointed prisms, each lit down one face, darker down the other, a bright tip. */
+  function crystals(p, cx, fy, h, u, o = {}) {
+    const r = rng(o.seed || 'crystals'); const z = o.z ?? 4; const n = o.n ?? 4; const R = o.ramp || 'glow'; const v = o.v ?? 5;
+    const list = [];
+    for (let i = 0; i < n; i += 1) {
+      const hh = h * (0.4 + r() * 0.6); const w = Math.max(2, hh * (0.24 + r() * 0.1));
+      const x0 = cx + (i - (n - 1) / 2) * w * 0.85 + (r() - 0.5) * w * 0.6;
+      list.push({ hh, w, x0, lean: (r() - 0.5) * 0.5 + (x0 - cx) / Math.max(1, h) * 0.6 });
+    }
+    list.sort((a, b) => b.hh - a.hh);
+    const tips = [];
+    for (const c of list) {
+      const tipX = c.x0 + c.lean * c.hh * 0.5; const tipY = fy - c.hh;
+      p.fill(C.poly([[c.x0 - c.w / 2, fy], [c.x0 - c.w / 2 + c.lean * c.hh * 0.38, fy - c.hh * 0.76], [tipX, tipY], [c.x0 + c.w / 2 + c.lean * c.hh * 0.38, fy - c.hh * 0.76], [c.x0 + c.w / 2, fy]]), R,
+        (x, y) => (x + 0.5 < lerp(c.x0, tipX, (fy - y) / c.hh) ? v + 1 : v - 1) + (y < tipY + 2 ? 1 : 0), z);
+      tips.push([Math.round(tipX), Math.round(tipY)]);
+    }
+    return tips;
+  }
+
+  /**
+   * A frozen waterfall: a cascade stopped where it fell, pouring out of a
+   * crack in the roof and spreading over the floor in lobes, fluted from top
+   * to bottom and glowing from inside, its thin edges brightest.
+   */
+  function frozenFall(p, cx, top, bottom, wTop, wBot, u, o = {}) {
+    const k = o.k ?? 1; const seed = o.seed || 3; const z = o.z ?? 2; const flutes = o.flutes || 9;
+    const hwAt = (y) => { const t = clamp((y - top) / (bottom - top), 0, 1); return lerp(wTop / 2, wBot / 2, t ** 1.3) + (n1(y / (6 * u), seed) - 0.5) * 2.4 * u; };
+    const pts = [];
+    for (let i = 0; i <= 24; i += 1) { const y = lerp(top - 1, bottom - 3 * u, i / 24); pts.push([cx - hwAt(y), y]); }
+    for (let i = 0; i <= 30; i += 1) { const t = i / 30; pts.push([lerp(cx - wBot / 2, cx + wBot / 2, t), bottom - 3 * u + Math.abs(Math.sin(t * Math.PI * 6)) ** 0.6 * 2 * u]); }
+    for (let i = 24; i >= 0; i -= 1) { const y = lerp(top - 1, bottom - 3 * u, i / 24); pts.push([cx + hwAt(y), y]); }
+    const shape = C.poly(pts);
+    // The pool it froze into, spread over the floor at its foot.
+    p.fill(C.ellipse(cx, bottom, wBot * 0.78, 2.8 * u, 24), 'glow', (x, y) => (y < bottom - 1 ? 5 : 4) - (Math.abs(x - cx) > wBot * 0.55 ? 1 : 0), z);
+    p.fill(shape, 'glow', (x, y) => {
+      const t = clamp((y - top) / (bottom - top), 0, 1); const hw = hwAt(Math.min(y, bottom - 3 * u)); const q = (x + 0.5 - cx) / hw;
+      const fl = frac(q * flutes * 0.5 + n1(y / (13 * u), seed + 1) * 0.4 + 0.5); const ridge = 1 - Math.abs(fl * 2 - 1);
+      let v = 7.4 + t * 1.1 - Math.abs(q) ** 2 * 2.6 + (ridge > 0.72 ? 1 : ridge < 0.22 ? -1 : 0) + (Math.abs(q) > 0.9 ? 1.2 : 0);
+      if (t > 0.88) v += 0.6;
+      return Math.round(v - (1 - k) * 4);
+    }, z);
+    // The crack in the roof it pours from.
+    p.fill(C.poly([[cx - wTop * 0.62, 0], [cx + wTop * 0.6, 0], [cx + wTop * 0.36, top + 2 * u], [cx + 2 * u, top + 3.5 * u], [cx - wTop * 0.4, top + 2 * u]]), 'ice', 0.6, 2);
+    p.light(cx, lerp(top, bottom, 0.62), wBot * 1.5, 4.4 * k, null, { zMin: 1, zMax: 3, hard: true });
+    p.light(cx, lerp(top, bottom, 0.62), wBot * 3.2, 1.8 * k, null, { zMin: 1, zMax: 3 });
+    return { shape, hwAt };
+  }
+
+  /** An ice column where an icicle met the floor: waisted, fluted, its thin edges glowing and its heart dark. */
+  function column(p, cx, top, bottom, w, u, o = {}) {
+    const seed = o.seed || 5; const z = o.z ?? 2; const toward = o.toward ?? 0;
+    const hwAt = (y) => {
+      const t = clamp((y - top) / (bottom - top), 0, 1);
+      return (w / 2) * (0.45 + 0.55 * Math.min(1, Math.abs(t - 0.55) * 2.2) ** 1.3) + (t < 0.08 ? (0.08 - t) * w * 3 : 0) + (t > 0.9 ? (t - 0.9) * w * 4 : 0) + (n1(y / (5 * u), seed) - 0.5) * 1.6 * u;
     };
-    p.fill(C.rect(x0, sill - 1.5 * u, x1 - x0, reach + 2 * u), 'snow', (x, y) => {
-      const e = edgeAt(x);
-      const top = sill - 1.5 * u * Math.sin(Math.PI * clamp((x - cx + hw * 0.8) / (hw * 1.6), 0, 1));
-      if (y + 0.5 < top || y + 0.5 > e) return null;
-      const t = clamp((y - sill) / Math.max(1, e - sill), 0, 1);
-      return (8.4 - t * 3.6 - (e - sill < reach * 0.4 ? 1.6 : 0)) * k + (frac((y + Math.sin(x / (4 * u)) * u) / (2.4 * u)) < 0.22 ? -1 : 0);
+    const pts = [];
+    for (let i = 0; i <= 20; i += 1) { const y = lerp(top, bottom, i / 20); pts.push([cx - hwAt(y), y]); }
+    for (let i = 20; i >= 0; i -= 1) { const y = lerp(top, bottom, i / 20); pts.push([cx + hwAt(y), y]); }
+    p.fill(C.poly(pts), 'ice', (x, y) => {
+      const q = (x + 0.5 - cx) / hwAt(y); const a = Math.abs(q);
+      return (o.v ?? 2) + (a > 0.72 ? 2 : a > 0.42 ? 1 : 0) + (frac(q * 1.6 + 0.5) < 0.14 ? -1 : 0) + (toward && Math.sign(q) === toward && a > 0.6 ? 1 : 0);
+    }, z);
+  }
+
+  /**
+   * An alcove in the ice: a shallow niche whose back is thin enough to glow,
+   * its sides in shadow, crystals grown at its foot, icicles off its lip.
+   * Never a window: nothing but more ice shows inside it.
+   */
+  function alcove(p, cx, top, hw, bottom, u, o = {}) {
+    const seed = o.seed || 1; const k = o.k ?? 1;
+    const sq = Math.min(1, (bottom - top) / hw * 0.7);
+    const outer = archPts(cx, top, hw, bottom, { jit: 3 * u, seed, squash: sq });
+    const inner = archPts(cx + hw * 0.06, top + hw * 0.2, hw * 0.74, bottom, { jit: 2.4 * u, seed: seed + 5, squash: sq });
+    p.fill(outer, 'ice', 1.6, 3);
+    const back = bottom - (bottom - top) * 0.32;
+    p.fill(inner, 'ice', (x, y) => Math.round(3.4 + 3 * k * clamp(1.15 - Math.hypot((x - cx) / (hw * 0.72), (y - back) / ((bottom - top) * 0.62)), 0, 1)), 3);
+    scallops(p, inner, { size: 3.4 * u, seed: seed + 3, z: 3, lightAt: () => [cx, back], bevel: 0.8, jointV: 0.5, joint: 0.8 });
+    p.shade(inner, (x, y) => (Math.abs(x - (cx + hw * 0.18 + Math.sin(y / (4 * u) + seed) * 1.2 * u)) < 0.6 && y > top + hw * 0.5 ? 1.6 : 0), 3);
+    lip(p, 3, 1, [[-1, 0], [1, 0], [0, 1]]);
+    p.shade(outer, (x, y) => (y < top + (bottom - top) * 0.3 ? -1 : 0), 3); // the overhang's shadow
+    p.shade(inner, (x, y) => (y >= bottom - 1.5 * u ? 2 : 0), 3); // frost on its ledge
+    const tips = crystals(p, cx - hw * 0.05, bottom, (8 + hash(seed, 0, 4) * 6) * u, u, { seed: `alc-${seed}`, n: 3 + (seed % 3), v: 4 + k, z: 4 });
+    icicles(p, cx - hw - 1 * u, cx + hw + 1 * u, topOf(p, 3), u, { seed: `alc-ice-${seed}`, min: 1.5, max: 8, v: 3, hi: 2.5, z: 4 });
+    return tips;
+  }
+
+  /** The floor's reflection of something glowing: a column of light broken by ripples, fading toward us. */
+  function reflection(p, cx, hw, floorY, len, u, k = 1) {
+    p.shade(C.rect(cx - hw * 0.62, floorY, hw * 1.24, len), (x, y) => {
+      const t = (y - floorY) / len; const w = 1 - Math.abs(x - cx) / (hw * 0.62);
+      return frac((y - floorY) / (2.2 * u) + hash(Math.floor(x / 2), Math.floor((y - floorY) / (2.2 * u)), 4) * 0.5) < 0.45 ? 0 : 4.4 * k * (1 - t) * w;
     }, 1);
   }
 
@@ -728,19 +743,11 @@
     });
   }
 
-  /** The floor's reflection of an opening: a column of light broken by ripples, fading toward us. */
-  function reflection(p, cx, hw, floorY, len, u, k = 1) {
-    p.shade(C.rect(cx - hw * 0.62, floorY, hw * 1.24, len), (x, y) => {
-      const t = (y - floorY) / len; const w = 1 - Math.abs(x - cx) / (hw * 0.62);
-      return frac((y - floorY) / (2.2 * u) + hash(Math.floor(x / 2), Math.floor((y - floorY) / (2.2 * u)), 4) * 0.5) < 0.45 ? 0 : 4.4 * k * (1 - t) * w;
-    }, 1);
-  }
-
   /** A chest frozen into a block of ice, glowing in the card's colour through it. */
   function iceChest(p, cx, fy, s, ramp, z) {
     const bw = s * 0.6; const bh = s * 0.78;
     const block = C.poly([[cx - bw, fy], [cx - bw * 1.02, fy - bh * 0.7], [cx - bw * 0.7, fy - bh], [cx + bw * 0.5, fy - bh * 0.92], [cx + bw * 0.98, fy - bh * 0.6], [cx + bw, fy]]);
-    p.fill(block, 'ice', (x, y) => 7.2 + (cx - x) / s * 2.4 + (fy - y) / s * 1.4, z);
+    p.fill(block, 'ice', (x, y) => 6.2 + (cx - x) / s * 2.4 + (fy - y) / s * 1.4, z);
     SUBJECT.item(p, cx, fy - s * 0.12, s * 0.6, ramp, z + 1);
     p.shade(block, 1.2, z + 1);
     // Facets: the top face catching the light, a fracture plane across it, the left edge bright.
@@ -749,145 +756,177 @@
     p.fill(C.rect(cx - bw * 1.0, fy - bh * 0.7, 1, bh * 0.7), 'ice', 10, z + 3);
   }
 
+  /** Twinkling points: crystal tips catching the glow, per frame. */
+  function twinkle(img, tips, t, hex = '#E6F8FD') {
+    tips.forEach(([x, y], i) => {
+      const a = clamp(Math.sin(t * 1.7 + i * 2.3) * 1.6 - 0.6, 0, 1);
+      if (a <= 0) return;
+      put(img, x, y, hex, a); put(img, x - 1, y, hex, a * 0.4); put(img, x + 1, y, hex, a * 0.4); put(img, x, y - 1, hex, a * 0.4);
+    });
+  }
+
   const B = {
     job: 6, setting: 'frozen-pass', key: 'B', id: 'frozen-pass-b', side: 'inside',
+    revised: 'After your note: the ice cave is sealed, with no openings to the outside anywhere. The ice glows by itself, the back runs on down an ice tunnel into the dark, and the cards meet you before a frozen waterfall; only a Clear Path splits it with a fissure of gold.',
     name: 'Frozen pass', title: 'The ice cave',
-    pitch: 'You shelter in a cave of old blue ice while the blizzard tears across the pass outside. Every card is a mouth in the ice, white with weather, and something stands in it.',
+    pitch: 'Deep in the glacier, a cavern sealed in old blue ice. No daylight reaches it: the ice glows by itself, and every card waits before a frozen waterfall.',
     notes: [
-      ['Light', 'All the light is daylight coming through the ice: white in the openings, glowing blue in the thin ice round them, dark and cold deeper in.'],
-      ['Detail', 'Scalloped ice walls with old dark strata, icicles fringing every opening, a far ridge half lost in the snow, drifts blown in across a glassy floor that holds the openings upside down.'],
-      ['Vista', 'A long cavern with openings along it, the middle one widest. The card stands in it against the white: a pale beast, a lantern, a chest frozen in a block of ice, a wall of green ice, gold sun breaking through.'],
-      ['World', 'A floor of dark glassy ice under the table, cracked white, a cold glow falling from the openings above and snow blowing in from the top.'],
+      ['Light', 'The ice’s own cold glow, coming through walls too thick to see out of: brightest in the frozen waterfall, the backs of the alcoves, the edges of the columns and the seams in the old ice, black where it is thickest.'],
+      ['Detail', 'Scalloped walls run with glowing strata, columns where icicles met the floor, alcoves with crystals grown in them, icicles everywhere, and a glassy floor that holds the waterfall upside down.'],
+      ['Vista', 'A long sealed cavern of alcoves and columns. The cards meet you before the frozen waterfall: a pale beast, a lantern, a chest frozen in a block, a wall of teal ice. Only a Clear Path splits the falls with a fissure glowing gold.'],
+      ['World', 'The glassy cracked floor under the table, frost and crystals at its edges where the walls glow, and nothing falling from above.'],
     ],
-    palette: ['#03070C', '#0B1926', '#183149', '#2C5077', '#588FBC', '#A8E1F7', '#DDF1F9', '#FCFEFE', '#16243A'],
+    palette: ['#03070C', '#0B1926', '#183149', '#2C5077', '#588FBC', '#7FB5D8', '#A8E1F7', '#E6F8FD', '#16243A'],
 
     back(W, H) {
-      const p = new Painter(W, H, RAMPS_B, { emit: ['out', 'pass'] });
-      const u = H / 134; const gx = W / 2;
-      const floorY = Math.round(108 * u); const top = 20 * u; const hw = 29 * u; const sill = 106 * u;
-      const wall = C.rect(0, 0, W, floorY);
-      p.fill(wall, 'ice', 1.4, 1);
-      p.shade(wall, (x, y) => (Math.abs(frac((y + Math.sin(x / (17 * u)) * 3 * u) / (23 * u)) - 0.5) < 0.04 ? -0.8 : 0), 1);
-      scallops(p, wall, { size: 7 * u, sy: 0.8, seed: 3, z: 1, lightAt: () => [gx, 62 * u], bevel: 1, jointV: 0.5 });
-      const { inner } = mouth(p, gx, top, hw, sill, u, { seed: 4, squash: 0.85 });
-      passBeyond(p, inner, gx, top, sill, u);
-      p.light(gx, 62 * u, 80 * u, 1.6, null, { zMin: 1, zMax: 1 });
-      // The floor: glassy ice holding the mouth upside down, a drift blown in across it, footprints going out.
-      p.fill(C.rect(0, floorY, W, H - floorY), 'floor', 1.4, 1);
-      reflection(p, gx, hw, floorY, H - floorY, u, 1);
-      drift(p, gx, sill, hw, 15 * u, u, { seed: 'b-back-drift', k: 0.9 });
-      trail(p, [[gx - 8 * u, 126 * u, 1.9], [gx - 3 * u, sill, 1.4]], u, -1.8, 1);
-      const hang = topOf(p, 2);
-      icicles(p, gx - hw - 3 * u, gx + hw + 3 * u, hang, u, { seed: 'b-back-ice', min: 2, max: 19, v: 3.8, z: 4 });
-      // Icicles off the roof outside the arch, in the dark.
+      const p = new Painter(W, H, RAMPS_B, { emit: ['glow'] });
+      const u = H / 134; const gx = W / 2; const floorY = 104 * u;
+      // The near wall round the way in: scalloped, thin and glowing close to it, seamed in rings like old growth.
+      const all = C.rect(0, 0, W, H);
+      p.fill(C.rect(0, 0, W, floorY), 'ice', 1.6, 1);
+      p.fill(C.rect(0, floorY, W, H - floorY), 'floor', 1.6, 1);
+      scallops(p, C.rect(0, 0, W, floorY), { size: 7 * u, sy: 0.85, seed: 3, z: 1, lightAt: () => [gx, 60 * u], bevel: 1, jointV: 0.5 });
+      p.shade(C.rect(0, 0, W, floorY), (x, y) => {
+        const d = Math.hypot(x - gx, (y - 62 * u) * 0.75) + (n1(Math.atan2(y - 62 * u, x - gx) * 3, 7) - 0.5) * 4 * u;
+        return Math.abs(frac(d / (7 * u)) - 0.5) > 0.42 && n1(Math.atan2(y - 62 * u, x - gx) * 2.2 + Math.floor(d / (7 * u)), 8) > 0.5 ? 1.8 : 0;
+      }, 1);
+      p.light(gx, 62 * u, 62 * u, 3.6, null, { zMin: 1, zMax: 1, hard: true });
+      // The tunnel: sections of ice, each smaller, lower and darker than the last, falling away into dark blue.
+      const N = 9; const secs = [];
+      for (let i = 0; i < N; i += 1) {
+        const f = i / (N - 1);
+        const hw = lerp(31 * u, 3.5 * u, f ** 0.72); const cx = gx + Math.sin(f * 2.4) * 5 * u * f; const cy = lerp(63 * u, 88 * u, f ** 0.85);
+        secs.push({ f, hw, cx, cy, z: 10 + i, shape: archPts(cx, cy - hw * 1.5, hw, cy + hw * 1.28, { jit: hw * 0.14, seed: 40 + i, squash: 0.82 }) });
+      }
+      for (const S of secs) {
+        const v = lerp(5.4, 0.5, S.f ** 0.55) + (S.f === 0 ? -0.6 : 0);
+        p.fill(S.shape, 'ice', (x, y) => {
+          const fl = y > S.cy + S.hw * 0.55;
+          return v + (fl ? 0.4 + (Math.abs(x - S.cx) < S.hw * 0.2 ? 0.6 : 0) * (1 - S.f) : 0) + clamp((Math.abs(x - S.cx) / S.hw - 0.7) / 0.3, 0, 1) * 0.8;
+        }, S.z);
+        if (S.f < 0.75) scallops(p, S.shape, { size: Math.max(2, 6 * u * (1 - S.f)), seed: 50 + S.z, z: S.z, lightAt: () => [S.cx, S.cy], bevel: 0.8, jointV: 0.4 });
+      }
+      for (const S of secs) lip(p, S.z, S.f === 0 ? 1.6 : lerp(3.4, 0.6, S.f ** 0.7), [[-1, 0], [1, 0], [0, -1], [0, 1]]);
+      p.light(gx, 66 * u, 34 * u, 2, null, { zMin: 10, zMax: 13 });
+      // A glowing seam running down the tunnel's right wall into the dark.
+      p.shade(all, (x, y) => {
+        const t = clamp((x - gx - 4 * u) / (22 * u), 0, 1);
+        const sy = lerp(86 * u, 46 * u, t) - Math.sin(t * 3) * 2 * u;
+        return x > gx + 4 * u && x < gx + 26 * u && Math.abs(y - sy) < 0.55 && p.z[Math.round(y) * W + Math.round(x)] >= 10 ? 1.6 * t + 0.4 : 0;
+      });
+      p.shade(all, (x, y) => {
+        const t = clamp((gx - 6 * u - x) / (20 * u), 0, 1);
+        const sy = lerp(80 * u, 58 * u, t) + Math.sin(t * 4) * 1.5 * u;
+        return x < gx - 6 * u && x > gx - 26 * u && Math.abs(y - sy) < 0.55 && p.z[Math.round(y) * W + Math.round(x)] >= 10 ? 1.2 * t + 0.3 : 0;
+      });
+      // The floor in front: glassy, holding the tunnel's glow, crystals grown at its edges.
+      reflection(p, gx, 26 * u, floorY, H - floorY, u, 0.9);
+      p.shade(C.rect(0, floorY, W, H - floorY), (x, y) => (frac((x * 0.4 + y) / (9 * u)) < 0.06 ? 0.8 : 0), 1);
+      const tips = [
+        ...crystals(p, gx - 33 * u, 128 * u, 16 * u, u, { seed: 'b-back-c1', n: 5, v: 6, z: 4 }),
+        ...crystals(p, gx + 34 * u, 125 * u, 12 * u, u, { seed: 'b-back-c2', n: 4, v: 5, z: 4 }),
+      ];
+      icicles(p, gx - 32 * u, gx + 32 * u, topOf(p, 10), u, { seed: 'b-back-ice', min: 2, max: 15, v: 3.8, z: 4 });
+      icicles(p, gx - 26 * u, gx + 26 * u, topOf(p, 11), u, { seed: 'b-back-ice2', min: 1, max: 8, v: 3, hi: 2.4, z: 4 });
       icicles(p, 0, W, () => 0, u, { seed: 'b-back-roof', min: 2, max: 10, v: 1.8, hi: 1.6, z: 4 });
-      p.light(gx, 62 * u, 56 * u, 2.4, null, { zMin: 4, zMax: 4 });
-      vignette(p, W, H, 2, 0.5);
+      p.light(gx, 62 * u, 50 * u, 2, null, { zMin: 4, zMax: 4 });
+      vignette(p, W, H, 1.8, 0.5);
       return {
         p,
-        over(img) {
-          for (const q of particles('sand', 34, [gx - hw, top + 6 * u, hw * 2, sill - top - 6 * u], 2.1, 41)) {
-            const i = Math.round(q.y) * W + Math.round(q.x);
-            if (p.z[i] === 3) { put(img, q.x, q.y, '#FCFEFE', 0.9); put(img, q.x - 1, q.y, '#FCFEFE', 0.5); }
-          }
-          for (const q of particles('snow', 12, [0, floorY - 34 * u, W, 44 * u], 2.1, 42)) put(img, q.x, q.y, '#A8E1F7', 0.6);
-        },
+        over(img) { twinkle(img, tips.filter((_, i) => i % 3 === 0), 0.6); },
       };
     },
 
     vista(W, H, cat) {
-      const p = new Painter(W, H, RAMPS_B, { emit: ['out', 'path'] });
+      const p = new Painter(W, H, RAMPS_B, { emit: ['glow', 'path'] });
       const u = H / 100; const gx = W / 2;
       const ramp = catRamp(cat); const hex = CARD[ramp][3];
-      const floorY = Math.round(84 * u);
+      const floorY = Math.round(82 * u); const fy = 91 * u; // the floor line, and where the card stands
       const wall = C.rect(0, 0, W, floorY);
       p.fill(wall, 'ice', 1.2, 1);
-      // The openings along the cavern, the middle one widest.
-      const ops = [{ cx: gx, top: 12 * u, hw: 24 * u, sill: 80 * u, mid: true }];
-      const r = rng('b-vista-ops');
+      scallops(p, wall, { size: 9 * u, sy: 0.8, seed: 6, z: 1, lightAt: () => [gx, 50 * u], bevel: 1, jointV: 0.5 });
+      thinIce(p, wall, { u, size: 26, seed: 6, k: 1, z: 1 });
+      seams(p, wall, { u, gap: 11, per: 27, amp: 2.4, patch: 22, thresh: 0.52, k: 2.2, seed: 4, z: 1 });
+      p.fill(C.rect(0, floorY, W, H - floorY), 'floor', 1.4, 1);
+      // The falls, the focal wall.
+      const k = cat === 'obstacle' ? 0.8 : cat === 'clear-path' ? 0.9 : 1;
+      frozenFall(p, gx, 3 * u, floorY + 3 * u, 34 * u, 64 * u, u, { k, seed: 7, flutes: 11 });
+      // Columns and alcoves along the cavern on both sides.
+      const tips = [];
+      const r = rng('b-cavern');
       for (const m of [-1, 1]) {
-        for (let x = gx + m * 26 * u; ;) {
-          x += m * (54 + r() * 24) * u;
-          if (m < 0 ? x < -24 * u : x > W + 24 * u) break;
-          ops.push({ cx: x, top: (32 + r() * 12) * u, hw: (15 + r() * 6) * u, sill: (77 + r() * 3) * u });
+        let k2 = 0;
+        for (let d = 45 * u; d < W / 2 + 40 * u; d += (28 + r() * 6) * u, k2 += 1) {
+          const x = gx + m * d;
+          if (k2 % 2 === 0) column(p, x, 0, floorY + 2 * u, (11 + r() * 4) * u, u, { seed: 10 + k2 * 2 + (m > 0 ? 1 : 0), toward: -m, v: k2 === 0 ? 2.4 : 2 });
+          else { const ab = (58 + r() * 12) * u; tips.push(...alcove(p, x, ab - (20 + r() * 8) * u, (14 + r() * 4) * u, ab, u, { seed: 20 + k2 * 2 + (m > 0 ? 1 : 0), k: k2 < 3 ? 1.1 : 0.9 })); }
         }
       }
-      const near = (x) => ops.reduce((a, b) => (Math.abs(b.cx - x) < Math.abs(a.cx - x) ? b : a));
-      p.shade(wall, (x, y) => (Math.abs(frac((y + Math.sin(x / (23 * u)) * 3 * u) / (21 * u)) - 0.5) < 0.04 ? -0.8 : 0), 1);
-      scallops(p, wall, { size: 9 * u, sy: 0.8, seed: 6, z: 1, lightAt: (x) => { const o = near(x); return [o.cx, (o.top + o.sill) / 2]; }, bevel: 1, jointV: 0.5 });
-      const holes = ops.map((o, k) => {
-        const bright = o.mid ? (cat === 'clear-path' ? 1.3 : cat === 'obstacle' ? 0.7 : 1.1) : 0.7;
-        return mouth(p, o.cx, o.top, o.hw, o.sill, u, { seed: 20 + k, glow: bright, dim: o.mid ? 0 : 0.5, squash: o.mid ? 0.75 : 0.6 });
-      });
-      const mid = ops[0]; const midIn = holes[0].inner;
-      // The floor: glassy, each opening held upside down in it, a drift blown in under each.
-      p.fill(C.rect(0, floorY, W, H - floorY), 'floor', 1.4, 1);
-      ops.forEach((o, k) => {
-        reflection(p, o.cx, o.hw, floorY, H - floorY, u, o.mid ? 1 : 0.6);
-        drift(p, o.cx, o.sill, o.hw, (o.mid ? 16 : 10) * u, u, { seed: `b-drift-${k}`, k: o.mid ? 1 : 0.72 });
-      });
-      // The card, in the middle opening.
-      const fy = mid.sill;
+      // The floor: glassy, the falls held upside down in it, a crack or two.
+      reflection(p, gx, 30 * u, floorY + 4 * u, H - floorY, u, 1.1);
+      p.shade(C.rect(0, floorY, W, H - floorY), (x, y) => (Math.abs(y - floorY - 9 * u - Math.sin(x / (17 * u)) * 2 * u - (x - gx) * 0.04) < 0.5 ? 1.2 : 0), 1);
+      // The card, before the falls.
       if (cat === 'monster') {
-        yeti(p, gx, fy, 52 * u, { v: 3.15, lit: 0.8, eyes: ramp, z: 6 });
-        p.backlit(6, 'out', 0, 'snow', 9.6);
-        p.tint(gx, fy - 52 * u * 0.88, 9 * u, hex, 0.5, flicker(0.3, 0.3, 1.4));
+        yeti(p, gx, fy, 56 * u, { v: 3.15, lit: 0.35, eyes: ramp, z: 6 });
+        p.backlit(6, 'glow', 5, 'snow', 9.6);
+        p.shade(C.rect(gx - 6 * u, fy - 12 * u, 12 * u, 12 * u), -2.6, 2); // its legs blocking the pool's glow
+        p.shade(C.poly([[gx - 7 * u, fy - 10 * u], [gx + 7 * u, fy - 10 * u], [gx + 12 * u, H], [gx - 12 * u, H]]), -3, 1); // and its shadow on the floor
+        p.tint(gx, fy - 56 * u * 0.88, 9 * u, hex, 0.5, flicker(0.3, 0.3, 1.4));
       } else if (cat === 'wanderer') {
         const s = 38 * u;
         const { lx, ly } = traveller(p, gx, fy, s, 'shadow', 2.2, 6);
-        p.backlit(6, 'out', 0, 'snow', 8.4);
+        p.backlit(6, 'glow', 5, 'snow', 8.4);
         lantern(p, lx, ly, ramp, 8);
-        p.light(lx + 1, fy + 4 * u, 34 * u, 3, flicker(0.9, 0.12), { zMin: 1, zMax: 2, sy: 0.5 });
+        p.light(lx + 1, fy + 2 * u, 34 * u, 3, flicker(0.9, 0.12), { zMin: 1, zMax: 3, sy: 0.5 });
         p.tint(lx + 1, ly + 2, 12 * u, CARD[ramp][4], 0.7, flicker(0.9, 0.15));
         p.tint(lx + 1, fy, 36 * u, hex, 0.5, flicker(0.9, 0.15));
       } else if (cat === 'item') {
         iceChest(p, gx, fy + 1, 32 * u, ramp, 6);
         p.tint(gx, fy - 10 * u, 32 * u, hex, 0.62, flicker(2, 0.15, 0.7));
       } else if (cat === 'obstacle') {
-        p.fill(midIn, ramp, (x, y) => 1.6 + 2.4 * clamp(1 - Math.hypot((x - gx) / mid.hw, (y - fy + 30 * u) / (44 * u)), 0, 1), 5);
-        p.cells(midIn, { size: 8 * u, sx: 0.8, sy: 1.4, joint: 0.9, jointV: -1, vary: 0.8, bevel: 0.8, seed: 8, z: 5 });
-        p.tint(gx, fy - 30 * u, 36 * u, hex, 0.4, flicker(0.5, 0.12, 0.6));
+        // A wall of teal ice grown across the falls, fractured into blocks, the glow coming through its middle.
+        const slab = [];
+        for (let i = 0; i <= 12; i += 1) slab.push([gx - 36 * u + i * 6 * u, (10 + hash(i, 3, 9) * 8) * u]);
+        const shape = C.poly([...slab, [gx + 38 * u, fy + 1 * u], [gx - 38 * u, fy + 1 * u]]);
+        p.fill(shape, ramp, (x, y) => 1.6 + 2.4 * clamp(1 - Math.hypot((x - gx) / (34 * u), (y - 52 * u) / (40 * u)), 0, 1), 5);
+        p.cells(shape, { size: 8 * u, sx: 0.8, sy: 1.4, joint: 0.9, jointV: -1, vary: 0.8, bevel: 0.8, seed: 8, z: 5 });
+        lip(p, 5, 1.4, [[0, -1]]);
+        p.tint(gx, 50 * u, 38 * u, hex, 0.4, flicker(0.5, 0.12, 0.6));
       } else {
-        // The blizzard parts: low sun over the pass, the far ridge dark against it.
-        p.glow(midIn, 'path', gx, fy - 22 * u, 50 * u, 4.6, 2.8, 3);
-        p.each(midIn, (x, y, i) => {
-          const a = 1 - Math.abs(frac(x / (21 * u) + 0.3) * 2 - 1); const b = 1 - Math.abs(frac(x / (8 * u) + 0.6) * 2 - 1);
-          if (y > fy - (12 + 9 * a + 3 * b) * u) { p.r[i] = p.ri('path'); p.v[i] = y > fy - 4 * u ? 3.4 : 2.1; }
-        });
-        p.tint(gx, floorY + 6 * u, 50 * u, CARD.path[3], 0.45, flicker(0.2, 0.08, 0.4));
-        p.light(gx, fy - 24 * u, 70 * u, 1.8, null, { zMin: 1, zMax: 2 });
+        // The one way opening: a fissure splitting the falls, glowing gold.
+        const fis = [];
+        for (let i = 0; i <= 14; i += 1) { const t = i / 14; fis.push([gx + (hash(i, 5, 3) - 0.5) * 4 * u - lerp(1, 7, t ** 1.5) * u, lerp(6 * u, floorY + 4 * u, t)]); }
+        const back = fis.slice().reverse().map(([x, y], i) => [x + lerp(2, 14, ((fis.length - 1 - i) / 14) ** 1.5) * u + (hash(i, 6, 3) - 0.5) * 2 * u, y]);
+        const shape = C.poly([...fis, ...back]);
+        p.glow(shape, 'path', gx, floorY - 6 * u, 46 * u, 4.6, 2.6, 5);
+        p.tint(gx, 50 * u, 26 * u, CARD.path[3], 0.45, flicker(0.4, 0.06, 0.3));
+        p.tint(gx, floorY + 8 * u, 44 * u, CARD.path[3], 0.45, flicker(0.2, 0.08, 0.4));
+        p.light(gx, floorY, 50 * u, 2, null, { zMin: 1, zMax: 1, sy: 0.5 });
       }
-      // Icicles fringing every opening, and off the roof between them.
-      const hang = topOf(p, 2);
-      ops.forEach((o, k) => icicles(p, o.cx - o.hw - 3 * u, o.cx + o.hw + 3 * u, hang, u, { seed: `b-ice-${k}`, min: 2, max: o.mid ? 17 : 11, v: 3.6, z: 4 }));
-      icicles(p, 0, W, () => 0, u, { seed: 'b-roof', min: 1, max: 8, v: 1.8, hi: 1.6, z: 4 });
-      ops.forEach((o) => p.light(o.cx, (o.top + o.sill) / 2, o.hw * 2.2, o.mid ? 2.6 : 1.6, null, { zMin: 4, zMax: 4 }));
+      // Icicles all along the roof, except where the falls pour.
+      icicles(p, 0, W, (x) => (Math.abs(x - gx) < 16 * u ? null : 0), u, { seed: 'b-roof', min: 2, max: 10, v: 1.8, hi: 2, z: 4 });
+      p.light(gx, 40 * u, 60 * u, 2.2, null, { zMin: 4, zMax: 4 });
       vignette(p, W, H, 2, 0.42);
-      const OUT = p.ri('out');
+      const shown = tips.filter(([x]) => x > 0 && x < W);
       return {
         p,
         over(img, t) {
-          for (const q of particles('sand', Math.round(W / 2), [0, 8 * u, W, 74 * u], t, 51)) {
-            const xi = Math.round(q.x); const yi = Math.round(q.y);
-            if (xi < 1 || xi >= W || yi < 0 || yi >= H) continue;
-            const i = yi * W + xi;
-            if (p.r[i] !== OUT || p.z[i] !== 3) continue;
-            put(img, xi, yi, '#FCFEFE', 0.95); put(img, xi - 1, yi, '#FCFEFE', 0.5);
-          }
-          for (const q of particles('snow', Math.round(W / 14), [0, 30 * u, W, 70 * u], t, 52)) put(img, q.x, q.y, '#A8E1F7', q.a * 0.6);
+          twinkle(img, shown, t);
+          for (const q of particles('mote', Math.round(W / 12), [0, 0, W, floorY], t, 52)) put(img, q.x, q.y, '#A8E1F7', q.a * 0.45);
         },
       };
     },
 
     world(W, H) {
-      const p = new Painter(W, H, RAMPS_B, { emit: ['out'] });
+      const p = new Painter(W, H, RAMPS_B, { emit: ['glow'] });
       const u = H / 250; const gx = W / 2;
       const floorY = 54 * u;
+      // The far wall, behind the vista: dark ice, seamed, a little glow where it is thin.
       const wall = C.rect(0, 0, W, floorY);
       p.fill(wall, 'ice', 1.2, 1);
-      const ops = [gx - 136 * u, gx, gx + 136 * u].map((cx, k) => ({ cx, top: (k === 1 ? 18 : 24) * u, hw: (k === 1 ? 36 : 24) * u, sill: floorY - 2 * u }));
-      scallops(p, wall, { size: 9 * u, sy: 0.8, seed: 7, z: 1, lightAt: (x) => [ops.reduce((a, b) => (Math.abs(b.cx - x) < Math.abs(a.cx - x) ? b : a)).cx, 30 * u], bevel: 1, jointV: 0.5 });
-      ops.forEach((o, k) => mouth(p, o.cx, o.top, o.hw, o.sill, u, { seed: 60 + k, glow: 0.8, squash: 0.6 }));
+      scallops(p, wall, { size: 9 * u, sy: 0.8, seed: 7, z: 1, lightAt: () => [gx, 30 * u], bevel: 1, jointV: 0.5 });
+      thinIce(p, wall, { u, size: 30, seed: 9, k: 1, z: 1 });
+      seams(p, wall, { u, gap: 12, per: 31, amp: 2.4, patch: 26, thresh: 0.5, k: 2, seed: 5, z: 1 });
       // The floor: dark glassy ice broken into great plates, pale where they meet, larger toward us.
       const fl = C.rect(0, floorY, W, H - floorY);
       p.fill(fl, 'floor', (x, y) => 1.3 + (n2(x / (50 * u), y / (16 * u), 4) - 0.5) * 0.8, 1);
@@ -902,15 +941,14 @@
           p.shade(C.rect(Math.floor(x), Math.floor(y), 1, 1), 0.9, 1);
         }
       }
-      ops.forEach((o, k) => { reflection(p, o.cx, o.hw, floorY, 26 * u, u, 0.8); drift(p, o.cx, o.sill, o.hw, 16 * u, u, { seed: `b-wdrift-${k}`, k: 0.7 }); });
-      // The cold glow pooling under the openings, falling away before the table.
-      p.light(gx, floorY + 2 * u, 130 * u, 3, flicker(0.4, 0.06, 0.4), { zMin: 1, zMax: 1, sx: 2.2, sy: 0.42 });
-      p.light(gx, floorY - 10 * u, 150 * u, 1, null, { zMin: 1, zMax: 1, sx: 1.8 });
-      // Ice walls at the sides, icicles off the roof.
+      // The cold glow at the edges, where the walls are thin: none falls from above.
       for (const side of [0, 1]) {
+        const ex = side ? W : 0;
+        p.light(ex, floorY + 50 * u, 130 * u, 2.6, flicker(side * 1.7, 0.06, 0.4), { zMin: 1, zMax: 1, sx: 0.75 });
         const sw = C.poly(side ? [[W - 26 * u, 0], [W, 0], [W, H], [W - 12 * u, H]] : [[0, 0], [26 * u, 0], [12 * u, H], [0, H]]);
-        p.fill(sw, 'ice', (x, y) => 2.6 - y / H * 1.8, 5);
-        scallops(p, sw, { size: 9 * u, seed: 9 + side, z: 5, lightAt: () => [gx, 0], bevel: 1, jointV: 0.5 });
+        p.fill(sw, 'ice', (x, y) => 3.4 - y / H * 1.6, 5);
+        scallops(p, sw, { size: 9 * u, seed: 9 + side, z: 5, lightAt: () => [side ? W - 30 * u : 30 * u, H * 0.4], bevel: 1, jointV: 0.5 });
+        seams(p, sw, { u, gap: 9, per: 13, amp: 3, patch: 14, thresh: 0.42, k: 2.2, seed: 11 + side, z: 5 });
       }
       icicles(p, 0, W, () => 0, u, { seed: 'b-world-roof', min: 2, max: 12, v: 2.4, hi: 2, z: 4 });
       p.shade(null, (x, y) => -2.4 * Math.max(0, y / H - 0.3));
@@ -924,13 +962,20 @@
         const feather = frac((x * 0.8 + y * 1.4) / (3 * u) + n1(x / (7 * u), 33)) < 0.35 ? 0.15 : 0;
         return f + feather + k * 0.6 > 1 ? 1.6 + k * 3.6 : 0;
       }, 1);
+      // A few crystals, at the edges and the corners, clear of the table.
+      const tips = [
+        ...crystals(p, 20 * u, 214 * u, 18 * u, u, { seed: 'b-w-c1', n: 5, v: 3, z: 4 }),
+        ...crystals(p, W - 22 * u, 196 * u, 14 * u, u, { seed: 'b-w-c2', n: 4, v: 3, z: 4 }),
+        ...crystals(p, 64 * u, 244 * u, 12 * u, u, { seed: 'b-w-c3', n: 4, v: 2, z: 4 }),
+        ...crystals(p, W - 70 * u, 246 * u, 10 * u, u, { seed: 'b-w-c4', n: 3, v: 2, z: 4 }),
+        ...crystals(p, gx - 92 * u, 72 * u, 8 * u, u, { seed: 'b-w-c5', n: 3, v: 3, z: 4 }),
+        ...crystals(p, gx + 118 * u, 74 * u, 7 * u, u, { seed: 'b-w-c6', n: 3, v: 3, z: 4 }),
+      ];
       return {
         p,
         over(img, t) {
-          for (const q of particles('snow', 70, [0, 0, W, H * 0.7], t, 91)) {
-            const fade = clamp(1 - q.y / (H * 0.62), 0, 1);
-            put(img, q.x, q.y, q.big ? '#C8EAF6' : '#84BDD8', q.a * fade);
-          }
+          twinkle(img, tips, t * 0.8, '#A8E1F7');
+          for (const q of particles('mote', 30, [0, 0, W, H * 0.6], t, 91)) put(img, q.x, q.y, '#588FBC', q.a * clamp(1 - q.y / (H * 0.6), 0, 1) * 0.7);
         },
       };
     },

@@ -781,6 +781,8 @@
 
   const C3 = {
     job: 1, setting: 'dungeon', key: 'C', id: 'dungeon-c', side: 'outside',
+    // Set aside 2026-10-11: the author keeps this setting inside only.
+    dropped: true,
     name: 'Dungeon', title: 'The approach',
     pitch: 'The same gate, from outside, at night. A drawbridge crosses a black chasm to the gatehouse; torches burn in iron cages on its round towers, the portcullis is down, and a thin moon hangs over the battlements.',
     notes: [

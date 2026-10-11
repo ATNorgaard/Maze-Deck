@@ -57,7 +57,8 @@ header.top .lede { font-size: 19px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 /* The jobs at a glance. */
-.index { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.index { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.part { display: flex; flex-direction: column; gap: 8px; padding-top: 40px; border-top: 2px solid var(--gold); }
 .index a { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--fg); text-decoration: none; min-width: 0; }
 .index a:hover { border-color: var(--gold); }
 .index .n { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -158,9 +159,9 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
 
 <div class="wrap">
   <header class="top">
-    <span class="kicker">Art jobs 1–6 · round two</span>
-    <h1>Every setting, inside and outside</h1>
-    <p class="lede">You picked a direction for each setting and decided every setting should have an inside and an outside. Each setting now shows the two sides of one place: the one you picked, revised after your notes, and its other side, newly drawn. Approve them or ask for changes, and say which card back the deck keeps. Nothing is built until you approve.</p>
+    <span class="kicker">Art directions · round three</span>
+    <h1>Every setting, drawn before it is built</h1>
+    <p class="lede">The six settings the game has, each with the sides you chose, revised after your notes. Below them, the eight settings you added, so the deck can carry any kind of high-fantasy adventure. For each: approve it or say what to change, and where a setting has two sides, which card back the deck keeps. Nothing is built until you approve.</p>
     <p class="small muted">Everything here is drawn on this page, from the briefs and the game's palette. The pictures are the design; the builds will match them, at the game's own sizes.</p>
     <div class="row">
       <button class="btn" id="motion" type="button" aria-pressed="true">Motion on</button>
@@ -188,9 +189,14 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
 (() => {
   'use strict';
   const { CATEGORIES, CARD, frame } = PX;
+  // The six the game has (art jobs 1-6), then the eight the author added
+  // (docs/new-settings.md): each a setting of its own, not a stop on a road.
   const SETTINGS = [
-    ['dungeon', 1, 'Dungeon'], ['tower', 2, 'Tower'], ['deep-forest', 3, 'Deep forest'],
-    ['desert', 4, 'Desert'], ['undercity', 5, 'Undercity'], ['frozen-pass', 6, 'Frozen pass'],
+    ['dungeon', 'Job 1', 'Dungeon'], ['tower', 'Job 2', 'Tower'], ['deep-forest', 'Job 3', 'Deep forest'],
+    ['desert', 'Job 4', 'Desert'], ['undercity', 'Job 5', 'Undercity'], ['frozen-pass', 'Job 6', 'Frozen pass'],
+    ['kings-road', 'New', 'The King\u2019s Road'], ['mire', 'New', 'The Mire'], ['high-road', 'New', 'The High Road'],
+    ['drowned-coast', 'New', 'The Drowned Coast'], ['barrow-moor', 'New', 'The Barrow Moor'], ['ember-hold', 'New', 'The Ember Hold'],
+    ['underdark', 'New', 'The Underdark'], ['sunken-jungle', 'New', 'The Sunken Jungle'],
   ];
   const LINES = {
     monster: 'Scratches on the wall at exactly the height of your throat, and they are fresh.',
@@ -200,7 +206,10 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     'clear-path': 'The air moves. Somewhere ahead, the way is open.',
   };
   const CAT_HEX = { mons: '#D9707C', obst: '#7FC0AC', wand: '#A6C0D4', item: '#C08FCE', path: '#F2CB8A' };
-  const designs = (window.DESIGNS || []);
+  // A design the author set aside stays in its file, and off the page.
+  const designs = (window.DESIGNS || []).filter((d) => !d.dropped);
+  // Settings the author keeps to one side (AJ7).
+  const ONLY = { dungeon: 'inside', tower: 'inside', 'kings-road': 'outside', mire: 'outside', underdark: 'inside' };
 
   /* ---------- pictures: a painter drawn into a canvas, animated while on screen ---------- */
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -414,7 +423,7 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     if (r && r.verdict) s.textContent = r.verdict === 'approve' ? 'Approved' : 'Changes asked';
     else if (f) {
       const sided = designs.filter((x) => x.setting === setting && x.side).length;
-      s.textContent = sided === 2 ? 'Both sides to review' : 'Other side being drawn';
+      s.textContent = sided === 2 ? 'Both sides to review' : ONLY[setting] ? `${ONLY[setting] === 'inside' ? 'Inside' : 'Outside'} only: to review` : 'Other side being drawn';
     } else return;
     s.setAttribute('data-picked', '');
   }
@@ -422,19 +431,26 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
   /* ---------- the page ---------- */
   const jobs = document.getElementById('jobs');
   const index = document.getElementById('index');
+  let newHeading = false;
   for (const [id, n, label] of SETTINGS) {
+    if (n === 'New' && !newHeading) {
+      newHeading = true;
+      jobs.insertAdjacentHTML('beforeend', '<div class="part"><span class="kicker">Eight more settings</span><h2>For every kind of adventure</h2><p class="muted">Each is a setting of its own, drawn with the sides you chose. Review them like the six: approve, or say what to change.</p></div>');
+    }
     const dirs = designs.filter((d) => d.setting === id);
     const sided = dirs.filter((d) => d.side).sort((a, b) => (a.side === b.side ? 0 : a.side === 'outside' ? -1 : 1));
     const rest = dirs.filter((d) => !d.side);
-    index.insertAdjacentHTML('beforeend', `<a href="#${id}"><span class="n">Job ${n}</span><span class="t">${label}</span><span class="s" id="status-${id}">${dirs.length ? 'Not chosen yet' : 'Drawing…'}</span></a>`);
+    index.insertAdjacentHTML('beforeend', `<a href="#${id}"><span class="n">${n === 'New' ? 'New setting' : n}</span><span class="t">${label}</span><span class="s" id="status-${id}">${!dirs.length ? 'Drawing…' : n === 'New' ? 'To review' : 'Not chosen yet'}</span></a>`);
     const sec = document.createElement('section');
     sec.className = 'job'; sec.id = id;
-    sec.innerHTML = `<div class="job-head"><span class="kicker">Job ${n}</span><h2>${label}</h2><p class="first"></p></div>`;
+    sec.innerHTML = `<div class="job-head"><span class="kicker">${n === 'New' ? 'New setting' : n}</span><h2>${label}</h2><p class="first"></p></div>`;
     if (!dirs.length) { sec.insertAdjacentHTML('beforeend', '<p class="muted">Its directions are still being drawn.</p>'); jobs.append(sec); continue; }
     const row = document.createElement('div'); row.className = 'dirs';
     if (sided.length) {
       sided.forEach((d) => row.append(direction(d)));
-      if (sided.length === 1) {
+      if (sided.length === 1 && ONLY[id]) {
+        row.insertAdjacentHTML('beforeend', `<div class="waiting">${ONLY[id] === 'inside' ? 'Inside' : 'Outside'} only, as you decided: this setting has no other side.</div>`);
+      } else if (sided.length === 1) {
         const other = sided[0].side === 'outside' ? 'inside' : 'outside';
         row.insertAdjacentHTML('beforeend', `<div class="waiting">Its ${other} is being drawn: the other side of the same place.</div>`);
       }

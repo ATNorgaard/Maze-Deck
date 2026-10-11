@@ -1141,6 +1141,8 @@
 
   const C3 = {
     job: 2, setting: 'tower', key: 'C', id: 'tower-c', side: 'outside',
+    // Set aside 2026-10-11: the author keeps this setting inside only.
+    dropped: true,
     name: 'Tower', title: 'The tower on the crag',
     pitch: 'The same tower from outside: on a crag under the moon, its windows climbing in a spiral, each lit amber by the candles on the stair inside, one bright window at the top where someone is still reading. A path winds up to the door.',
     notes: [

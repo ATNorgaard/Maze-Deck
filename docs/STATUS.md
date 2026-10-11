@@ -62,8 +62,9 @@ deploys.
   <https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>. The author has picked
   (2026-10-11): dungeon A, tower A, forest A, desert A, undercity B, and both
   frozen pass designs. They then decided **every setting has an inside and
-  an outside** (AJ7), so each setting's other side is being designed. Nothing
-  is built until those are approved.
+  an outside** (AJ7; the dungeon and the tower stay inside only), and added
+  **eight more settings** (AJ8, [new-settings.md](new-settings.md)), each
+  being designed. Nothing is built until the author approves.
 
 Both are on the `front-door` branch.
 

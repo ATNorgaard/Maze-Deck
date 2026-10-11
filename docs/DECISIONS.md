@@ -97,7 +97,8 @@ the references read, and the jobs.
 | AJ4 | **The card families' colours are reserved:** a setting lights itself with its own family, and any other family's hue stays under about 5% of a picture. |
 | AJ5 | **The backs keep still; the world moves.** Backs move only in depth, on tilt. |
 | AJ6 | **The vista takes the pixel style too**, setting by setting, each measured on a phone before it ships. |
-| AJ7 | **Every setting has an inside and an outside** (2026-10-11), chosen when a crossing is set up: each side its own vista and world (and, if the author keeps both, its own back). The frozen pass's peaks and ice cave were the first pair. Every art job designs both sides before building. |
+| AJ7 | **Every setting has an inside and an outside** (2026-10-11), chosen when a crossing is set up: each side its own vista and world (and, if the author keeps both, its own back). The frozen pass's peaks and ice cave were the first pair. Every art job designs both sides before building. **Except the dungeon and the tower, which stay inside only** (2026-10-11). |
+| AJ8 | **Eight more settings** (2026-10-11), each its own setting, not a journey: the King's Road and the Mire (outside), the Underdark (inside), and the High Road, the Drowned Coast, the Barrow Moor, the Ember Hold and the Sunken Jungle (both sides). See [new-settings.md](new-settings.md). Each goes through design approval, then its words, palette, dark and sound, then a build. |
 
 ## Build order
 

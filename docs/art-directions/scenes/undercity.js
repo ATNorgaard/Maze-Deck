@@ -23,6 +23,7 @@
     warm: ['#030203', '#0D0807', '#1A100B', '#2A1A10', '#3D2715', '#55361A', '#73491F', '#98612A', '#C07F35', '#E3A445', '#F2CB8A', '#FFF1C4'],
     skin: ['#030203', '#07080B', '#0C1114', '#111B1C', '#172625', '#1E3430', '#27453D', '#315847'], // a wet hide that can catch the glow
     fogsky: ['#030203', '#06070D', '#0A0D16', '#0E141C', '#131D22', '#192827', '#20352F', '#29453B', '#345747', '#436D58'], // night fog lit from below by the canal
+    mist: ['#030203', '#07080F', '#0C0E18', '#121522', '#191D2C', '#222837', '#2E3544', '#3D4552', '#525A63', '#6E7676', '#959C99'], // moonlit mist
     night: ['#030203', '#050409', '#080811', '#0B0C18', '#10111F', '#151727', '#1B1E30', '#232838', '#2B3240'], // the sky over the forgotten city
     ...CARD,
   };
@@ -1059,11 +1060,10 @@
     },
   };
 
-  /* ================= C: the city above (outside) ================= */
+  /* ================= C: the streets above (outside) ================= */
 
   const FOG_DARK = PX.hexRgb('#232B2D'); const FOG_LIT = PX.hexRgb('#4F9482');
-  const RISE = PX.hexRgb(CARD.obst[3]); // the canal's light coming up through the grates
-  const GAS = PX.hexRgb('#C3CFC8'); // a guttering gas mantle, cold and pale
+  const RISE = PX.hexRgb(CARD.obst[3]); // what lies under the city, breathing up through a grate
 
   /**
    * Fog over the snapped picture: soft banks drifting sideways in a few
@@ -1083,11 +1083,6 @@
         put(img, x, y, [lerp(FOG_DARK[0], FOG_LIT[0], l), lerp(FOG_DARK[1], FOG_LIT[1], l), lerp(FOG_DARK[2], FOG_LIT[2], l)], step * a);
       }
     }
-  }
-  /** A gas lamp guttering: mostly a low glow, now and then catching, now and then nearly out. */
-  const gutter = (t, ph) => clamp(0.45 + 0.55 * (Math.sin(t * 6.1 + ph) * Math.sin(t * 2.3 + ph * 1.7) + 0.4 * Math.sin(t * 13.7 + ph * 3)), 0.06, 1);
-  function lampGlass(img, x, y, k) {
-    for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) put(img, x + dx, y + dy, GAS, k * (dx || dy ? 0.45 : 1));
   }
   /** A street lamp: an iron post and a lantern with dead glass. Returns the glass's centre. */
   function lampPost(p, x, base, h, z = 4) {
@@ -1111,12 +1106,13 @@
     const front = C.poly([[x, base], [x + w, base], [x + w + lean, base - h], [x + lean, base - h]]);
     const plaster = r() < 0.4;
     p.fill(front, 'brick', o.v ?? (plaster ? 1.8 : 1.4), z);
-    if (plaster) p.grain(front, 0.7, 3, seed, z);
+    if (plaster || o.brick === false) p.grain(front, 0.7, 3, seed, z);
     else p.masonry(front, { bw: 6, bh: 3, joint: -0.9, top: 0.25, vary: 0.6, seed, z, irregular: false });
+    const [rr, rv] = o.roof || ['shadow', 1.1];
     const rh = h * (0.3 + r() * 0.3); const x0 = x + lean - 1; const x1 = x + w + lean + 1; const pk = lerp(x0, x1, 0.35 + r() * 0.3);
-    if (r() < 0.72) p.fill(C.poly([[x0, base - h], [x1, base - h], [pk, base - h - rh]]), 'shadow', 1.1, z);
-    else p.fill(C.poly([[x0, base - h], [x1, base - h], [x1 - 1.5, base - h - rh * 0.55], [x0 + 1.5, base - h - rh * 0.55]]), 'shadow', 1.1, z);
-    if (r() < 0.7) { const cx = lerp(x0 + 2, x1 - 3, r()); p.fill(C.rect(Math.round(cx), base - h - rh * (0.5 + r() * 0.4), 2, rh * 0.7), 'shadow', 1.4, z); }
+    if (r() < 0.72) p.fill(C.poly([[x0, base - h], [x1, base - h], [pk, base - h - rh]]), rr, rv, z);
+    else p.fill(C.poly([[x0, base - h], [x1, base - h], [x1 - 1.5, base - h - rh * 0.55], [x0 + 1.5, base - h - rh * 0.55]]), rr, rv, z);
+    if (r() < 0.7) { const cx = lerp(x0 + 2, x1 - 3, r()); p.fill(C.rect(Math.round(cx), base - h - rh * (0.5 + r() * 0.4), 2, rh * 0.7), rr, rv + 0.3, z); }
     const cols = Math.max(1, Math.round(w / 7)); const rows = Math.max(1, Math.floor((h - 4) / 8));
     for (let i = 0; i < rows; i += 1) {
       for (let j = 0; j < cols; j += 1) {
@@ -1130,230 +1126,316 @@
       }
     }
   }
-  /** A drain grate set in the cobbles, the canal's glow in its slots. */
+  /** A drain grate set in the cobbles, a little teal in its slots. */
   function streetGrate(p, x, y, w, h, z = 3, v = 7.5) {
     p.fill(C.rect(Math.round(x - w / 2) - 1, Math.round(y - h / 2) - 1, Math.round(w) + 2, Math.round(h) + 2), 'iron', 2.6, z);
     for (let k = 0; k * 2 < w - 1; k += 1) p.fill(C.rect(Math.round(x - w / 2) + k * 2, Math.round(y - h / 2), 1, Math.round(h)), 'glow', v - (k % 3 === 1 ? 1 : 0), z);
   }
 
+  /**
+   * A house on the square, facing you: a leaning front of old brick or
+   * plaster, its roof and chimney black against the fog, a boarded door,
+   * shuttered windows, now and then one dimly lit from inside.
+   */
+  function squareHouse(p, x, base, w, h, u, seed, o = {}) {
+    const r = rng(seed); const z = o.z ?? 2;
+    const lean = (o.lean ?? (r() - 0.5) * 0.14) * h;
+    const front = C.poly([[x, base], [x + w, base], [x + w + lean, base - h], [x + lean, base - h]]);
+    const plaster = r() < 0.45;
+    p.fill(front, 'brick', o.v ?? (plaster ? 1.4 : 1), z);
+    if (plaster) p.grain(front, 0.6, 3, seed, z);
+    else p.masonry(front, { bw: 6, bh: 3, joint: -0.8, top: 0.2, vary: 0.5, seed, z, irregular: false });
+    const rh = h * (0.26 + r() * 0.3); const x0 = x + lean - 1.5; const x1 = x + w + lean + 1.5; const pk = lerp(x0, x1, 0.3 + r() * 0.4);
+    if (r() < 0.6) p.fill(C.poly([[x0, base - h], [x1, base - h], [pk, base - h - rh]]), 'shadow', 1, z);
+    else p.fill(C.poly([[x0, base - h], [x1, base - h], [x1 - 2, base - h - rh * 0.6], [x0 + 2, base - h - rh * 0.6]]), 'shadow', 1, z);
+    if (r() < 0.75) { const cx = lerp(x0 + 2, x1 - 3, r()); p.fill(C.rect(Math.round(cx), base - h - rh * (0.45 + r() * 0.45), 2, rh * 0.7), 'shadow', 1.3, z); }
+    p.fill(C.rect(x0, base - h, x1 - x0, 1), 'shadow', 0.6, z);
+    // Upper floors: shuttered windows, a few dimly lit.
+    for (let fy = 13 * u; fy < h - 7 * u; fy += 10 * u) {
+      const cols = Math.max(1, Math.round(w / (8 * u)));
+      for (let j = 0; j < cols; j += 1) {
+        const f = fy / h; const wx = Math.round(x + lean * f + (j + 0.5) * (w / cols) - 1.5); const wy = Math.round(base - fy - 4 * u);
+        if (r() < 0.12) continue;
+        if (r() < (o.litP ?? 0.08)) {
+          p.fill(C.rect(wx, wy, 3, 4 * u), 'cap', 4.2, z);
+          p.light(wx + 1.5, wy + 2 * u, 6 * u, 1.6, null, { zMin: z, zMax: z });
+        } else p.fill(C.rect(wx, wy, 3, 4 * u), 'wood', (px) => ((px - wx) % 2 ? 1.6 : 0.7), z);
+        p.fill(C.rect(wx - 0.5, wy + 4 * u, 4, 1), 'brick', 2.4, z);
+      }
+    }
+    // The ground floor: a boarded door.
+    const dx = Math.round(x + w * (0.25 + r() * 0.4)); const dh = 9 * u; const dw = Math.max(4, 5 * u);
+    p.fill(C.rect(dx, base - dh, dw, dh), 'shadow', 0.4, z);
+    for (const k of [0.3, 0.65]) {
+      const y0 = base - dh * k - 1;
+      p.fill(C.poly([[dx - 0.5, y0], [dx + dw + 0.5, y0 - 1.5], [dx + dw + 0.5, y0 - 0.3], [dx - 0.5, y0 + 1.2]]), 'wood', 1.6, z);
+    }
+  }
+  /** The dry fountain in the square: a stone basin, empty, its statue gone from the broken stump. */
+  function fountain(p, cx, base, rx, u, z = 5) {
+    const top = base - 7 * u;
+    p.fill(C.rect(cx - rx, top, rx * 2, base - top), 'brick', 2.8, z);
+    p.masonry(C.rect(cx - rx, top, rx * 2, base - top), { bw: 6, bh: 3.5 * u, oy: top, joint: -1, top: 0.3, vary: 0.6, seed: 91, z });
+    p.fill(C.ellipse(cx, top, rx + 0.5, 2.6 * u), 'brick', 4.4, z);
+    p.fill(C.ellipse(cx, top - 0.3, rx - 2 * u, 1.6 * u), 'shadow', 0.8, z);
+    p.fill(C.poly([[cx - 2 * u, top], [cx - 2 * u, top - 4 * u], [cx - 0.5 * u, top - 5.5 * u], [cx + 0.8 * u, top - 4.2 * u], [cx + 2 * u, top - 5 * u], [cx + 2 * u, top]]), 'brick', 3.2, z);
+    return top;
+  }
+  /** The statue, fallen from the fountain: lying on its back in the square, one arm still raised. */
+  function fallenStatue(p, x, y, u, z = 5) {
+    p.fill(C.poly([[x - 10 * u, y], [x + 7 * u, y], [x + 8 * u, y - 3 * u], [x - 9 * u, y - 4 * u]]), 'brick', 3.4, z);
+    p.fill(C.circle(x - 12 * u, y - 2.4 * u, 2.3 * u), 'brick', 3.8, z);
+    p.fill(C.poly([[x - 2 * u, y - 3.6 * u], [x + 0.5 * u, y - 3.8 * u], [x + 3 * u, y - 10 * u], [x + 1.6 * u, y - 10.4 * u]]), 'brick', 3.8, z);
+    p.fill(C.rect(x - 9 * u, y - 1, 17 * u, 1), 'brick', 1.4, z);
+  }
+  /** A broken cart: its bed tipped on one wheel, the other wheel flat on the cobbles, the shafts down. */
+  function brokenCart(p, x, y, u, z = 5) {
+    p.fill(C.poly([[x - 9 * u, y - 4 * u], [x + 8 * u, y - 7 * u], [x + 8.5 * u, y - 4.5 * u], [x - 8.5 * u, y - 1.5 * u]]), 'wood', 3.6, z);
+    p.shade(C.rect(x - 9 * u, y - 8 * u, 18 * u, 8 * u), (px) => ((Math.round(px - x) % 4 + 4) % 4 === 0 ? -0.8 : 0), z);
+    const wx = x + 3 * u; const wy = y - 3.4 * u; const wr = 3.4 * u;
+    p.fill(C.join(C.circle(wx, wy, wr), C.circle(wx, wy, wr - 1)), 'wood', 4.2, z + 1);
+    for (let k = 0; k < 3; k += 1) { const a = (k / 3) * Math.PI + 0.3; p.fill(C.poly([[wx + Math.cos(a) * wr, wy + Math.sin(a) * wr], [wx + Math.cos(a) * wr + 0.8, wy + Math.sin(a) * wr], [wx - Math.cos(a) * wr + 0.8, wy - Math.sin(a) * wr], [wx - Math.cos(a) * wr, wy - Math.sin(a) * wr]]), 'wood', 2.6, z + 1); }
+    p.fill(C.join(C.ellipse(x - 13 * u, y - 0.5 * u, 3.4 * u, 1.2 * u), C.ellipse(x - 13 * u, y - 0.5 * u, 2.4 * u, 0.6 * u)), 'wood', 2.4, z);
+    p.fill(C.poly([[x + 8 * u, y - 6 * u], [x + 16 * u, y - 0.5], [x + 15 * u, y], [x + 7.5 * u, y - 5 * u]]), 'wood', 2.2, z);
+  }
+
+  /**
+   * Moonlight on things: the top edge of each (where nothing of its own is
+   * above) turned to the moon's pale, the left edge a step dimmer. Card
+   * colours are left alone.
+   */
+  function moonRim(p, z0, z1, v) {
+    const rm = p.ri('mist'); const keep = ['mons', 'obst', 'wand', 'item', 'path'].map((n) => p.ri(n)); const hit = [];
+    for (let y = 1; y < p.h; y += 1) {
+      for (let x = 1; x < p.w; x += 1) {
+        const i = y * p.w + x; const z = p.z[i];
+        if (z < z0 || z > z1 || p.emit[p.r[i]] || keep.includes(p.r[i])) continue;
+        if (p.z[i - p.w] < z0) hit.push([i, v]); else if (p.z[i - 1] < z0) hit.push([i, v - 1.4]);
+      }
+    }
+    for (const [i, vv] of hit) { p.r[i] = rm; p.v[i] = vv; }
+  }
+  /** The Item here: a sealed jar on the fountain's rim, the card's light strong at its cracked stopper and down one crack. */
+  function jar(p, cx, base, s, ramp, z) {
+    p.fill(C.ellipse(cx, base - s * 0.36, s * 0.3, s * 0.36), 'brick', (x) => 3.2 + (x < cx - s * 0.1 ? 0.9 : 0), z);
+    p.fill(C.rect(cx - s * 0.11, base - s * 0.86, s * 0.22, s * 0.2), 'brick', 3, z);
+    const my = Math.round(base - s * 0.88);
+    p.fill(C.rect(cx - s * 0.16, my, s * 0.32, 1), 'brick', 4.2, z);
+    for (const [dx, dy, v] of [[0, 0, 4], [-1, 0, 3.4], [1, 0, 3.4], [0, -1, 3.2], [0, -2, 2.2], [-1, -1, 1.8], [1, -1, 1.8], [0, -3, 1.2]]) dot(p, cx + dx, my + dy, ramp, v, z + 1);
+    for (let k = 0; k < s * 0.45; k += 1) dot(p, cx + 1 + Math.round(Math.sin(k * 1.4) * 0.7), my + 3 + k, ramp, 3.2 - (k / (s * 0.45)) * 1.4, z + 1);
+  }
+
   const Cd = {
     job: 5, setting: 'undercity', key: 'C', id: 'undercity-c', side: 'outside',
     name: 'Undercity', title: 'The streets above',
-    pitch: 'The city over the drowned canal, at night and long abandoned. Fog fills the lanes between leaning houses, the lamps are dead, and the canal’s teal glow breathes up through every grate in the street.',
+    pitch: 'The city that forgot what is under it. Lanes of leaning, shuttered houses run to squares nobody crosses; fog lies in the streets, a veiled moon hangs over the roofs, and now and then a grate breathes a little teal.',
     notes: [
-      ['Light', 'No lamp is lit but one, guttering. The light comes from below: teal rising through drain grates and pouring out of the canal mouth onto the black river, lighting the fog from underneath.'],
-      ['Detail', 'Leaning houses of old brick and plaster, steep roofs and chimneys against the fog, dead windows with one lit teal by what grows inside, iron lamps and railings, a humped bridge over the canal mouth, outfalls trickling teal, steps down to the black river.'],
-      ['Vista', 'The river embankment the width of the board, the skyline above it and a bridge over the canal mouth. The card meets you at the mouth: the canal’s tentacles out in the river, a boat poling out, the outfall grate down, gold in the tunnel.'],
-      ['World', 'Wet cobbles under the table, grates in the gutters at the edges breathing teal light up into the fog. Black by the hand.'],
+      ['Light', 'A veiled moon over the roofs, pale and cold, and fog lit faintly teal from below. The lamps are dead. The only sign of what lies under the city is a small teal breath from a drain or a cellar window.'],
+      ['Detail', 'Leaning houses of old brick and plaster with shuttered windows and boarded doors, steep roofs, chimneys and a spire against the mist, wet setts holding the moon, a dead iron lamp, a dry fountain, a fallen statue, a broken cart.'],
+      ['Vista', 'A forgotten square the width of the board, houses round it and a lane leading off between the two tallest. The card meets you there: something huge in the fog of the lane, a lantern in its mouth, a chest on the fountain’s rim, a house fallen across it, gold at its end.'],
+      ['World', 'Wet setts under the table with a gutter down each side, a drain at the edge breathing a little teal, fog drifting. Black by the hand.'],
     ],
-    palette: ['#030203', '#0B0C18', '#1B1E30', '#2C2624', '#3D3C35', '#235347', '#47977F', '#A8DCC9', '#C3CFC8'],
+    palette: ['#030203', '#0C0E18', '#222837', '#3D4552', '#2C2624', '#20352F', '#47977F', '#959C99', '#C3CFC8'],
 
     back(W, H) {
       const p = new Painter(W, H, RAMPS, { emit: EMIT });
-      const u = H / 134;
-      const gx = W / 2; const wl = Math.round(98 * u); const sky = 64 * u;
-      const mx = 62 * u; const my = 37 * u; const mr = 4.2 * u; // the moon, veiled
-      // The night: fog lit teal from below, palest low over the roofs and round the moon.
-      p.fill(C.rect(0, 0, W, wl), 'fogsky', (x, y) => 1 + 7 * Math.min(1, (y + 0.5) / sky) ** 0.9 + 2.6 * Math.max(0, 1 - Math.hypot(x + 0.5 - mx, y + 0.5 - my) / (22 * u)) ** 1.5, 0);
-      p.fill(C.circle(mx, my, mr), 'sky', (x, y) => 4.6 - (Math.abs(y + 0.5 - (my + 1.2 * u)) < 0.8 ? 1.2 : 0) - (x + 0.5 > mx + mr * 0.4 ? 0.6 : 0), 1);
-      // The broken skyline, black against it: leaning roofs, chimneys, one spire.
-      const r = rng('c-back-roofs');
-      for (let x = -8 * u, k = 0; x < W + 8 * u; k += 1) {
-        const w = (7 + r() * 7) * u; const h = (9 + r() * 15) * u;
-        houseFront(p, Math.round(x), sky + 2 * u, w, h, 600 + k, { z: 2, v: 0.6, brick: false, litP: k === 2 || k === 6 ? 0.35 : 0, litV: 4.6 });
-        x += w - 1;
+      const u = H / 134; const gx = W / 2;
+      const vy = 74 * u; const E = 30 * u; const hw = 22 * u; const tS = 4.2; const tF = 6.5; // the lane, the square at its end
+      const X = (s, lat, t) => gx + (s * lat) / t; const Y = (h, t) => vy + (E - h) / t;
+      const mx = 56 * u; const my = 37 * u; const mr = 4.2 * u;
+      // The sky over the roofs: night mist, palest round the veiled moon. Nothing lights the end of the lane.
+      p.fill(C.rect(0, 0, W, H), 'mist', (x, y) => 2 + 2 * clamp((y - 6 * u) / (64 * u), 0, 1) + 5.6 * Math.max(0, 1 - Math.hypot(x + 0.5 - mx, (y + 0.5 - my) * 1.25) / (30 * u)) ** 1.6, 0);
+      p.fill(C.circle(mx, my, mr), 'sky', (x) => 4.7 - (x + 0.5 > mx + mr * 0.35 ? 0.7 : 0), 1);
+      p.shade(C.rect(mx - mr - 1, my + 0.8 * u, mr * 2 + 2, 1.6 * u), (x, y, i) => (p.r[i] === p.ri('sky') ? -1.8 : -0.7));
+      // Across the square, far off: low house fronts in the fog.
+      for (let k = -4; k <= 4; k += 1) {
+        const h = (58 + hash(k, 3, 9) * 22) * u; const a = X(1, (k * 14 - 7) * u, tF); const b = X(1, (k * 14 + 7) * u, tF);
+        p.fill(C.rect(a, Y(h, tF), b - a + 0.5, h / tF), 'brick', 1.1, 2);
+        p.fill(C.poly([[a - 0.5, Y(h, tF)], [b + 0.5, Y(h, tF)], [(a + b) / 2, Y(h + 16 * u, tF)]]), 'shadow', 1, 2);
       }
-      const sp = 33 * u; // the church: a tower and its spire
-      p.fill(C.rect(sp - 3.5 * u, 40 * u, 7 * u, sky - 38 * u), 'brick', 0.5, 3);
-      p.fill(C.poly([[sp - 4.2 * u, 40 * u], [sp + 4.2 * u, 40 * u], [sp + 0.5, 22 * u], [sp - 0.5, 22 * u]]), 'brick', 0.5, 3);
-      p.fill(C.rect(sp - 1, 45 * u, 2, 3 * u), 'cap', 3.6, 3); // a slit window with a little of the glow in it
-      p.fill(C.rect(sp, 19 * u, 1, 3 * u), 'iron', 2.4, 3);
-      // The bridge: a span across the picture, its parapet catching the fog light, one lamp on it.
-      const parTop = (x) => sky - 2 * u - 2 * u * Math.max(0, 1 - ((x - gx) / (60 * u)) ** 2);
-      const run = (dy, rev) => Array.from({ length: 25 }, (_, i) => { const f = rev ? 1 - i / 24 : i / 24; const x = -2 + f * (W + 4); return [x, parTop(x) + dy]; });
-      const par = C.poly([...run(0, false), ...run(5 * u, true)]);
-      p.fill(par, 'brick', 1.8, 3);
-      p.masonry(par, { bw: 7, bh: 5, joint: -1.1, top: 1.4, vary: 0.6, seed: 73, z: 3 });
-      const face = C.poly([...run(5 * u, false), [W + 2, wl], [-2, wl]]);
-      p.fill(face, 'brick', 1.4, 1);
-      p.masonry(face, { bw: 9, bh: 4, joint: -1.2, top: 0.4, left: 0.2, vary: 0.9, chip: 0.06, seed: 74, z: 1 });
-      p.shade(C.rect(0, wl - 7 * u, W, 7 * u), (x, y) => (y < wl - 7 * u + 1 ? 0.8 : -0.6), 1);
-      const joints = jointMask(p, 0.5);
-      const gas = lampPost(p, 30 * u, parTop(30 * u), 12 * u, 4);
-      lampPost(p, 72 * u, parTop(72 * u), 12 * u, 4);
-      p.light(gas[0], gas[1], 14 * u, 2.2, null, { zMin: 3, zMax: 4 });
-      // The canal mouth under it, small and low, the same teal light deep inside.
-      const hw = 11 * u; const top = 75 * u;
-      const tg = { cx: gx, hw, top, floor: wl, vy: wl - 9 * u, zf: 3, seed: 14, water: true, ledge: { w: 3 * u, h: 1.5 * u }, light: 8, far: 1, farIn: 11.6, farFall: 5, farMid: 0.85, amb: 0.35, reach: 1.3, waterZ: 0 };
-      const T = tunnel(p, tg);
-      brickArch(p, gx, top, hw, wl, { th: 3.5 * u, hb: 3, bh: 4, seed: 75, v: 2.4 });
-      p.light(gx, wl - 6 * u, hw * 2, 3, null, { zMin: 3, zMax: 3 });
-      p.light(gx, wl, hw * 3, 3.6, null, { zMin: 1, zMax: 1, sy: 0.5 });
-      for (const [x, k] of [[30, 0], [36, 1], [62, 2], [68, 3]]) threads(p, joints, x * u, wl - 2 * u, 12 + k * 3, 530 + k, { v: 3.2, knot: 2 });
-      glowAt(p, 33 * u, wl - 2 * u, 12 * u, 3.4, null, [[1, 1]]); glowAt(p, 65 * u, wl - 2 * u, 12 * u, 3.4, null, [[1, 1]]);
-      mirror(p, tg, { seed: 15 });
-      // The black river in front: the bridge, the mouth and the moon given back in ripple lines.
-      p.fill(C.rect(0, wl, W, H - wl), 'water', 1.1, 0);
-      ripples(p, C.rect(0, wl, W, H - wl), 18, 0.5);
-      flipMirror(p, 0, W, wl, H, 19, 0.55);
-      glints(p, gx, T.farFloor, H, T.hwf * 0.9, 16 * u, 7.5, 20, { density: 0.42, floor: 0.06, fall: 0.3 });
-      refl(p, mx, wl + 8 * u, H, 2 * u, 4 * u, 4.4, 21, null, { gaps: 0.35 });
-      vignette(p, W, H, 1.6, 0.42);
-      p.rim(0, -1, 0.5, 3);
+      p.fill(C.poly([[X(-1, hw, tS), Y(0, tS)], [X(1, hw, tS), Y(0, tS)], [X(1, 64 * u, tF), Y(0, tF)], [X(-1, 64 * u, tF), Y(0, tF)]]), 'wet', 1.2, 1);
+      // The houses either side of the lane, leaning over it, shuttered.
+      const runs = { '-1': [[0.5, 0.78, 84, 6, 0], [0.78, 1.18, 70, 9, 1], [1.18, 1.75, 90, 5, 0], [1.75, 2.6, 74, 8, 1], [2.6, tS, 82, 6, 0]],
+        1: [[0.5, 0.86, 78, 8, 1], [0.86, 1.32, 94, 4, 0], [1.32, 1.95, 72, 10, 1], [1.95, 2.9, 86, 6, 0], [2.9, tS, 76, 7, 1]] };
+      for (const s of [-1, 1]) {
+        runs[s].forEach(([t0, t1, h0, l0, gable], k) => {
+          const h = h0 * 0.82 * u; const lean = l0 * u; const seed = 80 + k * 2 + (s > 0 ? 1 : 0);
+          const lat = (hh) => hw - (lean * hh) / h;
+          const P = (hh, t, out = 0) => [X(s, lat(hh) + out, t), Y(hh, t)];
+          p.fill(C.poly([P(0, t0), P(0, t1), P(h, t1), P(h, t0)]), 'brick', (x, y) => {
+            const t = clamp((s * hw) / Math.max(0.5, s * (x + 0.5 - gx)), t0, t1);
+            const hh = E - (y + 0.5 - vy) * t; const c = Math.floor(hh / (4 * u));
+            const joint = (hh / (4 * u) - c) * 4 * u < t * 0.9;
+            return 0.9 + (joint ? -0.7 : (hash(c, k, seed) - 0.5) * 0.4) + (k % 2 ? 0.25 : 0);
+          }, 2);
+          const tm = (t0 + t1) / 2;
+          if (gable) p.fill(C.poly([P(h, t0), P(h, t1), P(h + 22 * u, tm)]), 'shadow', 0.9, 3);
+          else p.fill(C.poly([P(h, t0), P(h, t1), P(h + 14 * u, t1, 14 * u), P(h + 14 * u, t0, 14 * u)]), 'shadow', 0.9, 3);
+          if (k % 2 === 0) { const tc = lerp(t0, t1, 0.35); const [cx, cy] = P(h + 13 * u, tc, 9 * u); p.fill(C.rect(cx - 1, cy - (9 * u) / tc, Math.max(2, (4 * u) / tc), (10 * u) / tc), 'shadow', 1.1, 3); }
+          for (const [hy0, hy1] of [[26, 38], [50, 62]]) {
+            for (const [f0, f1] of [[0.18, 0.4], [0.58, 0.8]]) {
+              const ta = lerp(t0, t1, f0); const tb = lerp(t0, t1, f1);
+              p.fill(C.poly([P(hy0 * 0.82 * u, ta), P(hy0 * 0.82 * u, tb), P(hy1 * 0.82 * u, tb), P(hy1 * 0.82 * u, ta)]), 'wood', (x) => (x % 2 ? 2.4 : 1.2), 4);
+            }
+          }
+          if (s > 0 && k === 1) { // a cellar window, low at the foot of the house, with the faint teal breath in it
+            const ta = lerp(t0, t1, 0.4); const tb = lerp(t0, t1, 0.6);
+            p.fill(C.poly([P(1 * u, ta), P(1 * u, tb), P(7 * u, tb), P(7 * u, ta)]), 'cap', 3.6, 4);
+            p.light(X(s, hw, (ta + tb) / 2), Y(4 * u, (ta + tb) / 2), 8 * u, 2, null, { zMin: 1, zMax: 2 });
+          }
+        });
+      }
+      // The lane: wet setts, the moon held in them; a gutter each side.
+      const lane = C.poly([[X(-1, hw, 0.5), H + 1], [X(1, hw, 0.5), H + 1], [X(1, hw, tS), Y(0, tS)], [X(-1, hw, tS), Y(0, tS)]]);
+      p.fill(lane, 'wet', 1.5, 1);
+      p.floor(lane, { vx: gx, vy, rows: 8, size: 1.1, d0: E / tS, joint: -1.2, top: 0.45, left: 0.2, vary: 0.7, chip: 0.05, seed: 81, z: 1 });
+      for (const s of [-1, 1]) p.shade(C.poly([[X(s, hw, 0.5), H + 1], [X(s, hw - 4 * u, 0.5), H + 1], [X(s, hw - 4 * u, tS), Y(0, tS)], [X(s, hw, tS), Y(0, tS)]]), -0.7, 1);
+      const ry = vy + (vy - my); // where the moon sits in the wet street
+      p.shade(C.rect(mx - 6 * u, ry - 14 * u, 12 * u, 28 * u), (x, y, i) => {
+        if (p.r[i] !== p.ri('wet') || hash(y, 5, 82) < 0.35) return 0;
+        const w = 1.5 * u + Math.abs(y - ry) * 0.12;
+        return Math.abs(x + 0.5 - mx) < w ? 3.6 * (1 - Math.abs(y - ry) / (15 * u)) : 0;
+      });
+      // A dead lamp on the left; a drain in the right-hand gutter breathing a little teal.
+      const lamp = lampPost(p, X(-1, hw - 4 * u, 1.15), Y(0, 1.15), (46 * u) / 1.15, 5);
+      p.fill(C.rect(lamp[0] + 1, lamp[1] - 3, 1, 4), 'iron', 4.4, 5);
+      const dgx = X(1, 13 * u, 0.72); const dgy = Y(0, 0.72);
+      streetGrate(p, dgx, dgy, 9 * u, 2 * u, 4, 5.5);
+      p.light(dgx, dgy, 12 * u, 2.6, null, { zMin: 1, zMax: 1, sy: 0.5, hard: true });
+      rimFrom(p, 3, [['mist', 3]], 'mist', 5.6, [[0, -1], [1, 0]]);
+      rimFrom(p, 2, [['mist', 3]], 'mist', 5.2, [[0, -1], [1, 0]]);
+      vignette(p, W, H, 1.4, 0.42);
       return {
         p,
         over(img) {
-          fog(img, 52 * u, sky + 4 * u, 0.2, 0, 8, (x) => 0.55 - Math.abs(x - gx) / (50 * u));
-          fog(img, wl - 6 * u, wl + 12 * u, 0.28, 0, 4, (x) => 1.1 - Math.abs(x - gx) / (24 * u));
-          lampGlass(img, gas[0], gas[1], 0.6);
+          fog(img, my - 3 * u, my + 6 * u, 0.28, 0, 11, null, (x) => Math.abs(x - mx) < 16 * u);
+          fog(img, 62 * u, 98 * u, 0.24, 0, 3, (x, y) => ((y - 62 * u) / (36 * u)) * 0.45);
+          beam(img, dgx, dgy - 12 * u, 3 * u, dgx, dgy - 1, 2.4 * u, 0.22, 0, RISE, true);
         },
       };
     },
 
     vista(W, H, cat) {
       const p = new Painter(W, H, RAMPS, { emit: EMIT });
-      const u = H / 100; const gx = W / 2;
-      const street = Math.round(36 * u); const wl = Math.round(82 * u);
+      const u = H / 100; const gx = W / 2; const ground = Math.round(78 * u);
       const ramp = catRamp(cat); const hex = CARD[ramp][3];
       let plume = null;
-      // The night over the city, paler low where fog holds the glow from below.
-      p.fill(C.rect(0, 0, W, street), 'fogsky', (x, y) => 1.6 + 7 * ((y + 0.5) / street) ** 0.7 + 1.2 * Math.max(0, 1 - Math.abs(x + 0.5 - gx) / (70 * u)), 0);
-      // The skyline: leaning houses packed along the embankment.
-      const r = rng('c-skyline');
-      for (let x = -14 * u, k = 0; x < W + 14 * u; k += 1) {
-        const w = (12 + r() * 12) * u; const h = (10 + r() * 13) * u;
-        houseFront(p, Math.round(x), street, w, h, 400 + k, { z: 2, litP: 0.12, litV: 4.4, v: 0.6 + r() * 0.4 });
+      const gap = 13 * u; // half the lane that leaves the square between its two tallest houses
+      // The sky: night fog lit faintly from below, a veiled moon off to the left.
+      p.fill(C.rect(0, 0, W, ground), 'fogsky', (x, y) => 1.6 + 6.6 * ((y + 0.5) / ground) ** 0.75, 0);
+      const mx = gx - 62 * u; const my = 15 * u;
+      p.light(mx, my, 22 * u, 2.2, null, { zMin: 0, zMax: 0 });
+      p.fill(C.circle(mx, my, 3.6 * u), 'sky', 4.4, 1);
+      p.shade(C.rect(mx - 5 * u, my + 0.6 * u, 10 * u, 1.4 * u), (x, y, i) => (p.r[i] === p.ri('sky') ? -1.6 : -0.5));
+      // Far roofs and a spire, a step paler in the fog.
+      const rf = rng('c-square-far');
+      for (let x = -10 * u, k = 0; x < W + 10 * u; k += 1) {
+        const w = (10 + rf() * 10) * u; const h = (8 + rf() * 10) * u;
+        houseFront(p, Math.round(x), ground - 20 * u, w, h, 700 + k, { z: 1, v: 3.4, brick: false, litP: 0, roof: ['brick', 3] });
         x += w - 1;
       }
-      // The street along the top of the embankment: a coping, an iron railing, dead lamps.
-      const archHw = 21 * u; const archTop = 40 * u; const bridge = 40 * u;
-      const parTop = (x) => street - 5 * u - 8 * u * Math.max(0, 1 - ((x - gx) / bridge) ** 2);
-      p.fill(C.rect(0, street, W, 3 * u), 'brick', 2.4, 3);
-      p.fill(C.rect(0, street, W, 1), 'brick', 3.6, 3);
-      for (let x = 0; x < W; x += 1) {
-        if (Math.abs(x + 0.5 - gx) < bridge) continue;
-        if (x % 2 === 0) p.fill(C.rect(x, street - 5 * u, 1, 5 * u), 'iron', 1.6, 3);
+      const sp = gx + 44 * u;
+      p.fill(C.rect(sp - 3 * u, 22 * u, 6 * u, ground - 42 * u), 'brick', 3, 1);
+      p.fill(C.poly([[sp - 3.6 * u, 22 * u], [sp + 3.6 * u, 22 * u], [sp + 0.5, 6 * u], [sp - 0.5, 6 * u]]), 'brick', 3, 1);
+      // The lane leaving the square: dark walls closing in, its far end lost in fog.
+      const far = ground - 4 * u; const fw = gap * 0.35;
+      const g = cat === 'clear-path' ? { wall: 'warm', end: 'gold' } : { wall: 'brick', end: 'fogsky' };
+      const endTop = far - 30 * u;
+      p.fill(C.poly([[gx - gap, ground], [gx + gap, ground], [gx + gap, ground - 50 * u], [gx + fw, endTop], [gx - fw, endTop], [gx - gap, ground - 50 * u]]), g.end, (x, y) => (cat === 'clear-path' ? 9.6 - Math.hypot((x - gx) / (gap * 0.6), (y - far + 10 * u) / (22 * u)) * 3.2 : 3.6 + 0.8 * ((y - endTop) / (far - endTop))), 1);
+      for (const s of [-1, 1]) p.fill(C.poly([[gx + s * gap, ground], [gx + s * fw, far], [gx + s * fw, endTop], [gx + s * gap, ground - 50 * u]]), g.wall, cat === 'clear-path' ? (x) => 5.4 - (Math.abs(x - gx) / gap) * 2.8 : (x, y) => 0.8 + (Math.abs(x - gx) / gap) * 0.6, 1);
+      p.fill(C.poly([[gx - gap, ground], [gx + gap, ground], [gx + fw, far], [gx - fw, far]]), cat === 'clear-path' ? 'warm' : 'wet', cat === 'clear-path' ? 6 : 1.2, 1);
+      if (cat === 'monster') {
+        // A colossal hunched thing in the lane, taller than the houses (drawn behind them): its back, two horns.
+        const Bm = (pts) => C.poly(pts.map(([x, y]) => [gx + x * u, y * u]));
+        p.fill(Bm([[-15, 80], [-21, 46], [-24, 29], [-21, 17], [-12, 9], [0, 6], [12, 8], [21, 15], [25, 28], [22, 46], [15, 80]]), 'shadow', 0.4, 7);
+        for (const m of [-1, 1]) p.fill(Bm([[m * 3, 15], [m * 8, 9], [m * 12, 4.5], [m * 15, 1.5], [m * 12.5, 5.5], [m * 9, 10.5], [m * 6, 15], [m * 2.5, 18]]), 'shadow', 0.4, 7);
       }
-      p.fill(C.rect(0, street - 5 * u, W, 1), 'iron', 2.8, 3);
-      // The embankment: big old stones, stained, down to the black river.
-      const bank = C.rect(0, street + 3 * u, W, wl - street - 3 * u);
-      p.fill(bank, 'brick', 1.3, 1);
-      p.masonry(bank, { bw: 11, bh: 5, oy: street + 3 * u, joint: -1.2, top: 0.4, left: 0.2, vary: 0.9, chip: 0.06, seed: 65, z: 1 });
-      p.shade(C.rect(0, wl - 7 * u, W, 7 * u), (x, y) => (y < wl - 7 * u + 1 ? 0.7 : -0.6), 1);
-      // The bridge over the canal mouth: a humped parapet, the arch of the mouth under it.
-      const par = C.poly([...Array.from({ length: 25 }, (_, i) => { const x = gx - bridge + (i / 24) * bridge * 2; return [x, parTop(x)]; }), ...Array.from({ length: 25 }, (_, i) => { const x = gx + bridge - (i / 24) * bridge * 2; return [x, parTop(x) + 5 * u]; })]);
-      p.fill(par, 'brick', 2, 3);
-      p.masonry(par, { bw: 7, bh: 5 * u, joint: -1.1, top: 0.5, vary: 0.7, seed: 66, z: 3 });
-      p.fill(C.poly([[gx - bridge, street + 3 * u], ...Array.from({ length: 25 }, (_, i) => { const x = gx - bridge + (i / 24) * bridge * 2; return [x, parTop(x) + 5 * u]; }), [gx + bridge, street + 3 * u], [gx + bridge, wl], [gx - bridge, wl]]), 'brick', 1.6, 1);
-      p.masonry(C.rect(gx - bridge, parTop(gx) + 5 * u, bridge * 2, wl - parTop(gx)), { bw: 9, bh: 4, oy: 1, joint: -1.2, top: 0.4, vary: 0.8, seed: 67, z: 1 });
-      // The canal mouth: the tunnel running back under the city, lit from deep inside.
-      const g = { cx: gx, hw: archHw, top: archTop, floor: wl, vy: wl - 15 * u, zf: 1.7, seed: 11, water: true, ledge: { w: 5 * u, h: 2 * u }, far: 1, light: 8, amb: 0.4, farFall: 4, farMid: 0.8, waterZ: 0 };
-      if (cat === 'obstacle') g.far = 0.4;
-      if (cat === 'clear-path') { g.far = 1.1; g.ramp = 'warm'; g.floorRamp = 'warm'; g.farRamp = 'gold'; g.farIn = 9.6; }
-      tunnel(p, g);
-      brickArch(p, gx, archTop, archHw, wl, { th: 5 * u, hb: 3.4, bh: 3, seed: 68, v: 2.6 });
-      p.light(gx, wl - 10 * u, archHw * 1.6, 2.6 * g.far, null, { zMin: 3, zMax: 3 });
-      p.light(gx, wl, archHw * 2.2, 3.4 * g.far, null, { zMin: 1, zMax: 1, sy: 0.5 });
-      // Steps down the embankment to a landing at the water, left of the mouth; a mooring post on it.
-      for (let k = 0; k < 13; k += 1) {
-        const sx = gx - 28 * u - k * 3 * u; const sy = wl - (k + 1) * 3.3 * u;
-        p.fill(C.rect(sx - 3 * u, sy, 3 * u + 1, wl - sy), 'brick', (x, y) => 1.9 + (((Math.floor((y - sy) / (5 * u)) + k) % 2) && ((x + k * 3) % 9 === 0) ? -1 : 0), 3);
-        p.fill(C.rect(sx - 3 * u, sy, 3 * u + 1, 1), 'wet', 4.6, 3);
-        p.fill(C.rect(sx - 3 * u, sy + 1, 3 * u + 1, 1), 'wet', 1, 3);
+      // The houses round the square, the two tallest framing the lane.
+      const rh = rng('c-square-near');
+      for (const s of [-1, 1]) {
+        let x = gx + s * gap;
+        for (let k = 0; Math.abs(x - gx) < W / 2 + 24 * u; k += 1) {
+          const w = (17 + rh() * 11) * u; const h = (k === 0 ? 50 : 30 + rh() * 14) * u;
+          squareHouse(p, s < 0 ? x - w : x, ground, w, h, u, 720 + k * 2 + (s > 0 ? 1 : 0), { z: 2, lean: k === 0 ? -s * 0.06 : undefined });
+          x += s * (w - 1);
+        }
       }
-      p.fill(C.rect(gx - 28 * u, wl - 2 * u, 7 * u, 2 * u), 'wet', 2.4, 3);
-      p.fill(C.rect(gx - 28 * u, wl - 2 * u, 7 * u, 1), 'wet', 4, 3);
-      const post = gx - 25 * u;
-      p.fill(C.rect(post - 1, wl - 7 * u, 2, 5 * u), 'iron', 2.4, 4);
-      p.fill(C.rect(post - 1.5, wl - 7.6 * u, 3, 1), 'iron', 4, 4);
-      // Outfalls along the bank: round culverts, the canal's glow trickling out of them.
-      const falls = [];
-      for (let k = 1; gx + k * 62 * u - 8 * u < W; k += 1) for (const m of [-1, 1]) falls.push([gx + m * k * 62 * u + (m > 0 ? 6 : -16) * u, k]);
-      falls.forEach(([x, k], i) => {
-        const cy = wl - 13 * u; const rr = 4.4 * u;
-        p.fill(C.join(C.circle(x, cy, rr + 1.6 * u), C.circle(x, cy, rr)), 'brick', 2.8, 3);
-        p.fill(C.circle(x, cy, rr), 'shadow', 0.6, 3);
-        p.fill(C.ellipse(x, cy + rr * 0.55, rr * 0.75, rr * 0.35), 'glow', 6.5, 3);
-        p.fill(C.rect(Math.round(x), cy + rr, 1, wl - cy - rr), 'glow', 6, 3);
-        glowAt(p, x, cy + rr, 16 * u, 4.2, breathe(i * 1.7, 0.3, 0.7), [[1, 1], [3, 3]]);
-        refl(p, x, wl + 1, H, 1.5 * u, 3 * u, 5, 120 + i, breathe(i * 1.7, 0.3, 0.7));
-      });
-      // Lamps on the street, all dead but the one on the bridge, guttering over the mouth.
-      const lamps = [];
-      for (let k = 1; gx + k * 46 * u < W + 4 * u; k += 1) for (const m of [-1, 1]) if (k > 0) lamps.push(lampPost(p, gx + m * (k * 46 * u + 8 * u), street, 15 * u, 4));
-      const gas = lampPost(p, gx, parTop(gx), 13 * u, 4);
-      p.light(gas[0], gas[1], 14 * u, 1.6, (t) => gutter(t, 0.7), { zMin: 2, zMax: 3 });
-      // The river: black water giving back the mouth, the wall and every glow in ripple lines.
-      ripples(p, C.rect(0, wl, W, H - wl), 15, 0.5);
-      flipMirror(p, 0, W, wl, H, 16, 0.6);
-      glints(p, gx, wl, H, archHw * 0.45, archHw * 1.2, 8 * g.far, 17, { density: 0.44, floor: 0.06, fall: 0.25 });
+      // The square: wet setts.
+      const sq = C.rect(0, ground, W, H - ground);
+      p.fill(sq, 'wet', 1.9, 1);
+      p.floor(sq, { vx: gx, vy: ground - 40 * u, rows: 6, size: 1.1, d0: 40 * u, joint: -1.2, top: 0.45, left: 0.2, vary: 0.7, chip: 0.05, seed: 83, z: 1 });
+      p.shade(sq, (x, y) => 3 * Math.exp(-(((y + 0.5 - 87 * u) / (4.5 * u)) ** 2)) * (hash(Math.floor(x / 3), Math.floor(y / 2), 84) < 0.7 ? 1 : 0.45) * (1 - Math.abs(x - mx - 30 * u) / (W * 1.4))); // the moon's sheen across the wet setts
+      // In it: the dry fountain, the fallen statue, a broken cart, a dead lamp, a drain breathing a little teal.
+      const rim = fountain(p, gx, 96 * u, 17 * u, u);
+      fallenStatue(p, gx + 38 * u, 95 * u, u);
+      brokenCart(p, gx - 46 * u, 95 * u, u);
+      lampPost(p, gx + 62 * u, ground + 4 * u, 24 * u, 5);
+      const dg = [gx - 70 * u, 90 * u];
+      streetGrate(p, dg[0], dg[1], 8 * u, 2 * u, 4, 5.4);
+      p.light(dg[0], dg[1], 12 * u, 2.6, null, { zMin: 1, zMax: 1, sy: 0.5, hard: true });
+      p.light(mx + 20 * u, my, 220 * u, 3, null, { zMin: 1, zMax: 5, hard: true, sy: 0.8 }); // the moon on the square
       if (cat === 'clear-path') {
-        p.tint(gx, wl + 8 * u, 26 * u, CARD.path[2], 0.4, breathe(0.2, 0.08, 0.5));
-        p.tint(gx, wl - 6 * u, 20 * u, CARD.path[2], 0.35, breathe(0.2, 0.08, 0.5));
+        p.tint(gx, ground + 2 * u, 26 * u, CARD.path[2], 0.4, breathe(0.2, 0.08, 0.5));
+        p.light(gx, ground + 4 * u, 30 * u, 3, null, { zMin: 1, zMax: 1, sy: 0.4 });
       }
-      // The card, at the canal mouth.
-      const BL = 34 * u; const bwl = wl + 5 * u; const bh = Math.max(4, BL * 0.2);
-      if (cat === 'wanderer') {
-        SUBJECT.wanderer(p, gx + 6 * u, bwl - bh * 0.5, 38 * u, 'shadow', 6, false);
+      // The card, in the lane's mouth or on the fountain.
+      if (cat === 'monster') {
+        // Something huge and wrong in the fog of the lane, taller than the houses, its eyes red;
+        // its arms up through a broken grate in the square, one round the fountain's stump.
+        const X = (a) => gx + a * u; const Y = (b) => b * u;
+        // One clawed arm over onto the roof of the house on the left, gripping its eave.
+        const arm = spline([[X(-18), Y(16)], [X(-27), Y(10)], [X(-33), Y(17)], [X(-34), Y(25)]], 0.4);
+        arm.forEach(([x, y], i) => disc(p, x, y, lerp(3.6, 2.2, i / arm.length) * u, 'shadow', 0.4, 7));
+        for (const dx of [-3.5, -1, 1.5]) for (let k = 0; k < 4; k += 1) dot(p, X(-34 + dx) + (k >= 2 ? 1 : 0), Y(26.5) + k, 'shadow', 0.4, 7); // claws over the eave
+        // Its eyes, red, low on the head between the shoulders.
+        for (const [ex, ey, er] of [[-4, 24, 1.6], [3.5, 23, 1.3], [-0.5, 28.5, 2], [7, 27, 0.9], [-8, 28, 0.9]]) {
+          p.fill(C.circle(X(ex), Y(ey), er * u), ramp, 3.6, 8);
+          p.fill(C.rect(X(ex) - 0.5, Y(ey) - er * u * 0.6, 1, er * u * 1.2), ramp, 0.4, 8);
+        }
+        rimFrom(p, 7, [['fogsky', 1.5], ['brick', 2.4], ['mist', 1]], 'mist', 6.6, [[-1, 0], [0, -1]]); // the moon along its back, horns and arm
+        p.fill(C.ellipse(X(-23), Y(97), 6 * u, 1.6 * u), 'iron', 1.2, 4); // the broken grate
+        const arms = [
+          { e: 97, w: 9, side: 1, pts: [[-24, 104], [-25, 94], [-22, 80], [-26, 66], [-32, 58], [-37, 60], [-36, 66], [-32, 66]] },
+          { e: 97, w: 8, side: -1, pts: [[-21, 104], [-19, 94], [-12, 88], [-6, 84], [-2, 86.5], [-4, 89], [-1, 91.5], [2.5, 89]] },
+          { e: 97, w: 7, side: 1, pts: [[-26, 104], [-29, 95], [-34, 90], [-40, 88], [-44, 91], [-41, 93.5]] },
+        ];
+        for (const a of arms) tentacle(p, a.pts.map(([x, y]) => [X(x), Y(y)]), a.w * u, ramp, 9, a.side, Y(a.e), 'skin');
+        p.light(X(-20), Y(92), 30 * u, 4, null, { zMin: 9, zMax: 9 });
+        rimFrom(p, 9, [['fogsky', 3], ['brick', 2.6], ['wet', 3]], 'cap', 4.4);
+      } else if (cat === 'wanderer') {
+        SUBJECT.wanderer(p, gx - 2 * u, ground, 34 * u, 'shadow', 6, false);
         const rs = p.ri('shadow');
         for (let i = 0; i < p.v.length; i += 1) if (p.z[i] === 6 && p.r[i] === rs) p.v[i] = p.v[i] < 1.3 ? 1 : 2; // clean bands, no dither
-        rimFrom(p, 6, [['glow', 4], ['brick', 6]], 'cap', 4.4);
-        const lx = gx + 6 * u + 38 * u * 0.3; const ly = bwl - bh * 0.5 - 38 * u * 0.62;
+        rimFrom(p, 6, [['fogsky', 3.6], ['wet', 3.6]], 'cap', 4.4);
+        const lx = gx - 2 * u + 34 * u * 0.3; const ly = ground - 34 * u * 0.62;
         p.fill(C.rect(lx - 1.5, ly, 4, 4), ramp, 4, 7);
         p.fill(C.rect(lx - 0.5, ly - 2, 2, 2), 'iron', 3, 7);
-        boatSide(p, gx, bwl, BL, { z: 8 });
-        p.light(lx, ly + 2, 16 * u, 4, breathe(0.9, 0.08, 2), { zMin: 0, zMax: 8, hard: true });
-        for (let k = 0; k < 4; k += 1) { const yy = Math.round(wl + (wl - ly) * 0.55 + k * 2 * u); dot(p, lx - 1 + (k % 2), yy, ramp, 2.2 - k * 0.4, 1); dot(p, lx + (k % 2), yy, ramp, 1.8 - k * 0.4, 1); } // its light broken on the water
+        p.light(lx, ly + 2, 18 * u, 4, breathe(0.9, 0.08, 2), { zMin: 1, zMax: 2, hard: true });
       } else if (cat === 'item') {
-        plume = chest(p, gx + 1 * u, bwl - bh * 1.1, 18 * u, ramp, 6);
-        p.tint(gx + 1 * u, plume.y, 24 * u, hex, 0.55, breathe(2, 0.15, 1));
-        p.tint(gx + 1 * u, wl + 14 * u, 12 * u, hex, 0.45, breathe(2, 0.15, 1));
-        boatSide(p, gx, bwl, BL, { rope: [post, wl - 6 * u], z: 8 });
-      } else if (cat === 'monster') {
-        // The thing from the canal has come out with it: arms up out of the river round the mouth,
-        // one over the parapet, one round the mooring post, its eye red under the black water.
-        const X = (a) => gx + a * u; const Y = (b) => wl + b * u;
-        drownedEye(p, X(1.5), Y(12), 8 * u, ramp, 6);
-        const arms = [
-          { e: 4, w: 9, side: 1, pts: [[-9, 10], [-10, 0], [-8, -14], [-11, -28], [-16, -36], [-22, -35], [-22.5, -29.5], [-19, -28.5]] },
-          { e: 5, w: 8.6, side: -1, pts: [[9, 12], [10, 0], [8, -14], [11, -26], [16, -40], [22, -44], [27, -41], [25.5, -37]] },
-          { e: 3, w: 6.6, side: -1, pts: [[-19, 8], [-20, 0], [-22, -4], [-24.5, -7.5], [-21.6, -9.5], [-21, -12], [-24.6, -13.5], [-25, -16.5], [-22, -18]] },
-          { e: 3, w: 6.4, side: 1, pts: [[22, 9], [23, 0], [25, -8], [24, -15], [28, -20], [32, -19], [31, -15.5]] },
-          { e: 14, w: 6, side: 1, pts: [[-2, 22], [-2, 13], [0.5, 8], [5, 7.5], [6, 10.5], [3.5, 11]] },
-        ];
-        for (const a of arms) {
-          const [bxw, byw] = tentacle(p, a.pts.map(([x, y]) => [X(x), Y(y)]), a.w * u, ramp, 9, a.side, Y(a.e), 'skin');
-          ringsAt(p, bxw, byw, a.w * u);
-        }
-        p.light(gx, wl - 4 * u, 54 * u, 7, null, { zMin: 9, zMax: 9, sy: 1 });
-        p.fill(C.rect(post - 1, wl - 5 * u, 2, 1.4 * u), 'iron', 2.4, 10); // the coil passes behind the post here
-        rimFrom(p, 9, [['glow', 4], ['brick', 5.5], ['water', 4.5], ['wet', 4], ['fogsky', 4]], 'cap', 4.4);
-      } else if (cat === 'obstacle') {
-        // The outfall grate is down across the mouth, the canal's rubbish banked against it.
-        const step = Math.max(4, Math.round(5 * u));
-        p.each(C.arch(gx, archTop, archHw, wl + 1), (x, y, i) => {
-          const bx2 = (x - gx + step * 40) % step;
-          const cross = Math.abs(y - (archTop + archHw * 0.85)) < 1 || Math.abs(y - (wl - 10 * u)) < 1;
-          if (bx2 >= 2 && !cross) return;
-          p.r[i] = p.ri(ramp); p.z[i] = 4; p.v[i] = (cross ? 2.6 : 2.1) + (bx2 < 1 ? 0.4 : 0);
+        jar(p, gx, rim + 0.5, 12 * u, ramp, 6);
+        p.each(C.ellipse(gx, rim, 10 * u, 3 * u), (x, y, i) => { // the fountain's rim catching it
+          if (p.z[i] !== 5) return;
+          const d = Math.abs(x + 0.5 - gx) / (10 * u);
+          if (d < 1) { p.r[i] = p.ri(ramp); p.v[i] = 0.5 + 2.2 * (1 - d) ** 1.3; }
         });
-        const junk = C.poly([[gx - archHw, wl + 1], [gx - 12 * u, wl - 4 * u], [gx - 3 * u, wl - 2.5 * u], [gx + 5 * u, wl - 5 * u], [gx + 14 * u, wl - 2 * u], [gx + archHw, wl + 1]]);
-        p.fill(junk, 'wood', 2.2, 5);
-        p.cells(junk, { size: 2.6 * u, sx: 2.2, joint: 0.7, jointV: -1.4, vary: 1.2, bevel: 0.7, seed: 4, z: 5 });
-        p.tint(gx, wl - 16 * u, 28 * u, hex, 0.3, breathe(0.5, 0.12, 0.6));
+      } else if (cat === 'obstacle') {
+        // A house has come down across the lane: a heap of its stones and beams, in the card's teal.
+        const heap = C.poly([[gx - gap - 4 * u, ground + 2 * u], [gx - gap, ground - 20 * u], [gx - 6 * u, ground - 34 * u], [gx + 3 * u, ground - 28 * u], [gx + gap - 2 * u, ground - 40 * u], [gx + gap + 4 * u, ground + 2 * u]]);
+        p.fill(heap, ramp, 1.3, 4);
+        p.cells(heap, { size: 3.4 * u, sx: 1.6, joint: 0.8, jointV: -1.4, vary: 1.1, bevel: 0.9, seed: 5, z: 4 });
+        for (const [x0, y0, x1, y1] of [[-14, -14, 6, -42], [4, -10, 18, -30], [-8, -26, 12, -20]]) p.fill(C.poly([[gx + x0 * u, ground + y0 * u], [gx + x1 * u, ground + y1 * u], [gx + x1 * u + 1.2, ground + y1 * u + 1], [gx + x0 * u + 1.2, ground + y0 * u + 1]]), ramp, 2.2, 5);
+        p.tint(gx, ground - 20 * u, 26 * u, hex, 0.25, breathe(0.5, 0.12, 0.6));
       }
-      if (cat !== 'wanderer' && cat !== 'item') boatSide(p, gx - 52 * u, wl + 4 * u, 30 * u, { rope: [post, wl - 6 * u], z: 8 });
-      vignette(p, W, H, 1.6, 0.45);
-      p.rim(0, -1, 0.5, 3);
-      const lampFlick = (t) => gutter(t, 0.7);
+      moonRim(p, 5, 6, 6.6); // the moon on the tops of the fountain, the statue, the cart, the lamp
+      vignette(p, W, H, 1, 0.45);
+      p.rim(0, -1, 0.4, 3);
       return {
         p,
         over(img, t) {
-          if (plume) beam(img, plume.x, plume.y - 20 * u, plume.w * 1.6, plume.x, plume.y, plume.w * 0.85, 0.72 + 0.12 * Math.sin(t * 1.3), 0, VIOLET, true);
-          fog(img, 12 * u, street + 2 * u, 0.18, t, 2, (x) => 0.6 - Math.abs(x - gx) / (60 * u));
-          fog(img, wl - 8 * u, wl + 12 * u, 0.3, t * 1.3, 9, (x) => 1 - Math.abs(x - gx) / (34 * u));
-          lampGlass(img, gas[0], gas[1], lampFlick(t));
-          for (const [x] of falls) for (let k = 0; k < 2; k += 1) { const f = (t * 0.9 + k * 0.5 + x * 0.013) % 1; put(img, x, wl - 13 * u + 4.4 * u + f * (9 * u), '#A8DCC9', 0.8); }
+          if (plume) beam(img, plume.x, plume.y - 18 * u, plume.w * 1.6, plume.x, plume.y, plume.w * 0.85, 0.72 + 0.12 * Math.sin(t * 1.3), 0, VIOLET, true);
+          fog(img, 30 * u, ground + 4 * u, cat === 'monster' ? 0.34 : 0.3, t, 2, (x, y) => 0.25 + (y / ground) * 0.25);
+          fog(img, ground - 4 * u, 92 * u, 0.2, t * 1.2, 9, (x, y) => 0.3 - Math.abs(x - dg[0]) / (60 * u));
+          beam(img, dg[0], dg[1] - 12 * u, 3 * u, dg[0], dg[1] - 1, 2.4 * u, 0.2, 0, RISE, true);
         },
       };
     },
@@ -1373,19 +1455,20 @@
         const x = r() < 0.5 ? r() * 26 * u : W - r() * 26 * u; const y = 20 * u + r() * H * 0.8;
         p.fill(C.ellipse(x, y, (8 + r() * 14) * u, (2 + r() * 2.5) * u), 'water', (px, py) => 2 + (hash(Math.floor(px / 4), py, k) < 0.2 ? 0.8 : 0), 1);
       }
-      // Grates in the gutters near the edges, the canal's light breathing up through them.
-      const grates = [[19 * u, 120 * u], [W - 19 * u, 96 * u], [20 * u, 214 * u], [W - 20 * u, 206 * u], [19 * u, 34 * u], [W - 19 * u, 28 * u]];
+      // Two drains at the edges, breathing a little teal from under the city.
+      const grates = [[19 * u, 118 * u], [W - 20 * u, 206 * u]];
       const ks = grates.map((_, i) => breathe(i * 2.1, 0.4, 0.55 + i * 0.07));
       grates.forEach(([x, y], i) => {
-        streetGrate(p, x, y, 10 * u, 4 * u, 3, 7);
-        glowAt(p, x, y, 36 * u, 4.6, ks[i], [[1, 1]], { sy: 0.7 });
+        streetGrate(p, x, y, 10 * u, 4 * u, 3, 5.6);
+        glowAt(p, x, y, 30 * u, 3.4, ks[i], [[1, 1]], { sy: 0.7 });
       });
       p.shade(null, (x, y) => -2.1 * Math.max(0, y / H - 0.42));
       return {
         p,
         over(img, t) {
-          grates.forEach(([x, y], i) => beam(img, x, y - 40 * u, 7 * u, x, y - 1, 4 * u, 0.3 * ks[i](t), 0, RISE, true));
-          fog(img, 0, 70 * u, 0.2, t, 5, null, (x) => x < 50 * u || x > W - 50 * u);
+          grates.forEach(([x, y], i) => beam(img, x, y - 30 * u, 6 * u, x, y - 1, 4 * u, 0.22 * ks[i](t), 0, RISE, true));
+          fog(img, 0, 80 * u, 0.2, t, 5, null, (x) => x < 60 * u || x > W - 60 * u);
+          fog(img, 150 * u, 230 * u, 0.14, t * 0.8, 12, null, (x) => x < 40 * u || x > W - 40 * u);
         },
       };
     },
