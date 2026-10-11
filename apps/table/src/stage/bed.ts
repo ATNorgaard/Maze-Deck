@@ -685,7 +685,7 @@ function refresh(jump = false): void {
   }
   const a = audio();
   if (!a) return;
-  const graph = buildBed(a.ctx, a.master, want, `bed:${Date.now()}`);
+  const graph = buildBed(a.ctx, a.bed, want, `bed:${Date.now()}`);
   graph.apply(bedParams(mood), a.ctx.currentTime);
   live = { biome: want, graph, ctx: a.ctx };
   graph.schedule(a.ctx.currentTime, a.ctx.currentTime + AHEAD);

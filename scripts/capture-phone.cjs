@@ -24,11 +24,11 @@
    A GM opens a room on the new board; a phone (390 x 844, touch, its
    vibrations recorded) joins by the code and takes a seat. The GM plays
    the other seats' turns. Along the way it checks and photographs:
-   the phone at rest; a card turned (the vista, and "the GM has the
-   scene"); the GM showing the table the scene, and the phone
-   reading it; the phone's own turn (the hand risen, felt); its roll —
-   or, with --manual, its throw, whose number the GM types in; its pick;
-   and every scene shown at once once the GM sets it in the drawer.
+   the phone at rest, showing only its own (the controller: the table
+   is on the GM's screen); waiting, whose turn it is and, the turn
+   before its own, "You're next"; its own turn (the six actions, felt);
+   its roll — or, with --manual, its throw, whose number the GM types
+   in; any decision; its pick; and back to waiting.
 
    The phone keeps up by polling (the local authority rings no Realtime
    bell), so each check waits up to ten seconds for it.
@@ -132,23 +132,20 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
   await phone.waitForTimeout(1500);
   log(`the phone sits as ${seatName}`);
   await shot(phone, 'phone-0-joined');
-  // The side the GM chose reaches the phone with the room (AJ7), and with
-  // it the same place: the phone draws the side's own design.
-  const where = (page) => page.evaluate(() => ({
-    side: document.querySelector('.t-biome')?.getAttribute('data-side') ?? null,
-    vista: document.querySelector('.t-vista')?.dataset.design ?? null,
-    world: document.querySelector('.t-world')?.dataset.design ?? null,
+  // The side the GM chose reaches the phone with the room (AJ7): the
+  // backs in its river, when it picks, are that side's.
+  const sideOf = (page) => page.evaluate(() => document.querySelector('.t-biome')?.getAttribute('data-side') ?? null);
+  const [gmSide, phoneSide] = [await sideOf(gm), await sideOf(phone)];
+  check(phoneSide === gmSide && (!side || gmSide === side),
+    `the phone plays the side the GM chose: ${phoneSide} (the GM's ${gmSide})`);
+  // The controller: the table is on the GM's screen, so the phone shows
+  // only what is the player's to act on.
+  const bare = await phone.evaluate(() => ({
+    state: document.querySelector('.t-ctl')?.dataset.state ?? '-',
+    extras: document.querySelectorAll('.t-vista, .t-world, .t-route, .t-track, .t-seats, .t-phone__log, .t-scene').length,
   }));
-  const [atGm, atPhone] = [await where(gm), await where(phone)];
-  check(atPhone.side === atGm.side && (!side || atGm.side === side),
-    `the phone plays the side the GM chose: ${atPhone.side} (the GM's ${atGm.side})`);
-  check(Boolean(atPhone.vista) && atPhone.vista === atGm.vista,
-    `and draws the same place: the vista ${atPhone.vista}, the world ${atPhone.world ?? 'off'} (the GM's ${atGm.vista})`);
-  check(await phone.locator('.t-world, .t-vista').count() > 0, 'the phone has the place behind it: the vista, and the world where the device draws it');
-  const tier = await phone.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'none');
-  check(tier === 'low' || tier === 'still', `a phone's world starts light: ${tier}`);
-  const ground = await phone.evaluate(() => getComputedStyle(document.querySelector('.t-phone .md-river')).backgroundColor);
-  check(ground === 'rgba(0, 0, 0, 0)' || ground === 'transparent', `the river lies on the world, not on a slab: ${ground}`);
+  check(bare.state !== '-' && bare.extras === 0,
+    `the phone shows only its own: no vista, world, route, threat, party, scene or log (${bare.extras} found; ${bare.state})`);
 
   /* ---------------- the phone's budget (--measure) ---------------- */
   // As measure-frames.cjs measures the board: main-thread time from the
@@ -191,8 +188,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
     found: Boolean(document.querySelector('.t-found')),
     active: document.querySelector('.t-rail .md-seat[data-active="true"] .md-seat__name')?.textContent ?? '',
     over: document.querySelector('.t-table')?.dataset.outcome ?? '',
-    share: document.querySelector('.t-share')?.getAttribute('aria-pressed') ?? null,
-    caption: document.querySelector('.t-stage > .t-scene .t-scene__text')?.textContent ?? '',
+    order: [...document.querySelectorAll('.t-rail .md-seat .md-seat__name')].map((n) => n.textContent),
   }));
   /** One step of somebody else's turn, as a quick GM plays it. */
   const gmStep = async (s) => {
@@ -212,11 +208,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
     else if (s.focus === 'river') await click(gm, gm.locator('.md-river__slot article.md-card--back, .md-river__slot article[data-interactive]'));
     await gm.waitForTimeout(1200);
   };
-  const phoneScene = () => phone.evaluate(() => ({
-    text: document.querySelector('.t-phone__text:not(.t-phone__text--waiting)')?.textContent ?? '',
-    waiting: Boolean(document.querySelector('.t-phone__text--waiting')),
-    kicker: document.querySelector('.t-phone__scene .t-kicker')?.textContent ?? '',
-  }));
+  const phoneState = () => phone.evaluate(() => document.querySelector('.t-ctl')?.dataset.state ?? '-');
 
   /** Press a GM control once the board has drawn it (it presents a beat late). */
   const gmPress = async (name, ms = 12000) => {
@@ -225,78 +217,43 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
     return ok;
   };
 
-  // In this order: the GM shows a scene by hand; the phone takes its own
-  // turn; then, with every scene shown as it is drawn, a new one arrives
-  // with no press. The phone's seat may come up before any card has
-  // turned, so each waits for its moment.
-  let shared = false;
+  // In whatever order the turns come: the phone, waiting, says whose turn
+  // it is and, the turn before its own, that it is next; then its own turn,
+  // everything on it the phone's to do.
   let ownTurn = false;
-  let auto = false;
-  let autoChecked = false;
-  let sharedCaption = '';
-  for (let step = 0; step < 120 && !autoChecked; step += 1) {
+  let nextSeen = false;
+  for (let step = 0; step < 120 && !(ownTurn && nextSeen); step += 1) {
     const s = await gmState();
     if (s.over) { log('the crossing ended before every check'); break; }
 
-    // A card has turned and its scene is on the GM's caption: show the table.
-    if (!shared && s.share === 'false' && s.caption) {
-      check(await until(phone, () => Boolean(document.querySelector('.t-phone__text--waiting'))),
-        'before it is shown, the phone knows a card turned, and that the GM has its scene');
+    // Somebody else acting, and the phone's seat after them.
+    const i = s.order.indexOf(s.active);
+    const next = i >= 0 && s.order.length > 1 ? s.order[(i + 1) % s.order.length] : null;
+    if (!nextSeen && s.focus === 'actions' && s.active && s.active !== seatName && next === seatName) {
+      const told = await until(phone, (who) => (document.querySelector('.t-ctl__wait')?.textContent ?? '').startsWith(who)
+        && Boolean(document.querySelector('.t-ctl__next')), 12000, s.active);
+      const w = await phone.evaluate(() => document.querySelector('.t-ctl__wait')?.textContent ?? '');
+      check(told, `waiting, the phone says whose turn it is and that its own is next: "${w}", "You’re next"`);
       log(polled());
-      await shot(phone, 'phone-1-card-turned');
-      await gmPress('Show the table');
-      const ok = await until(phone, (c) => document.querySelector('.t-phone__text:not(.t-phone__text--waiting)')?.textContent === c, 10000, s.caption);
-      const p = await phoneScene();
-      check(ok, `the GM shows it, and the phone reads the same line: "${p.text.slice(0, 60)}"`);
-      // The phone's poll can land between the write and the GM's own render.
-      check(await until(gm, () => document.querySelector('.t-share')?.getAttribute('aria-pressed') === 'true', 3000),
-        'the GM\'s caption says it is shown');
-      await shot(phone, 'phone-2-scene-shown');
-      await shot(gm, 'gm-scene-shown');
-      shared = true;
-      sharedCaption = s.caption;
-      continue;
-    }
-
-    // From here on, every scene is shown as it is drawn.
-    if (shared && ownTurn && !auto) {
-      await click(gm, gm.getByRole('button', { name: 'GM', exact: true }));
-      await gm.waitForTimeout(400);
-      await click(gm, gm.getByRole('button', { name: 'Scenes shown one at a time' }));
-      check(await gm.getByRole('button', { name: 'Every scene shown to the table' }).count() > 0, 'the GM sets every scene to be shown as it is drawn');
-      await gm.keyboard.press('Escape');
-      await gm.waitForTimeout(400);
-      auto = true;
-      sharedCaption = (await gmState()).caption || sharedCaption;
-      continue;
-    }
-
-    // A new scene, with nobody pressing anything.
-    if (auto && s.caption && s.caption !== sharedCaption) {
-      const shownOnBoard = await until(gm, () => document.querySelector('.t-share')?.getAttribute('aria-pressed') === 'true', 6000);
-      check(shownOnBoard, 'the GM\'s board shows the new scene as already shown');
-      const ok = await until(phone, (c) => document.querySelector('.t-phone__text:not(.t-phone__text--waiting)')?.textContent === c, 12000, s.caption);
-      const p = await phoneScene();
-      check(ok, `shown automatically: the phone reads "${p.text.slice(0, 60)}"`);
-      await shot(phone, 'phone-6-auto-shown');
-      autoChecked = true;
-      break;
+      await shot(phone, 'phone-1-next');
+      nextSeen = true;
     }
 
     // The phone's own turn: everything on it is the phone's to do.
     if (!ownTurn && s.active === seatName && s.focus === 'actions') {
-      const risen = await until(phone, () => Boolean(document.querySelector('.t-phone__hand[data-raised]')), 12000);
-      check(risen, 'on its own turn the phone\'s hand rises');
+      const risen = await until(phone, () => document.querySelector('.t-ctl')?.dataset.state === 'act'
+        && document.querySelectorAll('.t-ctl .md-action').length === 6, 12000);
+      check(risen, 'on its own turn the phone shows the six actions, and nothing else');
       await phone.waitForTimeout(500);
       const buzzes = await phone.evaluate(() => window.__buzz);
       const turns = buzzes.filter((p) => Array.isArray(p) && p.join() === '40,60,40').length;
       check(turns === 1, `and the turn is felt, once (vibrations so far: ${JSON.stringify(buzzes)})`);
-      await shot(phone, 'phone-3-hand');
-      await phone.locator('.t-phone__hand .md-action').first().tap();
+      await shot(phone, 'phone-2-actions');
+      await phone.locator('.t-ctl .md-action').first().tap();
 
       if (manual) {
-        const die = await until(phone, () => Boolean(document.querySelector('.t-phone__hand[data-raised] .t-throw__die')), 12000);
-        check(die, 'the table rolls its own dice: the die to throw rises where the hand was');
+        const die = await until(phone, () => Boolean(document.querySelector('.t-ctl[data-state="roll"] .t-throw__die')), 12000);
+        check(die, 'the table rolls its own dice: the phone shows the die to throw');
         await phone.waitForTimeout(500);
         await shot(phone, 'phone-4a-die');
         await phone.locator('.t-throw__die').tap({ force: true }); // it sways while it waits
@@ -312,17 +269,17 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
         if (await second.count()) await second.fill(String(kept));
         await gmPress('Take the roll');
         // The throw gives way to the room's roll: the number the GM typed.
-        const typed = await until(phone, () => !document.querySelector('.t-phone__mine .t-throw')
-          && Boolean(document.querySelector('.t-phone__mine .t-die')), 12000);
+        const typed = await until(phone, () => !document.querySelector('.t-ctl__roll .t-throw')
+          && Boolean(document.querySelector('.t-ctl__roll .t-die')), 12000);
         await phone.waitForTimeout(1600);
-        const faces = await phone.locator('.t-phone__mine .t-die__face').allTextContents();
+        const faces = await phone.locator('.t-ctl__roll .t-die__face').allTextContents();
         check(typed && faces.includes(String(kept)), `the GM types it in, and the phone shows the roll the room acts on (${faces.join(', ')})`);
       } else {
-        const rolled = await until(phone, () => Boolean(document.querySelector('.t-phone__hand[data-raised] .t-phone__mine .t-die')), 12000);
-        check(rolled, 'its roll rises where the hand was');
+        const rolled = await until(phone, () => Boolean(document.querySelector('.t-ctl[data-state="roll"] .t-die')), 12000);
+        check(rolled, 'then the phone shows its roll');
         await phone.waitForTimeout(1600);
       }
-      const mineStatus = await phone.locator('.t-phone__status').textContent();
+      const mineStatus = await phone.locator('.t-ctl__task > .t-kicker').first().textContent();
       check(/^Your roll/.test(mineStatus ?? ''), `the phone says whose roll it is: "${mineStatus}"`);
       await shot(phone, 'phone-4-roll');
       check(await gmPress('Let it land'), 'the GM lets it land');
@@ -331,16 +288,16 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
       // pick is the phone's.
       let pickable = false;
       for (let k = 0; k < 8 && !pickable; k += 1) {
-        pickable = await phone.evaluate(() => Boolean(document.querySelector('.t-phone__prompt')));
-        if (!pickable && await phone.locator('.t-modal').count()) {
+        pickable = (await phoneState()) === 'pick';
+        if (!pickable && (await phoneState()) === 'decide') {
           log('the phone answers a decision');
-          await click(phone, phone.locator('.t-modal button:not([disabled])'));
+          await click(phone, phone.locator('.t-ctl[data-state="decide"] button:not([disabled])'));
         }
         if (!pickable) await phone.waitForTimeout(1500);
       }
       check(pickable, 'then the phone is asked to commit to a path');
-      const pickStatus = await phone.locator('.t-phone__status').textContent();
-      log(`the phone's status: "${pickStatus}"`);
+      const pickAsk = await phone.locator('.t-ctl__ask').textContent().catch(() => '');
+      log(`the phone asks: "${pickAsk}"`);
       await shot(phone, 'phone-5-pick');
       // What the GM's table shows: the river's faces, the deck, the discard's
       // top. A pick changes at least one, whatever the card turns out to be
@@ -358,7 +315,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
         return (c.chronicle || []).filter((e) => e.seatId === id).length;
       }, seatName);
       // A face-down card: a blocker left face up from an earlier turn is not a path to take.
-      const pick = () => phone.locator('.t-river[data-pickable] .md-river__slot article.md-card--back').first().tap();
+      const pick = () => phone.locator('.t-ctl .t-river[data-pickable] .md-river__slot article.md-card--back').first().tap();
       if (measuring) await measure('The phone, its own pick', 5000, pick);
       else await pick();
       let turned = false;
@@ -382,7 +339,9 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
         return e ? `${e.key}, round ${e.round}, ${e.category}` : 'none';
       });
       check(credited, `the GM's chronicle has a scene for the phone's pick, credited to it (latest: ${lastScene})`);
-      await phone.waitForTimeout(1500);
+      const back = await until(phone, () => document.querySelector('.t-ctl')?.dataset.state !== 'pick', 12000);
+      check(back, `once picked, the phone leaves the river (now ${await phoneState()})`);
+      await phone.waitForTimeout(1000);
       await shot(phone, 'phone-5-picked');
       ownTurn = true;
       continue;
@@ -390,7 +349,33 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
 
     await gmStep(s);
   }
-  check(shared && ownTurn && autoChecked, 'every check was reached');
+  check(ownTurn && nextSeen, 'every check was reached');
+
+  // The phones no longer show scenes, so the GM's board no longer offers to.
+  const offers = await gm.evaluate(() => [...document.querySelectorAll('button')]
+    .filter((b) => /Show the table|Shown to the table|shown to the table|one at a time/.test(b.textContent)).length);
+  check(offers === 0, `the GM's board no longer offers to show the phones a scene (${offers} such controls)`);
+
+  /* ---------------- the menu ---------------- */
+  // Sound, its two levels, haptics and leaving, behind the corner button.
+  // A phone starts silent: the GM's screen carries the table's sound.
+  const soundBefore = await phone.evaluate(() => localStorage.getItem('mazedeck.sound'));
+  await phone.getByRole('button', { name: 'Settings' }).tap();
+  await phone.waitForTimeout(400);
+  check(soundBefore !== 'on' && await phone.getByRole('button', { name: 'Sound off' }).count() === 1,
+    `the menu opens, and the phone's sound is off until turned on (${soundBefore ?? 'never chosen'})`);
+  await phone.getByRole('button', { name: 'Sound off' }).tap();
+  await phone.waitForTimeout(300);
+  const sliders = await phone.locator('.t-drawer .t-level input[type=range]').count();
+  check(sliders === 2, `with sound on, two levels to turn down: ambience and effects (${sliders})`);
+  await phone.locator('.t-drawer .t-level').filter({ hasText: 'Ambience' }).locator('input').fill('40');
+  await phone.locator('.t-drawer .t-level').filter({ hasText: 'Effects' }).locator('input').fill('25');
+  const kept = await phone.evaluate(() => localStorage.getItem('mazedeck.volume'));
+  check(kept === JSON.stringify({ bed: 0.4, voices: 0.25 }), `and the levels are kept on this device: ${kept}`);
+  check(await phone.getByRole('button', { name: 'Leave the table' }).count() === 1, 'leaving is in the menu too');
+  await shot(phone, 'phone-6-menu');
+  await phone.getByRole('button', { name: 'Sound on' }).tap();
+  await phone.keyboard.press('Escape');
 
   if (budget.length) {
     log(`

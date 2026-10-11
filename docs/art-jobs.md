@@ -2,7 +2,7 @@
 
 > **Built** (2026-10-11): the approved designs replaced these jobs, for all
 > fourteen settings and both sides. See [settings-build.md](settings-build.md)
-> and DECISIONS S1–S13. What follows is the reasoning that led there.
+> and DECISIONS S1–S15. What follows is the reasoning that led there.
 
 **Status:** decided 2026-10-10: the house style is **A, pixel diorama**
 (AJ1), and daylight is **sky high, table low** (AJ2); AJ3–AJ6 as

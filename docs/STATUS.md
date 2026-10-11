@@ -6,10 +6,9 @@ Rewritten at the end of every session. Coming in cold: read this, then
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md), and for
 the art, [settings-build.md](settings-build.md).
 
-**Last updated:** 2026-10-11: **the settings are live** (`set/0`–`set/6`,
-merged to `main` and shipped as `70cdeae`): fourteen settings, each side's
-approved design as its back, vista and world, a side chosen per crossing,
-and a picture per narration line.
+**Last updated:** 2026-10-12: **the phone is a controller, on the `phone`
+branch** (DECISIONS S14, S15), after the author played the live site with
+real phones. The settings (`set/0`–`set/6`) are live as `70cdeae`.
 
 ## Where we are
 
@@ -21,7 +20,7 @@ deck that it should not know.
 | | What | Where |
 |---|---|---|
 | Live | The settings, `set/0`–`set/6` (`70cdeae`), shipped 2026-10-11, on the overhaul (`world/10`, 2026-10-09) | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `front-door`: level with `main`, this file's update included | never pushed on its own |
+| Branch | `phone`: `main` plus the controller phone and the sound levels (S14, S15) | not pushed |
 | Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
 **What the settings added** ([settings-build.md](settings-build.md) has each
@@ -32,7 +31,7 @@ phase's log):
   words, light, palette, dark and sound bed.
 - **A side per crossing** (AJ7), chosen on the threshold and carried to
   every phone: 23 sides in all.
-- **Every picture is an approved design** (S1–S13):
+- **Every picture is an approved design** (S1–S15):
   - the backs, baked to PNGs;
   - the vista, live on a canvas, each narration line drawing its card its
     own way (a salt on the design's scatter, and half mirrored);
@@ -49,9 +48,40 @@ frame budget is within noise of the overhaul at rest and in a turn.
 
 ## Next single action
 
-**The author plays it, live**, at <https://maze-deck-six.vercel.app>: a few
-doors and both sides, a crossing with sound on, and a hosted room with a
-real phone or two.
+**The author tries the controller phone** on the `phone` branch, then says
+whether to ship it: `node scripts/local-session.mjs --app`, host a room at
+<http://localhost:5182>, and join from a phone on the same network (or
+review `proof/ctl-phone/`). A push to `main` deploys it.
+
+**What the `phone` branch changes** (S14, S15), from the author's notes on
+playing live ("includes a lot of things the mobile user doesn't need"):
+- **The phone shows one thing at a time, the player's own:** waiting (whose
+  turn it is, and *You're next* the turn before theirs); the six actions as
+  big buttons; their roll, or the die to throw; their decision; the river,
+  its cards filling the width, to commit to a path; a line each for being
+  found and the end. The vista, the scene, the route, the threat, the party
+  and the log are left to the GM's screen.
+- **Behind it, the side's still frame, veiled**; no animated world. Sound,
+  haptics and leaving are in a menu (···). A phone's sound stays off unless
+  its owner turns it on.
+- **Two sound levels per device**, *Ambience* (the bed) and *Effects* (the
+  cards and dice), beside the switch in the GM's drawer and the phone's
+  menu, remembered on the device.
+- **The GM's board no longer offers to show the phones a scene** (O1
+  superseded); the share op and the `scene` column stay, unused.
+- `capture-phone.cjs` checks the controller: only its own on screen,
+  *You're next*, the actions, the roll or the throw, a decision, the pick,
+  back to waiting, the menu and its levels, and no share controls on the
+  board.
+
+**Verified on the branch** (against `local-session.mjs`, GPU): every phone
+check passes, with the table rolling and with the phone throwing; the 52
+sound checks pass; a board walk reveals at 0px; app 45 tests, and both apps
+typecheck. The phone at 4x CPU costs 0.11 s per 4 s at rest and 0.23 s for
+its own pick, against 0.19 s and 0.79 s before.
+
+**The author's live check of the settings** (2026-10-11), and the ship's
+read-only check, are below.
 
 **The ship was verified on the live site, read-only** (2026-10-11):
 - Vercel reported the deployment of `70cdeae` complete;
@@ -111,8 +141,9 @@ deploys.
     its piles, the party rail and the hand. Every decision is made on the
     table, the roll and the encounter happen at its centre, and an opening
     and a storyboard bookend each crossing.
-  - The phone (`PlayerScreen`): the vista, the shared scene, a hand that
-    rises on your turn, a die to throw, haptics.
+  - The phone (`PlayerScreen`), on `phone`: a controller showing only the
+    player's own moment (waiting, actions, roll or throw, decision, path),
+    over the side's still frame, with sound and haptics in a menu.
   - Under it all, the choreographer (`stage/`), the voices and the bed
     (`stage/sound.ts`, `stage/bed.ts`), and the transports (local, and
     remote).

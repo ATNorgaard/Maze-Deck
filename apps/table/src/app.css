@@ -1243,6 +1243,22 @@ html, body, #root {
 .t-modal .t-panel__title { text-align: center; }
 .t-modal .t-row { justify-content: center; }
 
+/* ---------------- the sound, and its levels ----------------
+   In the GM's drawer and the phone's menu (components/SoundSettings.tsx). */
+.t-sound { display: flex; flex-direction: column; gap: calc(2.5 * var(--md-u)); }
+.t-sound > .t-btn { text-align: left; }
+.t-level {
+  display: grid;
+  grid-template-columns: calc(22 * var(--md-u)) minmax(0, 1fr) calc(12 * var(--md-u));
+  align-items: center;
+  gap: calc(2 * var(--md-u));
+  font-family: var(--md-font-ui);
+  font-size: 14px;
+  color: var(--md-parchment-300);
+}
+.t-level input { width: 100%; accent-color: var(--md-cat-path-500); }
+.t-level__value { text-align: right; color: var(--md-parchment-400); font-variant-numeric: tabular-nums; }
+
 /* The setting switch on the board — for looking at the settings, not
    for play. It changes what THIS screen wears and nothing on the wire. */
 .t-biome-switch {

@@ -62,6 +62,23 @@ let chosen = false;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 const listeners = new Set<() => void>();
+
+/**
+ * Two levels under the master, each turned down on its own and
+ * remembered per device: the setting's air (the bed) and the cards and
+ * dice (the voices). 1 is as made.
+ */
+export type Level = 'bed' | 'voices';
+const LEVEL_KEY = 'mazedeck.volume';
+let levels: Record<Level, number> = { bed: 1, voices: 1 };
+let buses: Record<Level, GainNode> | null = null;
+const unit = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1);
+try {
+  const stored = JSON.parse(window.localStorage.getItem(LEVEL_KEY) ?? 'null') as Partial<Record<Level, number>> | null;
+  if (stored) levels = { bed: unit(stored.bed), voices: unit(stored.voices) };
+} catch { /* storage blocked or unreadable: as made */ }
+/** A slider's position as a gain: squared, so the slider's middle sounds like the middle. */
+const gainOf = (v: number) => v * v;
 const playListeners = new Set<(voice: Voice) => void>();
 
 try {
@@ -80,6 +97,13 @@ function context(): AudioContext | null {
     master = ctx.createGain();
     master.gain.value = 0.5;
     master.connect(ctx.destination);
+    const bus = (level: Level) => {
+      const g = (ctx as AudioContext).createGain();
+      g.gain.value = gainOf(levels[level]);
+      g.connect(master as GainNode);
+      return g;
+    };
+    buses = { bed: bus('bed'), voices: bus('voices') };
   }
   if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
@@ -99,10 +123,25 @@ export function setSoundOn(on: boolean): void {
   for (const l of listeners) l();
 }
 
-/** The context and the master level, made on first use; null where there is no WebAudio. */
-export function audio(): { ctx: AudioContext; master: GainNode } | null {
+/** The context, the master level and the bed's own, made on first use; null where there is no WebAudio. */
+export function audio(): { ctx: AudioContext; master: GainNode; bed: GainNode } | null {
   const c = context();
-  return c && master ? { ctx: c, master } : null;
+  return c && master && buses ? { ctx: c, master, bed: buses.bed } : null;
+}
+
+export function levelOf(level: Level): number { return levels[level]; }
+
+/** Turn one level up or down, 0..1, at once and for next time. */
+export function setLevel(level: Level, value: number): void {
+  levels = { ...levels, [level]: unit(value) };
+  try { window.localStorage.setItem(LEVEL_KEY, JSON.stringify(levels)); } catch { /* not remembered */ }
+  if (ctx && buses) buses[level].gain.setTargetAtTime(gainOf(levels[level]), ctx.currentTime, 0.04);
+  for (const l of listeners) l();
+}
+
+export function useLevel(level: Level): [number, (value: number) => void] {
+  const value = React.useSyncExternalStore(subscribeSound, () => levels[level], () => 1);
+  return [value, (v: number) => setLevel(level, v)];
 }
 
 /** Told whenever the switch moves. Returns the unsubscribe. */
@@ -137,6 +176,9 @@ export function useSoundChosen(): boolean {
 
 /* ---------------- voices ---------------- */
 
+/** Where a voice plays into: its own level, under the master. */
+const voices = (): GainNode => (buses ? buses.voices : master as GainNode);
+
 type Osc = OscillatorType;
 
 function tone(
@@ -152,7 +194,7 @@ function tone(
   g.gain.exponentialRampToValueAtTime(peak, at + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
   o.connect(g);
-  g.connect(master as GainNode);
+  g.connect(voices());
   o.start(at);
   o.stop(at + dur + 0.02);
 }
@@ -176,7 +218,7 @@ function noise(c: AudioContext, at: number, dur: number, peak: number, lowpassFr
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
   src.connect(f);
   f.connect(g);
-  g.connect(master as GainNode);
+  g.connect(voices());
   src.start(at);
   src.stop(at + dur + 0.02);
 }
