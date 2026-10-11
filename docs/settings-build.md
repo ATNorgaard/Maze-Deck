@@ -536,4 +536,6 @@ seeded variations."
 after rules 75, app 45 and art 18 passed and the build ran as Vercel runs
 it. Vercel reported the deployment complete, and the live site was checked
 read-only (STATUS.md has what was checked). A hosted room was not created
-live.
+live at first. On the author's word it then was (room `5YA3RR`, the frozen
+pass's inside), and a headless phone joined it and passed every check of
+`capture-phone.cjs`, seeing the side the GM chose.
