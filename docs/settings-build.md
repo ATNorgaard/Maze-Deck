@@ -1,6 +1,6 @@
 # Building the settings: fourteen places, inside and outside
 
-**Status:** built 2026-10-11 (`set/0`–`set/6`, not pushed); the decisions
+**Status:** built and shipped 2026-10-11 (`set/0`–`set/6`, live as `70cdeae`); the decisions
 are DECISIONS S1–S13. Started the same day, on the author's word ("Implement!") after the
 designs in [art-directions/](art-directions/README.md) were drawn and shown.
 No verdicts were saved on the review page, so every design on it is taken
@@ -528,3 +528,12 @@ seeded variations."
     errors.
 
 **Commit:** `git log --grep set/6`.
+
+### Shipped
+
+`front-door` was fast-forwarded into `main` and pushed as `70cdeae` on
+2026-10-11, at the author's word ("Merge front-door into main and push"),
+after rules 75, app 45 and art 18 passed and the build ran as Vercel runs
+it. Vercel reported the deployment complete, and the live site was checked
+read-only (STATUS.md has what was checked). A hosted room was not created
+live.

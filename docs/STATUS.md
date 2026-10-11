@@ -6,25 +6,25 @@ Rewritten at the end of every session. Coming in cold: read this, then
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md), and for
 the art, [settings-build.md](settings-build.md).
 
-**Last updated:** 2026-10-11: **the settings are built** (`set/0`–`set/6` on
-`front-door`): fourteen settings, each side's approved design as its back,
-vista and world, and a side chosen per crossing. Not yet pushed. The overhaul
-(`world/10`) is what is live.
+**Last updated:** 2026-10-11: **the settings are live** (`set/0`–`set/6`,
+merged to `main` and shipped as `70cdeae`): fourteen settings, each side's
+approved design as its back, vista and world, a side chosen per crossing,
+and a picture per narration line.
 
 ## Where we are
 
-**The game is built, the overhaul is live, and the settings are built on a
-branch.** A GM runs a crossing on one screen or hosts a room that players
-join from their own phones. The server never tells any device what is in the
+**The game is built, and the overhaul and the settings are live.** A GM
+runs a crossing on one screen or hosts a room that players join from their
+own phones. The server never tells any device what is in the
 deck that it should not know.
 
 | | What | Where |
 |---|---|---|
-| Live | The whole overhaul, `world/10` (`678673d`), shipped 2026-10-09 | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `front-door`: the designs reviewed, then built as `set/0`–`set/6` | never pushed |
+| Live | The settings, `set/0`–`set/6` (`70cdeae`), shipped 2026-10-11, on the overhaul (`world/10`, 2026-10-09) | <https://maze-deck-six.vercel.app>, from `main` |
+| Branch | `front-door`: `main` plus this file's update, which rides along with the next ship | never pushed |
 | Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
-**What `front-door` adds** ([settings-build.md](settings-build.md) has each
+**What the settings added** ([settings-build.md](settings-build.md) has each
 phase's log):
 - **Fourteen settings:** the six there were, redrawn, and eight new ones
   (the King's Road, the Mire, the High Road, the Drowned Coast, the Barrow
@@ -49,20 +49,25 @@ frame budget is within noise of the overhaul at rest and in a turn.
 
 ## Next single action
 
-**The author plays the branch.** `cd apps/table && npm run dev`, then
-<http://localhost:5180>: pick a few doors and both sides, play a crossing
-with sound on, and host one with a phone (`node scripts/local-session.mjs
---app`, then <http://localhost:5182>). The contact sheet of all 23 boards is
-`proof/set5-all-sides.png` (regenerate with the sweep in settings-build.md,
-set/5).
+**The author plays it, live**, at <https://maze-deck-six.vercel.app>: a few
+doors and both sides, a crossing with sound on, and a hosted room with a
+phone or two. The room is the one part not yet exercised live (creating one
+writes a row), so a phone seeing the side the GM chose has been proved only
+against `local-session.mjs`.
 
-Then a push. **Pushing `front-door` to `main` deploys it**, the Vercel
-function included, which is what lets a hosted room carry the side to
-phones. Until then a phone on the live site plays the default side.
+**The ship was verified on the live site, read-only** (2026-10-11):
+- Vercel reported the deployment of `70cdeae` complete;
+- the served bundle carries both workers (the world's and the vistas') and
+  the new settings;
+- `/api/session/view` answers an unknown code with 404 *No session with
+  that code*;
+- single-screen crossings on the GPU in the dungeon, the Ember Hold
+  (inside), the Drowned Coast (outside) and the Underdark each drew that
+  side's world at *Full* and its vista moving, with no console errors and
+  no failed requests.
 
-The author's rulings on what the build found are all in: the weather blue
-allowed (AJ4, amended), a picture per narration line (S12), and the
-world's light kept as the designs draw it (S13).
+Then say what to change. Work goes on a branch, since a push to `main`
+deploys.
 
 **Still waiting on the author from before:**
 - [front-door.md](front-door.md): the landing, the threshold and the join
