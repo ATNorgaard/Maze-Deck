@@ -21,7 +21,7 @@ deck that it should not know.
 | | What | Where |
 |---|---|---|
 | Live | The settings, `set/0`–`set/6` (`70cdeae`), shipped 2026-10-11, on the overhaul (`world/10`, 2026-10-09) | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `front-door`: `main` plus this file's update, which rides along with the next ship | never pushed |
+| Branch | `front-door`: level with `main`, this file's update included | never pushed on its own |
 | Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
 **What the settings added** ([settings-build.md](settings-build.md) has each
