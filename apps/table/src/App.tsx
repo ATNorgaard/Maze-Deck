@@ -4,7 +4,7 @@ import { createGame, isJoinCode, makeJoinCode, normaliseJoinCode } from '@maze-d
 import type {
   GameAction, GameState, SeatOffer, Viewer,
 } from '@maze-deck/rules';
-import { biomeOf, sideFor, skinOf } from './biomes';
+import { artOf, biomeOf, sideFor, skinOf } from './biomes';
 import type { BiomeId } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign, ChronicleEntry } from './campaign';
@@ -33,6 +33,10 @@ function codeFromHash(): string | null {
   const code = m ? normaliseJoinCode(m[1] ?? '') : '';
   return isJoinCode(code) ? code : null;
 }
+
+/** The side's still frame, for the page under the world (app.css). */
+const stillStyle = (still: string | undefined) =>
+  (still ? { '--t-still': `url("${still}")` } as React.CSSProperties : undefined);
 
 export function App() {
   const [campaign, setCampaign] = React.useState<Campaign>(() => load());
@@ -237,9 +241,9 @@ export function App() {
   const side = sideFor(biome, previewBiome ? null : inRun ? view.rules.side : campaign.sides[biome.id]);
 
   return (
-    <div className="t-biome" data-biome={biome.id} data-side={side}>
-    {/* The setting's light is painted by `.t-app::before` (see app.css),
-        a fixed layer that drifts very slowly; the provider itself is
+    <div className="t-biome" data-biome={biome.id} data-side={side} style={stillStyle(artOf(biome, side)?.still)}>
+    {/* The place is painted by `.t-app::before` (see app.css): the
+        side's still frame under the world; the provider itself is
         plain ink underneath it. */}
     <MazeDeckProvider
       size="md"

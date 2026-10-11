@@ -31,25 +31,20 @@ html, body, #root {
   isolation: isolate;
 }
 
-/* ---------------- ambient life ----------------
-   The setting's light, drifting. `--t-biome-ground` is the biome's ink
-   plus one faint pool of its light (biomes.css); painting it on a fixed
-   layer larger than the viewport and moving that layer by a few percent
-   over most of a minute is what makes the room feel lit rather than
-   filled. Transform only. */
+/* ---------------- the place, still ----------------
+   Under the world (world/World.tsx): the side's world as one still
+   frame, baked by scripts/bake-backs.mjs and named by App.tsx as
+   `--t-still`, over the setting's ink (biomes.css). It is what the
+   world's *Off* shows, and what shows while the world loads
+   (settings-build.md, S8). Pixel art: scaled up crisp, and held still. */
 .t-app::before {
   content: '';
   position: fixed;
-  inset: -12%;
+  inset: 0;
   z-index: -1;
-  background: var(--t-biome-ground);
+  background: var(--t-still, none) center / cover no-repeat, var(--t-biome-ground);
+  image-rendering: pixelated;
   pointer-events: none;
-  animation: tDrift 48s ease-in-out infinite alternate;
-}
-
-@keyframes tDrift {
-  from { transform: translate(-2.5%, -1.5%); }
-  to   { transform: translate(2.5%, 1.5%); }
 }
 
 /* Torchlight. Every card face's light breathes on a slow cycle, each
@@ -1289,7 +1284,7 @@ html, body, #root {
 .t-soundask__after { margin-top: calc(3 * var(--md-u)); font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-app::before, .t-app .md-card__light, .t-log__line { animation: none; }
+  .t-app .md-card__light, .t-log__line { animation: none; }
   .t-river .md-river__slot, [data-outcome='lost'] .md-card__light { transition: none; }
   [data-outcome='through'] .t-track:first-child { animation: none; }
   .t-baton { transition: none; }

@@ -22,7 +22,7 @@ import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import type { SharedScene } from '../transport/types';
 import { useFittingSize } from '../useFittingSize';
-import { World } from '../world/World';
+import { PHONE_WORDS, World } from '../world/World';
 import '../table.css';
 import '../phone.css';
 
@@ -225,7 +225,9 @@ export function PlayerScreen({ view, biome, side, dispatch, connected, error, sc
     >
       <World
         biome={biome}
+        side={side}
         mood={mood}
+        words={PHONE_WORDS}
         focus={focus}
         flash={flash}
       />

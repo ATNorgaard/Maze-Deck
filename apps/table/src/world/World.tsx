@@ -1,23 +1,57 @@
 import * as React from 'react';
 import { hexToRgb, mix, readPalette, vocabOf } from '@maze-deck/art';
-import type { Palette } from '@maze-deck/art';
+import type { Palette, Side } from '@maze-deck/art';
 import type { CardCategory } from '@maze-deck/rules';
 import type { Biome } from '../biomes';
+import { useDesign } from '../components/pixel';
 import { reducedMotion } from '../stage/motion';
-import { NO_EDGE, WorldRenderer } from './renderer';
-import type { Edge, Mood, Rgb, WorldColors } from './renderer';
+import { WorldPainter } from './painter';
+import { MAX_WORDS, NO_EDGE, WorldRenderer } from './renderer';
+import type { Edge, Mood, Rgb, WordRegion, WorldColors } from './renderer';
 import { startingTier, useWorldChoice } from './settings';
 import type { Tier } from './settings';
 
 interface Props {
   biome: Biome;
+  /** The side being played: the world is that side's. */
+  side: Side;
   /** What the world should look like now. Read every frame; never re-creates anything. */
-  mood: Omit<Mood, 'parallax' | 'focus'>;
+  mood: Omit<Mood, 'parallax' | 'focus' | 'words'>;
+  /** Where the screen has words over the world, and their budgets: BOARD_WORDS or PHONE_WORDS. */
+  words: readonly Words[];
   /** The part of the table the phase is about — the river, the hand — or null. */
   focus: { name: string; ref: React.RefObject<HTMLElement> } | null;
   /** A card just turned: its category, and anything that changes per turn. */
   flash: { key: string; category: CardCategory } | null;
 }
+
+/** A kind of element that carries words, and how bright the world may be behind it. */
+export interface Words {
+  sel: string;
+  budget: number;
+}
+
+/**
+ * The board's words and their budgets, as check-art.cjs reads them:
+ * notes in the faintest parchment need 4.5:1, so 0.023 behind the
+ * caption, the hand and the rail, and 0.074 behind the top bar's and
+ * the ticker's larger words.
+ */
+export const BOARD_WORDS: readonly Words[] = [
+  { sel: '.t-top', budget: 0.074 },
+  { sel: '.t-scene', budget: 0.023 },
+  { sel: '.t-hand', budget: 0.023 },
+  { sel: '.t-rail', budget: 0.023 },
+  { sel: '.t-ticker', budget: 0.074 },
+];
+
+/** The phone's words, on the same budgets. */
+export const PHONE_WORDS: readonly Words[] = [
+  { sel: '.t-phone__top', budget: 0.074 },
+  { sel: '.t-phone__scene', budget: 0.023 },
+  { sel: '.t-phone__prompt', budget: 0.023 },
+  { sel: '.t-phone__rail', budget: 0.023 },
+];
 
 const CAT: Record<CardCategory, keyof Palette['cat']> = {
   'clear-path': 'path', obstacle: 'obst', wanderer: 'wand', item: 'item', monster: 'mons', 'dead-end': 'dead', trap: 'trap',
@@ -30,20 +64,11 @@ const rgb = (hex: string): Rgb => {
 
 function colorsOf(pal: Palette, light: keyof Palette['cat']): WorldColors {
   return {
-    ink900: rgb(pal.ink[900]),
-    ink800: rgb(pal.ink[800]),
-    ink700: rgb(pal.ink[700]),
-    parchment100: rgb(pal.parchment[100]),
-    parchment300: rgb(pal.parchment[300]),
-    parchment400: rgb(pal.parchment[400]),
+    dark: rgb(pal.ink[900]),
     light: rgb(pal.cat[light][500]),
-    lightSoft: rgb(pal.cat[light][300]),
     threat: rgb(pal.cat.mons[500]),
   };
 }
-
-/** Where each setting hangs its light, as its ground did (bake-art.cjs). */
-const POOL_Y: Partial<Record<string, number>> = { desert: 0.2 };
 
 /**
  * How the dark comes in each setting (docs/overhaul.md, phase 5). Every
@@ -79,11 +104,28 @@ function edgeOf(id: string, pal: Palette): Edge {
   }
 }
 
-/** Device pixels per CSS pixel, by tier. Fog is soft; it does not need the full screen. */
-const SCALE: Record<Tier, number> = { high: 1.25, low: 0.5, still: 0.75 };
+/** Canvas pixels per CSS pixel, by tier (times the device's, at most 2). The picture is pixel art: `low` lets the browser scale it up. */
+const SCALE: Record<Tier, number> = { high: 1, low: 0.5, still: 1 };
 
-/** Particles at 1920 x 1080, by tier; scaled by area. */
-const AIR: Record<Tier, number> = { high: 140, low: 60, still: 140 };
+/** The design's frames a second, by tier: the review page drew them at about 12. */
+const FPS: Record<Tier, number> = { high: 12, low: 8, still: 0 };
+
+/** The moment a still world shows. */
+const STILL_T = 1.3;
+
+/** The design's short side, in its own pixels: the worlds were drawn at 320 by 200. */
+const SHORT = 200;
+
+/**
+ * The design's size for a viewport: its shape, with the short side 200
+ * of its pixels, so a phone held upright gets a tall world rather than a
+ * sliver of a wide one. The shape rounds to a tenth, so a small resize
+ * does not build it again.
+ */
+function designSize(w: number, h: number): [number, number] {
+  const a = Math.round(Math.max(0.42, Math.min(2.4, w / Math.max(1, h))) * 10) / 10;
+  return a >= 1 ? [Math.round((SHORT * a) / 4) * 4, SHORT] : [SHORT, Math.round(SHORT / a / 4) * 4];
+}
 
 /**
  * A frame slower than this, as the median over a stretch, is a device
@@ -95,19 +137,26 @@ const WINDOW = 120;
 const NEXT_DOWN: Record<Tier, Tier> = { high: 'low', low: 'still', still: 'still' };
 
 /**
- * The world layer (docs/overhaul.md, phase 3): one canvas behind the
- * table, drawing the setting's ground and its air, and moving with the
- * crossing — the light leaning to where the phase is, a turned card's
- * colour washing out from the river, the dark drawing in with threat,
- * the light going out when the run is lost.
+ * The world layer (docs/overhaul.md, phase 3; docs/settings-build.md,
+ * set/3): one canvas behind the table, showing the played side's world
+ * as its design draws it, and moving with the crossing: a turned card's
+ * colour washing out from the river, the dark drawing in with threat
+ * (and the setting's own lights guttering), the air going still one
+ * strike short of being found, the light going out when the run is
+ * lost, gold when the party is through.
  *
- * Tiers: `high` draws everything at 1.25 device pixels; `low` at half
- * resolution with fewer particles; `still` draws one frame whenever
- * something changes and never runs a loop — the tier for reduced
- * motion, and the floor an `auto` world steps down to. `off`, or no
- * WebGL2, leaves the old animated ground on the page.
+ * The design draws its picture a dozen times a second, in a worker
+ * (paint.worker.ts; only the pixels its lights touch are worked out
+ * again), and the GPU lays the mood over it and scales it to the screen
+ * (renderer.ts).
+ *
+ * Tiers: `high` draws the design 12 times a second at the device's
+ * pixels; `low` 8 times, at half of them; `still` draws one frame
+ * whenever something changes and never runs a loop, the tier for
+ * reduced motion and the floor an `auto` world steps down to. `off`, or
+ * no WebGL2, leaves the world's still frame on the page (biomes.css).
  */
-export function World({ biome, mood, focus, flash }: Props) {
+export function World({ biome, side, mood, words, focus, flash }: Props) {
   const ref = React.useRef<HTMLCanvasElement>(null);
   const [choice] = useWorldChoice();
   const motionless = reducedMotion();
@@ -117,34 +166,72 @@ export function World({ biome, mood, focus, flash }: Props) {
     : choice === 'auto' ? autoTier
     : choice;
   const [failed, setFailed] = React.useState(false);
-  // A new choice is a new attempt: picking a tier by hand after an 
+  // A new choice is a new attempt: picking a tier by hand after an
   // world stepped aside should be able to bring it back.
   React.useEffect(() => { setFailed(false); }, [choice]);
   const live = tier !== null && !failed;
+  const design = useDesign(biome.id, side);
+  // Shown once it has drawn: until then the still frame under it shows.
+  const [drawn, setDrawn] = React.useState<string | null>(null);
+
+  // The design's size follows the viewport's shape, once a resize settles.
+  const [size, setSize] = React.useState<[number, number]>(() => designSize(window.innerWidth, window.innerHeight));
+  React.useEffect(() => {
+    let timer = 0;
+    const settle = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const next = designSize(window.innerWidth, window.innerHeight);
+        setSize((prev) => (prev[0] === next[0] && prev[1] === next[1] ? prev : next));
+      }, 250);
+    };
+    window.addEventListener('resize', settle);
+    return () => { window.clearTimeout(timer); window.removeEventListener('resize', settle); };
+  }, []);
+  const [W, H] = size;
 
   // Read by the loop every frame; written by every render.
-  const target = React.useRef<Mood>({ ...mood, focus: null, parallax: { x: 0, y: 0 } });
-  target.current = { ...mood, focus: target.current.focus, parallax: target.current.parallax };
+  const target = React.useRef<Mood>({ ...mood, focus: null, parallax: { x: 0, y: 0 }, words: [] });
+  target.current = { ...mood, focus: target.current.focus, parallax: target.current.parallax, words: target.current.words };
   const focusRef = React.useRef(focus);
   focusRef.current = focus;
+  const wordsRef = React.useRef(words);
+  wordsRef.current = words;
 
-  /** Where the focus is on screen, measured, so the light follows layout. */
+  /**
+   * The layout, measured: where the focus is, so a card's colour comes
+   * from where the eye is, and where the words are, so the world keeps
+   * its budget behind them.
+   */
   const measureFocus = React.useRef(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const regions: WordRegion[] = [];
+    for (const w of wordsRef.current) {
+      for (const el of document.querySelectorAll(w.sel)) {
+        const b = el.getBoundingClientRect();
+        if (b.width && b.height && regions.length < MAX_WORDS) {
+          regions.push({ x0: b.left / vw, y0: b.top / vh, x1: b.right / vw, y1: b.bottom / vh, budget: w.budget });
+        }
+      }
+    }
+    target.current.words = regions;
     const el = focusRef.current?.ref.current;
     if (!el) { target.current.focus = null; return; }
     const b = el.getBoundingClientRect();
     target.current.focus = {
-      x: (b.left + b.width / 2) / window.innerWidth,
-      y: (b.top + b.height / 2) / window.innerHeight,
+      x: (b.left + b.width / 2) / vw,
+      y: (b.top + b.height / 2) / vh,
     };
   });
   const renderer = React.useRef<WorldRenderer | null>(null);
   const drawStill = React.useRef<() => void>(() => {});
 
-  // The canvas and the loop. Re-made only when the tier changes.
+  // The canvas, the design and the loop. Made again when the tier, the
+  // design or its size changes.
   React.useEffect(() => {
     const canvas = ref.current;
-    if (!canvas || !live || tier === null) return undefined;
+    if (!canvas || !live || tier === null || !design) return undefined;
     let r: WorldRenderer;
     try {
       r = new WorldRenderer(canvas);
@@ -155,9 +242,7 @@ export function World({ biome, mood, focus, flash }: Props) {
     renderer.current = r;
 
     // CPU-drawn WebGL is no GPU at all: one still frame when the mood
-    // changes, never a loop. Measured at a desktop's real density, that
-    // still beats the old animated ground there on every count — idle
-    // 0.17 s against 1.2 s per 4 s at 4x CPU (docs/overhaul.md, world/3).
+    // changes, never a loop.
     if (choice === 'auto' && tier !== 'still' && r.isSoftware()) {
       r.dispose();
       renderer.current = null;
@@ -169,20 +254,39 @@ export function World({ biome, mood, focus, flash }: Props) {
     canvas.addEventListener('webglcontextlost', lost);
 
     const pal = readPalette(canvas);
-    const vocab = vocabOf(biome.id);
-    const area = Math.sqrt((window.innerWidth * window.innerHeight) / (1920 * 1080));
-    r.setting(biome.id, colorsOf(pal, vocab.light), vocab.particle, POOL_Y[biome.id] ?? 0.08,
-      Math.round(AIR[tier] * Math.max(0.5, Math.min(1.6, area))), edgeOf(biome.id, pal));
+    const edge = edgeOf(biome.id, pal);
+    r.setting(colorsOf(pal, vocabOf(biome.id).light), edge);
+    const fit = () => r.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight,
+      Math.min(window.devicePixelRatio || 1, 2) * SCALE[tier]);
+    fit();
 
-    const size = () => r.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight,
-      Math.min(window.devicePixelRatio || 1, 1.5) * SCALE[tier]);
-    size();
+    // The design, drawn in a worker at this size. Where the setting
+    // burns flames, its flickering lights gutter as the dark comes
+    // (Edge.gutter). Each picture is uploaded as it comes; the still
+    // tier, and the first picture, are drawn at once.
+    r.picture(W, H);
+    let shown = false;
+    const painter = new WorldPainter((pixels) => {
+      r.upload(pixels);
+      if (tier === 'still') r.frame(30, Infinity, target.current);
+      else if (!shown) r.frame(performance.now() / 1000, 0, target.current);
+      if (!shown) { shown = true; setDrawn(design.id); }
+    }, () => setFailed(true));
+    const paint = (t: number) => painter.request(t, edge.gutter * r.threat);
 
-    // The still tier draws on demand, at a fixed moment.
-    drawStill.current = () => { measureFocus.current(); r.frame(30, Infinity, target.current, true); };
+    // The still tier draws on demand, at a fixed moment: the mood at
+    // once, and the picture when the worker has it.
+    drawStill.current = () => {
+      measureFocus.current();
+      r.frame(30, Infinity, target.current);
+      paint(STILL_T);
+    };
 
     let raf = 0;
     let last = performance.now();
+    let lastPaint = -Infinity;
+    // The design's own clock: it runs slower in the hush.
+    let clock = STILL_T;
     const intervals: number[] = [];
     let frames = 0;
     let windowStart = performance.now();
@@ -203,9 +307,14 @@ export function World({ biome, mood, focus, flash }: Props) {
         }
       }
       last = now;
+      clock += dt * r.clock;
       // Layout is read a few times a second, not every frame.
       if ((frames += 1) % 15 === 1) measureFocus.current();
-      r.frame(now / 1000, dt, target.current, true);
+      if (now - lastPaint >= 1000 / FPS[tier] - 4) {
+        lastPaint = now;
+        paint(clock);
+      }
+      r.frame(now / 1000, dt, target.current);
       raf = requestAnimationFrame(loop);
     };
 
@@ -220,13 +329,16 @@ export function World({ biome, mood, focus, flash }: Props) {
     const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
     const visible = () => (document.visibilityState === 'hidden' ? stop() : start());
 
-    const onResize = () => { size(); if (tier === 'still') drawStill.current(); };
+    const onResize = () => { fit(); if (tier === 'still') drawStill.current(); };
     window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', visible);
-    start();
+    let disposed = false;
+    void painter.load(biome.id, side, W, H, edge.gutter > 0).then(() => { if (!disposed) start(); });
 
     return () => {
+      disposed = true;
       stop();
+      painter.dispose();
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', visible);
       canvas.removeEventListener('webglcontextlost', lost);
@@ -234,15 +346,15 @@ export function World({ biome, mood, focus, flash }: Props) {
       renderer.current = null;
       drawStill.current = () => {};
     };
-  }, [tier, live, biome.id, choice]);
+  }, [tier, live, biome.id, side, choice, design, W, H]);
 
-  // Desktop pointer parallax: a few pixels, the far fog least.
+  // Desktop pointer parallax: a few pixels.
   React.useEffect(() => {
     if (!live || tier === 'still' || !window.matchMedia?.('(pointer: fine)').matches) return undefined;
     const move = (e: PointerEvent) => {
       target.current.parallax = {
-        x: (e.clientX / window.innerWidth - 0.5) * -16,
-        y: (e.clientY / window.innerHeight - 0.5) * -10,
+        x: (e.clientX / window.innerWidth - 0.5) * -12,
+        y: (e.clientY / window.innerHeight - 0.5) * -8,
       };
     };
     window.addEventListener('pointermove', move, { passive: true });
@@ -266,5 +378,14 @@ export function World({ biome, mood, focus, flash }: Props) {
   }, [tier, stillKey]);
 
   if (!live) return null;
-  return <canvas ref={ref} className="t-world" data-live="" data-tier={tier ?? undefined} aria-hidden="true" />;
+  return (
+    <canvas
+      ref={ref}
+      className="t-world"
+      data-live={(design !== null && drawn === design.id) || undefined}
+      data-tier={tier ?? undefined}
+      data-design={design?.id}
+      aria-hidden="true"
+    />
+  );
 }

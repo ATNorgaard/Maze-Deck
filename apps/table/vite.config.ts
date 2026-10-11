@@ -17,6 +17,8 @@ export default defineConfig({
       '@maze-deck/ui/styles': here('../../packages/ui/src/styles/index.css'),
       '@maze-deck/ui': here('../../packages/ui/src/index.ts'),
       '@maze-deck/rules': here('../../packages/rules/src/index.ts'),
+      // The painter alone, for the world's worker (world/paint.worker.ts).
+      '@maze-deck/art/paint': here('../../packages/art/src/paint/index.ts'),
       '@maze-deck/art': here('../../packages/art/src/index.ts'),
     },
     // packages/art has no node_modules of its own, so its React is the
@@ -24,5 +26,8 @@ export default defineConfig({
     // import from a directory with none: two Reacts would break every hook.
     dedupe: ['react', 'react-dom'],
   },
+  // The world's worker loads one setting's designs at a time, as the
+  // page does: as ES modules, so each setting is still its own chunk.
+  worker: { format: 'es' },
   server: { port: 5180 },
 });

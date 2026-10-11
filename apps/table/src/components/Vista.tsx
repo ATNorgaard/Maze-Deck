@@ -25,8 +25,8 @@ const MIN_HEIGHT = 56;
 /** The height the designs were drawn at, in their own pixels. */
 const DESIGN_H = 72;
 
-/** Frames a second while the light moves: the designs' flicker was drawn at this. */
-const FPS = 8;
+/** Frames a second while the light moves: the review page drew the designs at about this. */
+const FPS = 12;
 
 /** The moment a still vista shows: reduced motion, or the world held still or off. */
 const STILL_T = 1.3;

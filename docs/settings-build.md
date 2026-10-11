@@ -28,7 +28,7 @@ phase (`set/N`).
 | S4 | **Each setting's art loads only when it is played** (a dynamic import per setting). | All fourteen are ~14,000 lines; the game should not ship them all up front. |
 | S5 | **Backs are baked as PNGs** by a Node script, one per side, and **tilt as a whole card**. The new backs have no inner parallax layers. | A painted pixel hides what is behind it, so a design cannot be split into clean depth layers without a hole or a ghost when they move. The card's own tilt, sheen and weight stay. |
 | S6 | **The vista is the design, drawn live on a canvas,** a few frames a second, crossfading on each card as now. | Each vista builds in under 30 ms and animates its own light. |
-| S7 | **The world is the design, resolved on the GPU.** The painter's per-pixel ramps, values and light fields upload once as textures; each frame sends only the lights' strengths, and the shader snaps to the ramp exactly as the painter does. The mood (threat, the dark's edge, dim, bloom, the flash) works in the same value space, so it steps down the ramp, staying pixel art. Sprites and particles are drawn by the design on the CPU into an overlay. | Worlds carry up to 26 flickering lights. Per frame on the CPU that is too much for a phone; on the GPU it is nothing. |
+| S7 | **The world is the design, drawn in a worker; the GPU adds the mood.** *(Revised in set/3.)* The design works out its own picture about 12 times a second in a Web Worker, exactly as approved, sprites and haze included. The GPU lays the mood over it at the design's size, as the painter blends a coloured light: in dithered fifths per design pixel. The mood covers threat, the dark's edge, the eyes, dim, bloom and the flash. The GPU then scales the picture to cover the screen. | Planned as a GPU resolve of the painter. But some designs' overlays shift rows of the finished picture (heat haze), which a GPU overlay cannot reproduce, and once the painter redraws only lit pixels a frame costs under 2 ms. On the main thread that still cost a mid phone 0.2 to 0.35 s per 4 s, so it runs in a worker. |
 | S8 | **"Off" shows the world's still frame as a picture** (a baked PNG per side), replacing the old animated SVG grounds. | It costs nothing while it is up, and it is the same place. |
 
 ## Phases
@@ -226,3 +226,97 @@ which way the light falls) if the author wants the variety back.
 - **Tests:** art 16, app 41, rules 75; both apps typecheck.
 
 **Commit:** `git log --grep set/2`.
+
+### set/3: the world
+
+**Changed.**
+- **The world is the side's design** (S7, revised).
+  - It is built at the viewport's shape, 200 of its own pixels on the
+    short side, so a phone held upright gets a tall world.
+  - A Web Worker (`world/paint.worker.ts`) draws its picture 12 times a
+    second (8 on the *Light* tier): the lit pixels, then the design's
+    sprites, particles and haze. The page uploads each picture as it
+    comes.
+  - The GPU (`world/renderer.ts`) makes two passes:
+    - the **mood**, at the design's size, as the painter blends a
+      coloured light (dithered fifths per design pixel);
+    - the **screen**, the result scaled up nearest-neighbour to cover
+      the viewport, nudged a few device pixels by the pointer.
+- **The mood, in pixel art.**
+  - A card's colour washes out from the river.
+  - From the first strike the dark closes in, in ragged tendrils,
+    reddening as it comes.
+  - The setting's idiom at the edge: frost, a sand wall, or eyes, which
+    are now a pixel each and blink.
+  - In the dungeon and the tower, the design's own flickering lights
+    gutter as the dark comes.
+  - One strike short of being found, the design's clock slows.
+  - Lost, the light goes out; through, gold rises.
+  - Nothing of the dark shows at rest: the approved designs are the
+    world as drawn.
+- **Words stay readable** (new). The screen names where its words are,
+  with the same budgets `check-art.cjs` reads (`BOARD_WORDS`,
+  `PHONE_WORDS`). Behind them, a design pixel brighter than the budget
+  steps towards the dark a fifth at a time until it is under. Only the
+  bright details passing behind words change (the dungeon's chain
+  behind the run's title, its torches behind a phone's tall top bar);
+  the dark that is most of every world is left alone.
+- **Off is the side's still frame** (S8), baked by `bake-backs.mjs`,
+  crisp and held still. It also shows while the world loads. The old
+  SVG grounds (six) and the page's slow drift are gone.
+- **The vista now moves at 12 frames a second**, as the review page
+  drew the designs, to match the world.
+- `@maze-deck/art/paint` is the painter alone, for the worker, and
+  workers build as ES modules so each setting stays its own chunk.
+- `check-art.cjs` reads the PNG backs, takes `--side`, and logs where
+  each region of words is. `node scripts/bench-world.mjs [WxH,...]`
+  measures every side's world frame.
+
+**Gone, for the author to know.** The old world's light no longer leans
+towards the part of the table the phase is about, and its pool no longer
+widens with ground gained. Either would lift the picture behind the
+river and the caption, which the budget forbids, and the approved
+designs already light themselves.
+
+**Found, for the author.** The deep forest's outside back has 6.6% of
+its pixels near the Wanderer's blue, over the 5% colour reservation in
+`check-art.cjs`. It is its night sky, approved as drawn, so it is left
+for the author to rule on. The *Off* still is baked without the words'
+budget, so a bright detail behind the top bar there is as drawn.
+
+**Verified.**
+- **A dungeon walk on the GPU:**
+  - the wall, its torches and the gate behind the table, crisp, with
+    the vista's gate in line with the world's;
+  - 3 reveals at **0px**;
+  - the run closed, the world dims in steps.
+- **Staged moments** (`capture-score.cjs`):
+  - at one strike the edges darken in ragged dithered steps, with eyes
+    a pixel each at the sides;
+  - found, the edge reddens.
+- **A deep forest walk with the world in the worker:** the root tunnel
+  with its glowing mushrooms; 3 reveals at **0px**.
+- **The luminance budget** (`check-art.cjs`), every region within it:
+  - the dungeon at 1600x1000, 1366x768, 1920x1080, 768x1024 and
+    390x844;
+  - the deep forest at 1600x1000 and 390x844.
+  - Before the words' budget, the top bar failed at every size and the
+    caption at 768x1024 by 0.0001.
+- **Every setting of the world, in a probe:**
+  - *Auto* draws at *Full* on the GPU, and falls to *Still* on software
+    GL;
+  - reduced motion and *Still* draw one frame;
+  - *Off* shows `world-desert-inside.png`;
+  - no page errors;
+  - the production build draws from its worker, on both GPUs.
+- **Frame budget** at 390x844, 4x CPU, GPU, *Full*, against set/2 served
+  from a worktree and measured alternately:
+  - at rest, 0.23 s of main thread per 4 s against 0.18 to 0.20 s;
+  - a turn, 0.91 to 1.24 s against 0.87 to 1.19 s, within noise;
+  - the worst frame is 100 ms in both.
+  - With the design drawn on the main thread, as first built, at rest
+    was 0.41 to 0.55 s and a turn 1.31 to 1.56 s; hence the worker.
+- **Build:** the worker is a 2.6 KB module with its own setting chunks.
+- **Tests:** app 41, art 16, rules 75; both apps typecheck.
+
+**Commit:** `git log --grep set/3`.

@@ -1,36 +1,33 @@
 /* ============================================================
-   The world, drawn.
+   The world, drawn (docs/settings-build.md, set/3).
 
-   One WebGL2 canvas behind the table, two programs:
+   The world is the played side's design (packages/art/src/paint). The
+   design resolves its own picture a dozen times a second, in a worker
+   (paint.worker.ts): only the pixels its lights touch are worked out
+   again, then its sprites, particles and haze go on top, exactly as
+   approved.
+   That picture, at the design's own size (about 200 pixels on its
+   short side), is all this file is given. Two cheap GPU passes follow:
 
-   - the GROUND, a full-screen triangle: the setting's ink, slow fog,
-     a pool of its light that breathes, paper grain and a vignette —
-     the animated SVG grounds' picture, made of arithmetic instead of
-     a 2560 x 1440 SVG re-rasterised every frame;
-   - the AIR, one draw of points: dust, motes, sand, drips, snow or
-     embers, whatever the setting has. Every particle's path is a
-     function of time and four random numbers, worked out in the
-     vertex shader, so nothing is uploaded after the first frame.
+   - the MOOD, at the design's size: the table's state laid over the
+     picture in the painter's own idiom, blends in dithered fifths per
+     design pixel. So the dark closing in, a card's colour washing out,
+     the light going out and the gold of getting through stay pixel
+     art; the eyes in the dark are a pixel each;
+   - the SCREEN: that scaled up to cover the viewport, nearest
+     neighbour, nudged a few device pixels by the pointer.
 
-   The main thread's whole job per frame is to ease a few numbers
-   towards the mood and set them as uniforms. No React, no DOM beyond
-   the canvas. See docs/overhaul.md, phase 3.
+   The main thread's job per frame is to ease a few numbers towards the
+   mood; the picture is uploaded only when the design draws a new one.
    ============================================================ */
-
-import type { Particle } from '@maze-deck/art';
 
 export type Rgb = readonly [number, number, number];
 
 export interface WorldColors {
-  ink900: Rgb;
-  ink800: Rgb;
-  ink700: Rgb;
-  parchment100: Rgb;
-  parchment300: Rgb;
-  parchment400: Rgb;
-  /** The setting's own light (its `light` category), 500 and 300. */
+  /** The setting's darkest ink: what the light going out goes to. */
+  dark: Rgb;
+  /** The setting's own light (its `light` category, 500): the gold of getting through. */
   light: Rgb;
-  lightSoft: Rgb;
   /** The Monster red, for the edge of the dark as threat rises. */
   threat: Rgb;
 }
@@ -51,7 +48,7 @@ export interface Edge {
   storm: number;
   /** The colour of the rime or the storm. */
   color: Rgb;
-  /** The light guttering, like a flame about to go. */
+  /** The setting's own lights guttering, like flames about to go (World.tsx). */
   gutter: number;
 }
 
@@ -59,11 +56,27 @@ export const NO_EDGE: Edge = {
   eyes: { count: 0, size: 1, low: 0, color: [0, 0, 0] }, reach: 1, rime: 0, storm: 0, color: [0, 0, 0], gutter: 0,
 };
 
+/**
+ * Where the screen has words over the world, in 0..1 of the viewport
+ * (y down), and how bright the world may be behind them: relative
+ * luminance, the budget docs/art-jobs.md sets and check-art.cjs reads.
+ */
+export interface WordRegion {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  budget: number;
+}
+
+/** At most this many regions of words are kept clear. */
+export const MAX_WORDS = 6;
+
 /** What the table wants the world to look like. The renderer eases towards it. */
 export interface Mood {
-  /** Where the phase is, in 0..1 of the viewport (y down), or null. */
+  /** Where the phase is, in 0..1 of the viewport (y down), or null: where a card's colour washes out from. */
   focus: { x: number; y: number } | null;
-  /** 0..1: strikes against the encounter. */
+  /** 0..1: strikes against the encounter. Past 1, found. */
   threat: number;
   /** 0..1: Clear Paths against the target. */
   progress: number;
@@ -75,32 +88,43 @@ export interface Mood {
   bloom: number;
   /** Pointer parallax in CSS px, desktop only. */
   parallax: { x: number; y: number };
+  /** Where the words are, measured from the layout (World.tsx). */
+  words: readonly WordRegion[];
 }
 
-const KINDS: Record<Particle, number> = { dust: 0, motes: 1, sand: 2, drips: 3, snow: 4, embers: 5 };
-
-const GROUND_VS = `#version 300 es
+const QUAD_VS = `#version 300 es
 void main() {
-  // One triangle that covers the screen.
+  // One triangle that covers the target.
   vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-const GROUND_FS = `#version 300 es
+/*
+ * Rows: the picture is uploaded top row first, so texel row 0 is its top,
+ * and the mood pass keeps that order (its fragment row y is the
+ * picture's row y, counting down). The screen pass turns it the right
+ * way up.
+ */
+const MOOD_FS = `#version 300 es
 precision highp float;
-uniform vec2 u_res;
+precision highp int;
+uniform sampler2D u_pic;
+uniform vec4 u_view;      // the part of the picture on screen, in its pixels: x0, y0, x1, y1
 uniform float u_time;
-uniform vec3 u_ink0, u_ink1, u_ink2, u_parch, u_light, u_threatC, u_flashC;
-uniform vec3 u_pool;      // x, y (0..1, y down), radius as a fraction of the longer side
-uniform vec2 u_focus;     // 0..1, y down
-uniform float u_focusAmt, u_flash, u_threat, u_dim, u_bloom, u_grain, u_fog, u_vignette, u_progress;
-uniform vec2 u_par;       // parallax, px
-// The setting's idiom for the dark (Edge): eyes = count, size, how low; then
-// reach, rime, storm and gutter, and the colours of the eyes and the edge.
-uniform vec3 u_eyes;
-uniform vec3 u_eyeC, u_edgeC;
-uniform float u_reach, u_rime, u_storm, u_gutter;
+uniform vec3 u_dark, u_threatC, u_flashC, u_light, u_eyeC, u_edgeC;
+uniform vec2 u_focus;     // 0..1 of the viewport, y down
+uniform float u_flash, u_threat, u_dim, u_bloom;
+uniform vec3 u_eyes;      // count, size, how low
+uniform float u_reach, u_rime, u_storm;
+uniform vec4 u_words[${MAX_WORDS}];  // where the words are: x0, y0, x1, y1 of the viewport
+uniform float u_budget[${MAX_WORDS}];
+uniform int u_nwords;
 out vec4 o;
+
+float lin(float v) { return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4); }
+float lum(vec3 c) { return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b); }
+
+const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -118,59 +142,32 @@ float fbm(vec2 p) {
   return v;
 }
 
+// As the painter blends a coloured light: in fifths, the step dithered.
+vec3 fifths(vec3 c, vec3 to, float a, float b) {
+  if (a <= 0.02) return c;
+  float s = floor(a * 5.0 + b) / 5.0;
+  return s <= 0.0 ? c : mix(c, to, min(s, 1.0));
+}
+
 void main() {
-  vec2 uv = gl_FragCoord.xy / u_res;
-  uv.y = 1.0 - uv.y;
-  float aspect = u_res.x / u_res.y;
-  vec2 p = vec2(uv.x * aspect, uv.y);
-  vec2 par = u_par / u_res.y;
+  ivec2 ip = ivec2(gl_FragCoord.xy);
+  vec3 c = texelFetch(u_pic, ip, 0).rgb;
+  float b = (BAYER[(ip.y & 3) * 4 + (ip.x & 3)] + 0.5) / 16.0;
 
-  // The ink, a shade lighter at the top where the light is.
-  vec3 col = mix(u_ink1, u_ink0, smoothstep(0.0, 0.9, uv.y));
-
-  // How close the dark is, 0..1. Past 1 (found) only the vignette floods.
+  // Where this pixel is on screen, 0..1, y down; every sum below is taken
+  // at the pixel's centre, so a design pixel is one colour.
+  vec2 span = u_view.zw - u_view.xy;
+  vec2 uv = (vec2(ip) + 0.5 - u_view.xy) / span;
+  float aspect = span.x / span.y;
+  float t = u_time;
   float th = clamp(u_threat, 0.0, 1.0);
 
-  // The light as the dark sees it: cooler and redder with every strike.
-  vec3 grey = vec3(dot(u_light, vec3(0.299, 0.587, 0.114)));
-  vec3 light = mix(u_light, mix(grey * vec3(0.78, 0.86, 1.0), u_threatC, 0.45), th * 0.8);
+  // A card turned: its colour washes out from where the eye is, and goes.
+  vec2 fd = (uv - u_focus) * vec2(aspect, 1.0);
+  c = fifths(c, u_flashC, u_flash * 0.5 * exp(-dot(fd, fd) * 3.0), b);
 
-  // Fog: two slow layers of noise drifting at different paces. It thins
-  // as the party gets on: the way opening up.
-  float t = u_time;
-  vec2 q = (p + par * 0.6) * 1.4;
-  float f1 = fbm(q + vec2(t * 0.011, t * 0.004));
-  float f2 = fbm(q * 2.2 - vec2(t * 0.019, -t * 0.005) + 7.3);
-  float fog = smoothstep(0.42, 0.95, f1 * 0.7 + f2 * 0.3);
-  col = mix(col, u_ink2, fog * u_fog * (1.0 - 0.3 * u_progress));
-
-  // The pool of the setting's light, as the grounds drew it: 0.15 at
-  // the centre, 0.045 at 45%, nothing at the rim. It breathes, it widens
-  // a little with the ground gained, and where the setting burns flames
-  // it gutters as the dark comes.
-  vec2 pc = vec2(u_pool.x * aspect, u_pool.y) + par;
-  float r = u_pool.z * max(aspect, 1.0) * (1.0 + 0.06 * sin(t * 0.571)) * (1.0 + 0.12 * u_progress);
-  float d = length(p - pc) / r;
-  float pool = mix(0.15, 0.045, smoothstep(0.0, 0.45, d)) * (1.0 - smoothstep(0.45, 1.0, d));
-  pool *= 1.0 + 0.1 * sin(t * 0.898) + 0.6 * u_bloom;
-  pool *= 1.0 - u_gutter * th * (0.35 * noise(vec2(t * 6.0, 1.3)) + 0.25 * noise(vec2(t * 15.0, 4.1)));
-  col = mix(col, light, pool * (1.0 - u_dim));
-
-  // Where the phase is: a low light leaning there, felt not seen.
-  vec2 fc = vec2(u_focus.x * aspect, u_focus.y);
-  float fd = length(p - fc);
-  col = mix(col, light, u_focusAmt * 0.05 * exp(-fd * fd * 6.0) * (1.0 - u_dim));
-
-  // A card turned: its colour washes out from the river, and goes.
-  col = mix(col, u_flashC, u_flash * 0.16 * exp(-fd * fd * 3.0));
-
-  // Grain, fixed to the page like the paper it stands for.
-  col = mix(col, u_parch, (hash(floor(gl_FragCoord.xy)) - 0.5) * u_grain);
-
-  // The vignette. Threat draws it in and warms its edge, and it does not
-  // close evenly: it reaches in, in tendrils that shift slowly.
-  // Everything the dark adds is skipped outright before the first strike:
-  // the branches are on uniforms, so every pixel takes the same one.
+  // The dark. Nothing at rest; threat draws it in and reddens it, and it
+  // does not close evenly: it reaches in, in tendrils that shift slowly.
   vec2 off = uv - 0.5;
   float vd = length(off / 0.7);
   if (th > 0.0) {
@@ -178,25 +175,25 @@ void main() {
     float rag = fbm(dir * 2.6 + vec2(vd * 2.0 - t * 0.025, t * 0.011));
     vd += (rag - 0.5) * 0.42 * u_reach * th;
   }
-  float inner = max(0.1, 0.45 - 0.26 * u_threat);
-  float vig = smoothstep(inner, 1.0, vd) * (u_vignette + 0.42 * u_threat);
-  col = mix(col, mix(u_ink0 * 0.55, u_threatC * 0.36, min(1.0, u_threat * 0.7)), clamp(vig, 0.0, 1.0));
+  float inner = max(0.1, 0.5 - 0.3 * u_threat);
+  float vig = smoothstep(inner, 1.0, vd) * 1.1 * u_threat;
+  c = fifths(c, mix(u_dark, u_threatC * 0.4, min(1.0, u_threat * 0.7)), clamp(vig, 0.0, 1.0), b);
 
-  // The setting's own way of closing in. Frost creeping over the edge,
-  // crystalline; or a wall of blown sand, streaked and moving.
+  // The setting's own way of closing in: frost, or a wall of blown sand.
   float edge = smoothstep(inner, 1.0, vd) * th;
   if (u_rime * th > 0.0) {
-    float frost = smoothstep(0.45, 0.8, fbm(uv * vec2(aspect, 1.0) * 16.0 + 3.1));
-    col = mix(col, u_edgeC, edge * u_rime * 0.55 * (0.35 + 0.65 * frost));
+    float frost = smoothstep(0.45, 0.8, fbm(vec2(ip) * 0.09 + 3.1));
+    c = fifths(c, u_edgeC, edge * u_rime * 0.7 * (0.35 + 0.65 * frost), b);
   }
   if (u_storm * th > 0.0) {
-    float sand = fbm(vec2(p.x * 1.6 - t * 0.16, p.y * 10.0));
-    col = mix(col, u_edgeC, edge * u_storm * (0.25 + 0.45 * sand));
+    float sand = fbm(vec2(uv.x * aspect * 1.6 - t * 0.16, uv.y * 10.0));
+    c = fifths(c, u_edgeC, edge * u_storm * (0.3 + 0.5 * sand), b);
   }
 
-  // Eyes in the dark: pairs that come and go, and blink, near the edge.
-  // More of them as the threat rises; none at all before the first strike.
-  float eyeA = 0.0;
+  // Eyes in the dark, a pixel each: pairs that come and go, and blink,
+  // out at the sides where the table is not. More of them as the threat
+  // rises; none before the first strike.
+  float eye = 0.0;
   for (int i = 0; i < 12; i++) {
     if (th <= 0.0) break;
     float fi = float(i);
@@ -204,99 +201,62 @@ void main() {
     float h1 = hash(vec2(fi, 3.7)), h2 = hash(vec2(fi, 9.1)), h3 = hash(vec2(fi, 17.3));
     float a = h1 * 6.2831853;
     vec2 ring = vec2(cos(a), sin(a));
-    // Out at the sides, where the table is not; u_eyes.z keeps them to the floor.
     ring.x = sign(ring.x) * (0.82 + 0.18 * abs(ring.x));
     ring.y = mix(ring.y, abs(ring.y) * 0.8 + 0.2, u_eyes.z);
-    vec2 c = 0.5 + ring * vec2(0.47, 0.44) * (0.86 + 0.12 * h2);
+    vec2 at = 0.5 + ring * vec2(0.47, 0.44) * (0.86 + 0.12 * h2);
     float shown = smoothstep(0.35, 0.75, 0.5 + 0.5 * sin(t * (0.06 + 0.05 * h3) + h2 * 6.2831853));
     shown *= smoothstep(h3 * 0.5, h3 * 0.5 + 0.25, th);
     float open = step(0.05, fract(t * (0.11 + 0.09 * h1) + h3));
-    vec2 dd = (uv - c) * vec2(aspect, 1.0);
-    float er = 0.0032 * u_eyes.y;
-    float es = 0.0095 * u_eyes.y;
-    vec2 e1 = (dd - vec2(es, 0.0)) * vec2(1.0, 1.8);
-    vec2 e2 = (dd + vec2(es, 0.0)) * vec2(1.0, 1.8);
-    float g = exp(-dot(e1, e1) / (er * er)) + exp(-dot(e2, e2) / (er * er));
-    g += 0.18 * exp(-dot(dd, dd) / (er * er * 50.0));
-    eyeA += g * shown * open;
+    ivec2 e = ivec2(floor(u_view.xy + at * span));
+    int gap = u_eyes.y > 1.05 ? 2 : 1;
+    ivec2 d = ip - e;
+    bool hit = d.y == 0 && (d.x == -gap || d.x == gap || (u_eyes.y > 1.05 && (d.x == -gap - 1 || d.x == gap + 1)));
+    if (hit) eye = max(eye, shown * open);
   }
-  col = mix(col, u_eyeC, clamp(eyeA, 0.0, 1.0) * smoothstep(0.0, 0.25, vig) * (1.0 - u_dim));
+  c = fifths(c, u_eyeC, eye * smoothstep(0.0, 0.25, vig) * (1.0 - u_dim), b);
 
   // Through: gold rises over everything. Lost: the light goes out.
-  col = mix(col, u_light, u_bloom * 0.22 * exp(-dot(p - pc, p - pc) * 1.2));
-  col *= 1.0 - 0.62 * u_dim;
+  vec2 bc = off * vec2(aspect, 1.0);
+  c = fifths(c, u_light, u_bloom * 0.45 * exp(-dot(bc, bc) * 1.2), b);
+  c = fifths(c, u_dark, u_dim * 0.85, b);
 
-  o = vec4(col, 1.0);
-}`;
-
-const AIR_VS = `#version 300 es
-precision highp float;
-in vec4 a_r;              // four random numbers per particle
-uniform float u_time, u_scale;
-uniform int u_kind;
-uniform vec2 u_res, u_pool, u_par;
-out float v_a;
-out float v_shape;
-out float v_size;
-out float v_tint;
-const float TAU = 6.2831853;
-
-void main() {
-  float t = u_time;
-  float x = a_r.x, y = a_r.y, s = a_r.z, w = a_r.w;
-  float size = 2.0, alpha = 0.3, shape = 0.0;   // shape: 0 round, 1 falling streak, 2 blown streak
-
-  if (u_kind == 0) {          // dust: hangs, drifts, settles
-    x += 0.013 * sin(t * 0.18 * (0.6 + s) + w * TAU);
-    y = fract(y + 0.01 * cos(t * 0.15 * (0.6 + s) + w * TAU) + t * 0.0018 * (0.3 + s));
-    size = mix(1.2, 3.6, s); alpha = mix(0.10, 0.45, w);
-  } else if (u_kind == 1) {   // motes: drawn to the light, and twinkle
-    float k = 0.25 + 0.75 * s;
-    x = u_pool.x + (x - u_pool.x) * k + 0.010 * sin(t * 0.21 * (0.5 + s) + w * TAU);
-    y = u_pool.y + (y - u_pool.y) * k + 0.012 * cos(t * 0.17 * (0.5 + w) + s * TAU);
-    size = mix(1.2, 3.6, s); alpha = mix(0.15, 0.55, w) * (0.65 + 0.35 * sin(t * 0.8 + w * TAU));
-  } else if (u_kind == 2) {   // sand: blown across
-    x = fract(x + t * 0.05 * (0.6 + s));
-    y += 0.01 * sin(t * 0.6 + w * TAU);
-    size = mix(14.0, 60.0, s); alpha = mix(0.08, 0.25, w); shape = 2.0;
-  } else if (u_kind == 3) {   // drips: fall
-    y = fract(y + t * 0.07 * (0.7 + s));
-    size = mix(8.0, 30.0, s); alpha = mix(0.10, 0.30, w); shape = 1.0;
-  } else if (u_kind == 4) {   // snow: falls, and sways as it does
-    y = fract(y + t * 0.0117 * (0.6 + s));
-    x += 0.011 * sin(t * 0.47 * (0.7 + s) + w * TAU);
-    size = mix(2.0, 6.4, s); alpha = mix(0.25, 0.75, w);
-  } else {                    // embers: rise
-    y = fract(y - t * 0.0136 * (0.6 + s));
-    x += 0.007 * sin(t * 0.6 * (0.7 + s) + w * TAU);
-    size = mix(1.6, 5.2, s); alpha = mix(0.35, 0.9, w);
+  // Words stay readable. Behind them, a pixel brighter than the budget
+  // steps towards the dark, a fifth at a time, until it is under: a
+  // torch or a chain passing behind the title dims there, and the dark
+  // that is most of every world is left alone. One design pixel of
+  // margin, so a pixel the words' edge crosses counts as behind them.
+  float least = 1.0;
+  vec2 px = 1.0 / span;
+  for (int i = 0; i < ${MAX_WORDS}; i++) {
+    if (i >= u_nwords) break;
+    vec4 r = u_words[i];
+    if (uv.x >= r.x - px.x && uv.x <= r.z + px.x && uv.y >= r.y - px.y && uv.y <= r.w + px.y) least = min(least, u_budget[i]);
+  }
+  if (least < 1.0 && lum(c) > least) {
+    vec3 was = c;
+    for (int k = 1; k <= 5; k++) {
+      c = mix(was, u_dark, float(k) / 5.0);
+      if (lum(c) <= least) break;
+    }
   }
 
-  // Nearer particles move further with the pointer.
-  vec2 pos = vec2(x, y) + u_par / u_res * (0.4 + s);
-  gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
-  gl_PointSize = size * u_scale;
-  v_a = alpha; v_shape = shape; v_size = size * u_scale; v_tint = w;
+  o = vec4(c, 1.0);
 }`;
 
-const AIR_FS = `#version 300 es
-precision mediump float;
-in float v_a;
-in float v_shape;
-in float v_size;
-in float v_tint;
-uniform vec3 u_c0, u_c1;
-uniform float u_fade;
+const SCREEN_FS = `#version 300 es
+precision highp float;
+precision highp int;
+uniform sampler2D u_mood;
+uniform vec2 u_res;       // the canvas, in its pixels
+uniform vec4 u_view;      // the part of the picture on screen, in its pixels
+uniform vec2 u_par;       // parallax, canvas pixels
 out vec4 o;
-
 void main() {
-  vec2 pc = gl_PointCoord - 0.5;
-  float a;
-  float line = 1.2 / max(v_size, 1.0);   // a streak is about a pixel wide
-  if (v_shape < 0.5) a = smoothstep(0.5, 0.15, length(pc));
-  else if (v_shape < 1.5) a = (1.0 - smoothstep(0.0, line, abs(pc.x))) * smoothstep(0.5, 0.2, abs(pc.y));
-  else a = (1.0 - smoothstep(0.0, line, abs(pc.y))) * smoothstep(0.5, 0.2, abs(pc.x));
-  o = vec4(mix(u_c0, u_c1, step(0.5, v_tint)), a * v_a * u_fade);
+  vec2 s = vec2(gl_FragCoord.x, u_res.y - gl_FragCoord.y) - u_par;
+  vec2 d = u_view.xy + s / u_res * (u_view.zw - u_view.xy);
+  ivec2 size = textureSize(u_mood, 0);
+  ivec2 ip = clamp(ivec2(floor(d)), ivec2(0), size - 1);
+  o = vec4(texelFetch(u_mood, ip, 0).rgb, 1.0);
 }`;
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
@@ -322,36 +282,45 @@ function program(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgr
   return p;
 }
 
+function texture(gl: WebGL2RenderingContext, w: number, h: number): WebGLTexture {
+  const tex = gl.createTexture();
+  if (!tex) throw new Error('No texture');
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, h);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+
 /** Ease `from` towards `to` with a time constant of `tau` seconds. */
 const ease = (from: number, to: number, dt: number, tau: number) => from + (to - from) * (1 - Math.exp(-dt / tau));
 
-/** A small seeded generator, so a setting's air is the same every visit. */
-function seeded(seed: string): () => number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < seed.length; i += 1) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-  return () => {
-    h = (h + 0x6d2b79f5) >>> 0;
-    let t = h;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/** How much larger than the screen the picture is drawn, so the parallax never shows its edge. */
+const OVERSCAN = 1.025;
 
 export class WorldRenderer {
   private gl: WebGL2RenderingContext;
-  private ground: WebGLProgram;
-  private air: WebGLProgram;
+  private mood: WebGLProgram;
+  private screen: WebGLProgram;
   private vao: WebGLVertexArrayObject;
-  private buffer: WebGLBuffer;
-  private u: Record<string, WebGLUniformLocation | null> = {};
-  private ua: Record<string, WebGLUniformLocation | null> = {};
-  private count = 0;
-  private kind = 0;
-  private pool: [number, number, number] = [0.5, 0.08, 0.55];
+  private um: Record<string, WebGLUniformLocation | null> = {};
+  private us: Record<string, WebGLUniformLocation | null> = {};
+  private pic: WebGLTexture | null = null;
+  private out: WebGLTexture | null = null;
+  private fbo: WebGLFramebuffer | null = null;
+  /** The picture's size, in its own pixels. */
+  private W = 0;
+  private H = 0;
+  /** No picture uploaded yet: nothing to draw. */
+  private empty = true;
   private colors: WorldColors | null = null;
   private edge: Edge = NO_EDGE;
+  /** CSS pixels to canvas pixels. */
   private scale = 1;
+  /** The part of the picture on screen, in its pixels. */
+  private view: [number, number, number, number] = [0, 0, 1, 1];
   /** The constants need sending again (see `constants`). */
   private dirty = true;
   /** No frame drawn yet: the first goes straight to the mood. */
@@ -359,17 +328,11 @@ export class WorldRenderer {
 
   /* The mood as drawn, easing towards the mood as asked for. */
   private now = {
-    fx: 0.5, fy: 0.55, focusAmt: 0, threat: 0, progress: 0, dim: 0, bloom: 0, px: 0, py: 0, flash: 0,
-    /** How fast the air moves: slows as the party nears being found. */
+    fx: 0.5, fy: 0.55, threat: 0, dim: 0, bloom: 0, px: 0, py: 0, flash: 0,
+    /** How fast the design's own clock runs: slows as the party nears being found. */
     air: 1,
   };
   private flashColor: Rgb = [0, 0, 0];
-  /**
-   * The air's own clock. Every particle's path is a function of time, so
-   * slowing the air means slowing the time it is given — run on its own
-   * clock, it slows without a jump.
-   */
-  private airTime = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
@@ -378,27 +341,17 @@ export class WorldRenderer {
     });
     if (!gl) throw new Error('No WebGL2');
     this.gl = gl;
-    this.ground = program(gl, GROUND_VS, GROUND_FS);
-    this.air = program(gl, AIR_VS, AIR_FS);
-    for (const n of ['u_res', 'u_time', 'u_ink0', 'u_ink1', 'u_ink2', 'u_parch', 'u_light', 'u_threatC', 'u_flashC',
-      'u_pool', 'u_focus', 'u_focusAmt', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_grain', 'u_fog', 'u_vignette', 'u_par',
-      'u_progress', 'u_eyes', 'u_eyeC', 'u_edgeC', 'u_reach', 'u_rime', 'u_storm', 'u_gutter']) {
-      this.u[n] = gl.getUniformLocation(this.ground, n);
+    this.mood = program(gl, QUAD_VS, MOOD_FS);
+    this.screen = program(gl, QUAD_VS, SCREEN_FS);
+    for (const n of ['u_pic', 'u_view', 'u_time', 'u_dark', 'u_threatC', 'u_flashC', 'u_light', 'u_eyeC', 'u_edgeC',
+      'u_focus', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_eyes', 'u_reach', 'u_rime', 'u_storm',
+      'u_words', 'u_budget', 'u_nwords']) {
+      this.um[n] = gl.getUniformLocation(this.mood, n);
     }
-    for (const n of ['u_time', 'u_scale', 'u_kind', 'u_res', 'u_pool', 'u_par', 'u_c0', 'u_c1', 'u_fade']) {
-      this.ua[n] = gl.getUniformLocation(this.air, n);
-    }
+    for (const n of ['u_mood', 'u_res', 'u_view', 'u_par']) this.us[n] = gl.getUniformLocation(this.screen, n);
     const vao = gl.createVertexArray();
-    const buffer = gl.createBuffer();
-    if (!vao || !buffer) throw new Error('No buffers');
+    if (!vao) throw new Error('No vertex array');
     this.vao = vao;
-    this.buffer = buffer;
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    const loc = gl.getAttribLocation(this.air, 'a_r');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 0, 0);
-    gl.bindVertexArray(null);
   }
 
   /**
@@ -412,20 +365,40 @@ export class WorldRenderer {
     return /swiftshader|llvmpipe|software/i.test(name);
   }
 
-  /** The setting: its colours, what is in its air, where its light hangs, how its dark comes. */
-  setting(id: string, colors: WorldColors, particle: Particle, poolY: number, count: number, edge: Edge = NO_EDGE): void {
+  /** The setting: its colours and how its dark comes. */
+  setting(colors: WorldColors, edge: Edge = NO_EDGE): void {
     this.colors = colors;
     this.edge = edge;
-    this.kind = KINDS[particle];
-    this.pool = [0.5, poolY, 0.55];
-    const r = seeded(`${id}:air`);
-    const data = new Float32Array(count * 4);
-    for (let i = 0; i < data.length; i += 1) data[i] = r();
-    const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    this.count = count;
     this.dirty = true;
+  }
+
+  /** The design's picture size. Its textures are made again only when it changes. */
+  picture(W: number, H: number): void {
+    if (W === this.W && H === this.H) return;
+    const gl = this.gl;
+    if (this.pic) gl.deleteTexture(this.pic);
+    if (this.out) gl.deleteTexture(this.out);
+    if (this.fbo) gl.deleteFramebuffer(this.fbo);
+    this.pic = texture(gl, W, H);
+    this.out = texture(gl, W, H);
+    this.fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.out, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.W = W;
+    this.H = H;
+    this.empty = true;
+    this.dirty = true;
+  }
+
+  /** A new frame of the design: RGBA, top row first, at the picture's size. */
+  upload(pixels: Uint8Array): void {
+    if (!this.pic || pixels.length !== this.W * this.H * 4) return;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.pic);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.W, this.H, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    this.empty = false;
   }
 
   resize(cssW: number, cssH: number, scale: number): void {
@@ -444,11 +417,22 @@ export class WorldRenderer {
     this.dirty = true;
   }
 
+  /** How fast the design's clock should run now (the hush slows it). */
+  get clock(): number {
+    return this.now.air;
+  }
+
+  /** The threat as drawn, eased: what the setting's lights gutter by. */
+  get threat(): number {
+    return Math.min(1, this.now.threat);
+  }
+
   /**
-   * Ease towards `mood` by `dt` seconds and draw at `time`. A `dt` of
-   * Infinity jumps straight there, which is how the still tier draws.
+   * Ease towards `mood` by `dt` seconds and draw, with the mood's own
+   * motion (the tendrils, the eyes) at `time`. A `dt` of Infinity jumps
+   * straight there, which is how the still tier draws.
    */
-  frame(time: number, dt: number, mood: Mood, air: boolean): void {
+  frame(time: number, dt: number, mood: Mood): void {
     const c = this.colors;
     if (!c) return;
     // The first frame starts where it is asked to, rather than easing in
@@ -458,104 +442,95 @@ export class WorldRenderer {
     const n = this.now;
     n.fx = ease(n.fx, mood.focus?.x ?? n.fx, dt, 0.9);
     n.fy = ease(n.fy, mood.focus?.y ?? n.fy, dt, 0.9);
-    n.focusAmt = ease(n.focusAmt, mood.focus ? 1 : 0, dt, 0.9);
     n.threat = ease(n.threat, mood.threat, dt, 1.4);
-    n.progress = ease(n.progress, mood.progress, dt, 1.4);
     n.dim = ease(n.dim, mood.dim, dt, 0.7);
     n.bloom = ease(n.bloom, mood.bloom, dt, 0.6);
     n.px = ease(n.px, mood.parallax.x, dt, 0.5);
     n.py = ease(n.py, mood.parallax.y, dt, 0.5);
     n.flash = Number.isFinite(dt) ? n.flash * Math.exp(-dt / 0.55) : 0;
     n.air = ease(n.air, mood.hush > 0 ? 0.3 : 1, dt, 1.6);
-    this.airTime = Number.isFinite(dt) ? this.airTime + dt * n.air : time;
+    if (this.empty || !this.fbo) return;
 
     const gl = this.gl;
-    const u = this.u;
-    const a = this.ua;
     if (this.dirty) this.constants(c);
+    gl.bindVertexArray(this.vao);
 
-    gl.disable(gl.BLEND);
-    gl.useProgram(this.ground);
-    gl.uniform1f(u.u_time!, time);
-    gl.uniform2f(u.u_focus!, n.fx, n.fy);
-    gl.uniform1f(u.u_focusAmt!, n.focusAmt);
-    gl.uniform1f(u.u_flash!, n.flash);
-    gl.uniform1f(u.u_threat!, n.threat);
-    gl.uniform1f(u.u_progress!, n.progress);
-    gl.uniform1f(u.u_dim!, n.dim);
-    gl.uniform1f(u.u_bloom!, n.bloom);
-    gl.uniform2f(u.u_par!, n.px * this.scale, n.py * this.scale);
+    // The mood, at the picture's size.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+    gl.viewport(0, 0, this.W, this.H);
+    gl.useProgram(this.mood);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.pic);
+    const m = this.um;
+    gl.uniform1f(m.u_time!, time);
+    gl.uniform2f(m.u_focus!, n.fx, n.fy);
+    gl.uniform1f(m.u_flash!, n.flash);
+    gl.uniform1f(m.u_threat!, n.threat);
+    gl.uniform1f(m.u_dim!, n.dim);
+    gl.uniform1f(m.u_bloom!, n.bloom);
+    const words = mood.words.slice(0, MAX_WORDS);
+    if (words.length) {
+      gl.uniform4fv(m.u_words!, words.flatMap((w) => [w.x0, w.y0, w.x1, w.y1]));
+      gl.uniform1fv(m.u_budget!, words.map((w) => w.budget));
+    }
+    gl.uniform1i(m.u_nwords!, words.length);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-    if (!air || this.count === 0) return;
-    gl.enable(gl.BLEND);
-    gl.useProgram(this.air);
-    gl.uniform1f(a.u_time!, this.airTime);
-    gl.uniform2f(a.u_par!, n.px * this.scale, n.py * this.scale);
-    gl.uniform1f(a.u_fade!, 1 - 0.7 * n.dim);
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.POINTS, 0, this.count);
+    // The screen.
+    const canvas = gl.canvas as HTMLCanvasElement;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(this.screen);
+    gl.bindTexture(gl.TEXTURE_2D, this.out);
+    gl.uniform2f(this.us.u_par!, Math.round(n.px * this.scale), Math.round(n.py * this.scale));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindVertexArray(null);
   }
 
   /**
    * Everything that changes only with the setting, the size or a flash's
-   * colour. A program keeps its uniforms, so these go once, not per frame:
-   * the per-frame work is the time and the eased mood.
+   * colour. A program keeps its uniforms, so these go once, not per frame.
    */
   private constants(c: WorldColors): void {
     const gl = this.gl;
     const canvas = gl.canvas as HTMLCanvasElement;
-    const u = this.u;
-    const a = this.ua;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // The picture covers the screen, centred, a little larger than it.
+    const k = Math.max(canvas.width / this.W, canvas.height / this.H) * OVERSCAN;
+    const vw = canvas.width / k;
+    const vh = canvas.height / k;
+    this.view = [(this.W - vw) / 2, (this.H - vh) / 2, (this.W + vw) / 2, (this.H + vh) / 2];
 
-    gl.useProgram(this.ground);
-    gl.uniform2f(u.u_res!, canvas.width, canvas.height);
-    gl.uniform3fv(u.u_ink0!, c.ink900);
-    gl.uniform3fv(u.u_ink1!, c.ink800);
-    gl.uniform3fv(u.u_ink2!, c.ink700);
-    gl.uniform3fv(u.u_parch!, c.parchment300);
-    gl.uniform3fv(u.u_light!, c.light);
-    gl.uniform3fv(u.u_threatC!, c.threat);
-    gl.uniform3fv(u.u_flashC!, this.flashColor);
-    gl.uniform3fv(u.u_pool!, this.pool);
-    gl.uniform1f(u.u_grain!, 0.05);
-    gl.uniform1f(u.u_fog!, 0.5);
-    gl.uniform1f(u.u_vignette!, 0.55);
+    const m = this.um;
+    gl.useProgram(this.mood);
+    gl.uniform1i(m.u_pic!, 0);
+    gl.uniform4fv(m.u_view!, this.view);
+    gl.uniform3fv(m.u_dark!, c.dark);
+    gl.uniform3fv(m.u_light!, c.light);
+    gl.uniform3fv(m.u_threatC!, c.threat);
+    gl.uniform3fv(m.u_flashC!, this.flashColor);
     const e = this.edge;
-    gl.uniform3f(u.u_eyes!, e.eyes.count, e.eyes.size, e.eyes.low);
-    gl.uniform3fv(u.u_eyeC!, e.eyes.color);
-    gl.uniform3fv(u.u_edgeC!, e.color);
-    gl.uniform1f(u.u_reach!, e.reach);
-    gl.uniform1f(u.u_rime!, e.rime);
-    gl.uniform1f(u.u_storm!, e.storm);
-    gl.uniform1f(u.u_gutter!, e.gutter);
+    gl.uniform3f(m.u_eyes!, e.eyes.count, e.eyes.size, e.eyes.low);
+    gl.uniform3fv(m.u_eyeC!, e.eyes.color);
+    gl.uniform3fv(m.u_edgeC!, e.color);
+    gl.uniform1f(m.u_reach!, e.reach);
+    gl.uniform1f(m.u_rime!, e.rime);
+    gl.uniform1f(m.u_storm!, e.storm);
 
-    gl.useProgram(this.air);
-    gl.uniform1f(a.u_scale!, this.scale);
-    gl.uniform1i(a.u_kind!, this.kind);
-    gl.uniform2f(a.u_res!, canvas.width, canvas.height);
-    gl.uniform2f(a.u_pool!, this.pool[0], this.pool[1]);
-    const k = this.kind;
-    // What each kind is made of, as the grounds drew it.
-    const [c0, c1] =
-      k === 4 ? [c.parchment100, c.parchment100]
-      : k === 5 ? [c.light, c.lightSoft]
-      : k === 1 || k === 3 ? [c.lightSoft, c.lightSoft]
-      : k === 2 ? [c.parchment400, c.parchment400]
-      : [c.parchment300, c.parchment300];
-    gl.uniform3fv(a.u_c0!, c0);
-    gl.uniform3fv(a.u_c1!, c1);
+    const s = this.us;
+    gl.useProgram(this.screen);
+    gl.uniform1i(s.u_mood!, 0);
+    gl.uniform2f(s.u_res!, canvas.width, canvas.height);
+    gl.uniform4fv(s.u_view!, this.view);
     this.dirty = false;
   }
 
   dispose(): void {
     const gl = this.gl;
-    gl.deleteProgram(this.ground);
-    gl.deleteProgram(this.air);
-    gl.deleteBuffer(this.buffer);
+    gl.deleteProgram(this.mood);
+    gl.deleteProgram(this.screen);
     gl.deleteVertexArray(this.vao);
+    if (this.pic) gl.deleteTexture(this.pic);
+    if (this.out) gl.deleteTexture(this.out);
+    if (this.fbo) gl.deleteFramebuffer(this.fbo);
   }
 }

@@ -38,7 +38,7 @@ import { useTicking } from '../stage/useTicking';
 import type { DrawnPrompt } from '../tables';
 import { useTableFit } from '../useTableFit';
 import { useTilt } from '../useTilt';
-import { World } from '../world/World';
+import { BOARD_WORDS, World } from '../world/World';
 import { WORLD_CHOICES, useWorldChoice } from '../world/settings';
 import type { WorldChoice } from '../world/settings';
 import '../table.css';
@@ -483,7 +483,9 @@ export function TableScreen({
     >
       <World
         biome={biome}
+        side={side}
         mood={worldMood}
+        words={BOARD_WORDS}
         focus={focus === 'river' ? { name: focus, ref: riverRef } : focus === 'actions' ? { name: focus, ref: handRef } : null}
         flash={worldFlash}
       />
