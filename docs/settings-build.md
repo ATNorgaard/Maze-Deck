@@ -1,7 +1,7 @@
 # Building the settings: fourteen places, inside and outside
 
 **Status:** built 2026-10-11 (`set/0`–`set/6`, not pushed); the decisions
-are DECISIONS S1–S12. Started the same day, on the author's word ("Implement!") after the
+are DECISIONS S1–S13. Started the same day, on the author's word ("Implement!") after the
 designs in [art-directions/](art-directions/README.md) were drawn and shown.
 No verdicts were saved on the review page, so every design on it is taken
 as approved as drawn. Work is on the `front-door` branch, one commit per
@@ -277,7 +277,8 @@ which way the light falls) if the author wants the variety back.
 towards the part of the table the phase is about, and its pool no longer
 widens with ground gained. Either would lift the picture behind the
 river and the caption, which the budget forbids, and the approved
-designs already light themselves.
+designs already light themselves. *The author kept it so (2026-10-11,
+S13).*
 
 **Found, for the author.** The deep forest's outside back has 6.6% of
 its pixels near the Wanderer's blue, over the 5% colour reservation in

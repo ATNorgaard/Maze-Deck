@@ -32,7 +32,7 @@ phase's log):
   words, light, palette, dark and sound bed.
 - **A side per crossing** (AJ7), chosen on the threshold and carried to
   every phone: 23 sides in all.
-- **Every picture is an approved design** (S1–S12):
+- **Every picture is an approved design** (S1–S13):
   - the backs, baked to PNGs;
   - the vista, live on a canvas, each narration line drawing its card its
     own way (a salt on the design's scatter, and half mirrored);
@@ -56,12 +56,13 @@ with sound on, and host one with a phone (`node scripts/local-session.mjs
 `proof/set5-all-sides.png` (regenerate with the sweep in settings-build.md,
 set/5).
 
-Then a ruling, and a push:
-- **The world's light no longer leans to the part of the table in play**,
-  nor widens with ground gained: both would brighten behind the words.
-- **Pushing `front-door` to `main` deploys it**, the Vercel function
-  included, which is what lets a hosted room carry the side to phones.
-  Until then a phone on the live site plays the default side.
+Then a push. **Pushing `front-door` to `main` deploys it**, the Vercel
+function included, which is what lets a hosted room carry the side to
+phones. Until then a phone on the live site plays the default side.
+
+The author's rulings on what the build found are all in: the weather blue
+allowed (AJ4, amended), a picture per narration line (S12), and the
+world's light kept as the designs draw it (S13).
 
 **Still waiting on the author from before:**
 - [front-door.md](front-door.md): the landing, the threshold and the join
