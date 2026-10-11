@@ -2,10 +2,11 @@
    The biomes.
 
    One file per setting. Adding one is: a file here, a line in
-   BIOMES, and a palette block in biomes.css keyed by its id. The
-   engine, the wire, the campaign schema and every screen already
-   handle "some biome" — nothing else needs to know a new one
-   exists.
+   BIOMES, a palette block in biomes.css keyed by its id, its designs
+   in @maze-deck/art (paint/settings) with their baked art (scripts/
+   bake-backs.mjs), its sound bed (stage/bed.ts) and its dark
+   (world/World.tsx). The engine, the wire and the campaign schema
+   already handle "some biome".
    ============================================================ */
 
 import { getCategory } from '@maze-deck/ui';
@@ -17,9 +18,12 @@ import { DEEP_FOREST } from './deep-forest';
 import { DESERT } from './desert';
 import { UNDERCITY } from './undercity';
 import { FROZEN_PASS } from './frozen-pass';
-import type { Biome, BiomeId } from './types';
+import { SIDES, sideOf } from '@maze-deck/art';
+import type { SettingId, Side } from '@maze-deck/art';
+import type { Biome, BiomeId, SideArt } from './types';
 
-export type { Biome, BiomeId, CardWording } from './types';
+export type { Biome, BiomeId, CardWording, SideArt } from './types';
+export type { Side } from '@maze-deck/art';
 
 /** In picker order. The dungeon first because it is the printed deck. */
 export const BIOMES: readonly Biome[] = [
@@ -52,15 +56,33 @@ export function biomeOf(id: string | null | undefined): Biome {
  * against a reskinned river: the mechanic never loses its name, it
  * only gains a local one.
  */
-const SKINS = new Map<BiomeId, DeckSkin>();
+const SKINS = new Map<string, DeckSkin>();
 
-export function skinOf(biome: Biome): DeckSkin {
-  const cached = SKINS.get(biome.id);
+/** The sides a setting has, its default first (AJ7). */
+export function sidesOf(biome: Biome): readonly Side[] {
+  return SIDES[biome.id as SettingId];
+}
+
+/** A side the setting has: the one asked for where it exists, else its default. */
+export function sideFor(biome: Biome, wanted?: string | null): Side {
+  return sideOf(biome.id as SettingId, wanted === 'inside' || wanted === 'outside' ? wanted : null);
+}
+
+/** One side's pictures. */
+export function artOf(biome: Biome, side?: string | null): SideArt | undefined {
+  return biome.art[sideFor(biome, side)];
+}
+
+export function skinOf(biome: Biome, side?: string | null): DeckSkin {
+  const key = `${biome.id}:${sideFor(biome, side)}`;
+  const cached = SKINS.get(key);
   if (cached) return cached;
 
   const skin: DeckSkin = { motif: biome.motif };
-  if (biome.backArt) skin.backArt = biome.backArt;
-  if (biome.backLayers) skin.backLayers = biome.backLayers;
+  // The side's back, the whole card: the designs are painted, so they do
+  // not part into depth layers (docs/settings-build.md, S5).
+  const art = artOf(biome, side);
+  if (art) skin.backArt = art.back;
   if (biome.cards) {
     const copy: NonNullable<DeckSkin['copy']> = {};
     for (const key of Object.keys(biome.cards) as CardCategory[]) {
@@ -74,7 +96,7 @@ export function skinOf(biome: Biome): DeckSkin {
     }
     skin.copy = copy;
   }
-  SKINS.set(biome.id, skin);
+  SKINS.set(key, skin);
   return skin;
 }
 

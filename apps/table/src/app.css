@@ -839,6 +839,8 @@ html, body, #root {
    than the maze motif does. */
 .t-door__field:has(.t-door__art) { opacity: .85; }
 .t-door__art { width: 100%; height: 100%; display: block; object-fit: cover; }
+/* The backs are pixel art (docs/settings-build.md): scaled up crisp, never smoothed. */
+.t-app .md-card__art, .t-door__art { image-rendering: pixelated; }
 .t-door__fade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--md-ink-900) 92%); }
 .t-door__glyph {
   position: absolute;
@@ -1904,6 +1906,18 @@ html, body, #root {
    ============================================================ */
 
 .t-setting__kicker { display: block; }
+
+/* Inside or outside (AJ7): two halves of one control, the chosen one lit. */
+.t-side { display: inline-flex; align-self: flex-start; border: 1px solid var(--md-line, rgba(201,188,156,.25)); border-radius: 999px; padding: 3px; gap: 2px; }
+.t-side__opt {
+  font: 600 13px/1 var(--md-font-ui, system-ui, sans-serif); letter-spacing: .06em;
+  color: var(--md-parchment-300); background: transparent; border: 0; border-radius: 999px;
+  padding: 8px 16px; cursor: pointer;
+}
+.t-side__opt:hover { color: var(--md-parchment-100); }
+.t-side__opt[aria-checked='true'] { background: var(--md-cat-path-500); color: var(--md-ink-900); }
+.t-side__opt:focus-visible { outline: 2px solid var(--md-cat-path-500); outline-offset: 2px; }
+.t-side__only { margin: 0; font: 600 12px/1 var(--md-font-ui, system-ui, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--md-parchment-400); }
 
 .t-setting__flavour {
   margin: 0;

@@ -4,7 +4,7 @@ import { createGame, isJoinCode, makeJoinCode, normaliseJoinCode } from '@maze-d
 import type {
   GameAction, GameState, SeatOffer, Viewer,
 } from '@maze-deck/rules';
-import { biomeOf, skinOf } from './biomes';
+import { biomeOf, sideFor, skinOf } from './biomes';
 import type { BiomeId } from './biomes';
 import { load, newId, runConfigFor, runSetupFor, save, tablesFor } from './campaign';
 import type { Campaign, ChronicleEntry } from './campaign';
@@ -233,16 +233,18 @@ export function App() {
   // alone wears another setting. Nothing on the wire changes and no
   // other device sees it. Dropped when the board is left.
   const biome = biomeOf(previewBiome ?? (inRun ? view.rules.biome : campaign.biome));
+  // Its side the same way: the run's, else the campaign's choice for it.
+  const side = sideFor(biome, previewBiome ? null : inRun ? view.rules.side : campaign.sides[biome.id]);
 
   return (
-    <div className="t-biome" data-biome={biome.id}>
+    <div className="t-biome" data-biome={biome.id} data-side={side}>
     {/* The setting's light is painted by `.t-app::before` (see app.css),
         a fixed layer that drifts very slowly; the provider itself is
         plain ink underneath it. */}
     <MazeDeckProvider
       size="md"
       className="t-app"
-      skin={skinOf(biome)}
+      skin={skinOf(biome, side)}
     >
       <PortalHost>
       {screen === 'play' && view ? (

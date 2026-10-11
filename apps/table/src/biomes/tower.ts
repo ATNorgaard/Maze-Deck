@@ -1,10 +1,8 @@
 import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
-import backArt from './art/back-tower.svg';
-import backSky from './art/back-tower-sky.svg';
-import backFar from './art/back-tower-far.svg';
-import backNear from './art/back-tower-near.svg';
+import backInside from './art/back-tower-inside.png';
+import stillInside from './art/world-tower-inside.png';
 
 /** Stairwells and landings. Up is the only way through, and every floor was somebody's. */
 export const TOWER: Biome = {
@@ -12,8 +10,9 @@ export const TOWER: Biome = {
   name: 'Tower',
   flavour: 'Stairwells and landings. Up is the only way through, and every floor was somebody’s.',
   motif: 'stair',
-  backArt,
-  backLayers: [backSky, backFar, backNear],
+  art: {
+    inside: { back: backInside, still: stillInside },
+  },
   cards: {
     'clear-path': {
       title: 'Landing',

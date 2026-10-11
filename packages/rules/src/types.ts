@@ -38,6 +38,12 @@ export interface RunConfig {
    * reskins the cards, the palette and the narration from it.
    */
   biome: string;
+  /**
+   * Which side of the setting, 'inside' or 'outside'. Inert like the
+   * biome, and optional: a run from before sides existed has none, and
+   * the app shows the setting's default side.
+   */
+  side?: string;
   mazeDc: number;
   escapeTarget: number;
   riverWidth: number;

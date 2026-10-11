@@ -1,10 +1,10 @@
 import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC } from '@maze-deck/ui';
 import { entry as e } from '../tables';
 import type { Biome } from './types';
-import backArt from './art/back-frozen-pass.svg';
-import backSky from './art/back-frozen-pass-sky.svg';
-import backFar from './art/back-frozen-pass-far.svg';
-import backNear from './art/back-frozen-pass-near.svg';
+import backOutside from './art/back-frozen-pass-outside.png';
+import stillOutside from './art/world-frozen-pass-outside.png';
+import backInside from './art/back-frozen-pass-inside.png';
+import stillInside from './art/world-frozen-pass-inside.png';
 
 /** Switchbacks in whiteout. Whatever lives up here is heard long before it is seen. */
 export const FROZEN_PASS: Biome = {
@@ -12,8 +12,10 @@ export const FROZEN_PASS: Biome = {
   name: 'Frozen pass',
   flavour: 'Switchbacks in whiteout. Whatever lives up here is heard long before it is seen.',
   motif: 'crystal',
-  backArt,
-  backLayers: [backSky, backFar, backNear],
+  art: {
+    outside: { back: backOutside, still: stillOutside },
+    inside: { back: backInside, still: stillInside },
+  },
   cards: {
     'clear-path': {
       title: 'Switchback',

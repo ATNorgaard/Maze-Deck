@@ -10,8 +10,8 @@ import { ENCOUNTER_AT, ESCAPE_TARGET, MAZE_DC, RIVER_WIDTH, OBSTACLE_JAM } from 
 import type {
   AbilityKey, AbilityScore, ExpansionCategory, GameState, RollMode, RunConfig, Seat,
 } from '@maze-deck/rules';
-import { biomeOf, DEFAULT_BIOME, isBiomeId } from './biomes';
-import type { BiomeId } from './biomes';
+import { biomeOf, DEFAULT_BIOME, isBiomeId, sideFor } from './biomes';
+import type { BiomeId, Side } from './biomes';
 import { DEFAULT_TABLES } from './tables';
 import type { DrawnPrompt, Tables } from './tables';
 
@@ -66,6 +66,11 @@ export interface Campaign {
   expansions: ExpansionCategory[];
   /** Where the maze is. Reskins the cards, the palette and the tables. */
   biome: BiomeId;
+  /**
+   * The side last chosen for each setting, inside or outside (AJ7). A
+   * setting with no entry plays its default side.
+   */
+  sides: Partial<Record<BiomeId, Side>>;
   /**
    * Narration tables, one editable set per setting. A setting the
    * GM has never edited has no entry here and reads its biome's
@@ -125,6 +130,7 @@ export function newCampaign(): Campaign {
     extraMonster: 0,
     expansions: [],
     biome: DEFAULT_BIOME,
+    sides: {},
     tablesByBiome: {},
     prompt: null,
     chronicle: [],
@@ -174,6 +180,7 @@ export function runConfigFor(campaign: Campaign, seed: string): RunConfig {
   return {
     seed,
     biome: campaign.biome,
+    side: sideFor(biomeOf(campaign.biome), campaign.sides[campaign.biome]),
     mazeDc: campaign.mazeDc,
     escapeTarget: campaign.escapeTarget,
     riverWidth: RIVER_WIDTH,

@@ -15,6 +15,7 @@
 
 import type { CardBackMotif } from '@maze-deck/ui';
 import type { CardCategory } from '@maze-deck/rules';
+import type { Side } from '@maze-deck/art';
 import type { Tables } from '../tables';
 
 export type BiomeId =
@@ -35,6 +36,14 @@ export interface CardWording {
   emphasis: string;
 }
 
+/** One side's pictures, as URLs. */
+export interface SideArt {
+  /** The card back, 96 x 134. */
+  back: string;
+  /** The world as one still frame, 320 x 200. */
+  still: string;
+}
+
 export interface Biome {
   id: BiomeId;
   name: string;
@@ -43,18 +52,12 @@ export interface Biome {
   /** The field on the card back. Same on every card in the run. */
   motif: CardBackMotif;
   /**
-   * A picture for the card back instead of the motif's maze: the
-   * setting's own horizon, from the atelier (apps/atelier, the Back
-   * bench in its Scene mode). A URL; the motif stays as the print
-   * deck's back and the fallback.
+   * Each side's pictures (AJ7), baked from its design by
+   * scripts/bake-backs.mjs: the deck's back for that side, and the
+   * world's still frame for when the world is off. The sides a setting
+   * has are `SIDES` in @maze-deck/art.
    */
-  backArt?: string;
-  /**
-   * The same picture as sky, far and near layers, baked beside it by
-   * scripts/bake-art.cjs, which the table moves in depth as a card
-   * tilts (docs/overhaul.md, phase 6).
-   */
-  backLayers?: string[];
+  art: Partial<Record<Side, SideArt>>;
   /**
    * The cards' copy. `null` keeps the canonical wording — the
    * dungeon is the printed deck, so it does not reword anything.

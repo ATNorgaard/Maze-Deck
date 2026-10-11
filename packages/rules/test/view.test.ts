@@ -170,4 +170,12 @@ describe('the setting', () => {
     expect(other.deck).toEqual(g.deck);
     expect(other.order).toEqual(g.order);
   });
+
+  /** The side (inside or outside) travels the same way, and only when chosen. */
+  it('carries the side to every viewer when the run has one', () => {
+    const g = makeRun('side', { biome: 'desert', side: 'inside' });
+    for (const viewer of [GM, PLAYER]) expect(view(g, viewer).rules.side).toBe('inside');
+    expect('side' in view(makeRun('side', { biome: 'desert' }), GM).rules).toBe(false);
+    expect(makeRun('side', { biome: 'desert', side: 'outside' }).deck).toEqual(g.deck);
+  });
 });

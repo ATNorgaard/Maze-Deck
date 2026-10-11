@@ -41,6 +41,8 @@ export interface ViewSlot {
 export interface ViewRules {
   /** The setting, as the run was created. A client reskins from it. */
   biome: string;
+  /** Its side, inside or outside, if the run chose one. */
+  side?: string;
   mazeDc: number;
   escapeTarget: number;
   riverWidth: number;
@@ -87,6 +89,7 @@ export function view(state: GameState, viewer: Viewer): GameView {
     viewer,
     rules: {
       biome: state.config.biome,
+      ...(state.config.side ? { side: state.config.side } : {}),
       mazeDc: state.config.mazeDc,
       escapeTarget: state.config.escapeTarget,
       riverWidth: state.config.riverWidth,

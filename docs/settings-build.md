@@ -116,3 +116,47 @@ and the frame budget measured against the commit before.
   the app's bundle is unchanged (nothing in the game loads a setting yet).
 
 **Commit:** `git log --grep set/0`.
+
+### set/1: sides, and the backs
+
+**Changed.**
+- **A crossing has a side.**
+  - `RunConfig.side` is optional and inert, like the biome. `ViewRules.side`
+    lets it through to every viewer, so a hosted room carries it to every
+    phone; it rides in the room's existing state JSON, so the database needs
+    no migration.
+  - The campaign remembers the side per setting (`sides`); a setting with
+    none plays its default.
+  - `sideFor` and `sidesOf` read `SIDES` from the art package.
+- **The setup screen asks which side.** A two-sided setting shows *Outside*
+  and *Inside* beside its flavour line. A one-sided setting says *Inside
+  only* or *Outside only*. Each door shows its setting's back for the side
+  last chosen.
+- **The deck wears the side's back.**
+  - Each setting file names its sides' art: the back and the world's still
+    frame, baked by `scripts/bake-backs.mjs` from the designs as RGB PNGs.
+    Backs are 3 to 6 KB, against 17.8 KB for the old SVG backs.
+  - `skinOf(biome, side)` keys its cache by both.
+  - The river, the deck, the piles, the opening and the doors show the side's
+    back, scaled up crisp (`image-rendering: pixelated`).
+- **The old SVG backs and their depth layers are gone** (S5): 24 files.
+- `scripts/bake-backs.mjs` also bakes all 23 sides' still frames for the
+  world's *Off* setting, and the eight new settings' art, for later phases.
+
+**Not yet.** The vista and the world are still the old pictures, until
+set/2 and set/3. The GM drawer's preview switch shows another setting at its
+default side. The hosted room needs the Vercel function redeployed before a
+phone sees the side; until then it plays the default side.
+
+**Verified.**
+- On the setup screen, picking the desert's *Inside* stores
+  `sides: {desert: 'inside'}`, and the dungeon says *Inside only*.
+- Starting the crossing carries `side: 'inside'` into the run, and the board
+  wears the desert's inside back in the river and on the deck, with no page
+  errors.
+- A frozen pass walk revealed 13 cards over 201 samples at **0px**.
+- **Tests:** rules 75 (one new: the side reaches every viewer, only when
+  chosen, and never changes the deal), app 41, art 15; the table and the
+  atelier typecheck.
+
+**Commit:** `git log --grep set/1`.

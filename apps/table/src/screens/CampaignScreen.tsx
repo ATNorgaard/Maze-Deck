@@ -2,7 +2,8 @@ import * as React from 'react';
 import {
   ArchGlyph, CANONICAL_CATEGORIES, CATEGORY_CLASS, CardBack, DECK_TOTAL, DeckCard, MazeField,
 } from '@maze-deck/ui';
-import { BIOMES, biomeOf, cardName } from '../biomes';
+import { BIOMES, artOf, biomeOf, cardName, sideFor, sidesOf } from '../biomes';
+import type { Side } from '../biomes';
 import { blankCharacter, SCORES } from '../campaign';
 import type { Campaign, Character } from '../campaign';
 import { SoundAsk } from '../components/SoundAsk';
@@ -84,6 +85,9 @@ export function CampaignScreen({
   const seats = campaign.roster.length;
   const ready = seats > 0;
   const biome = biomeOf(campaign.biome);
+  const side = sideFor(biome, campaign.sides[biome.id]);
+  const sides = sidesOf(biome);
+  const setSide = (next: Side) => set('sides', { ...campaign.sides, [biome.id]: next });
   // The chosen door's air, at rest (phase 9). Silent unless sound is on.
   useBed(biome.id, CALM);
 
@@ -239,8 +243,8 @@ export function CampaignScreen({
                   onClick={() => set('biome', b.id)}
                 >
                   <span className="t-door__field">
-                    {b.backArt
-                      ? <img className="t-door__art" src={b.backArt} alt="" draggable={false} />
+                    {artOf(b, campaign.sides[b.id])
+                      ? <img className="t-door__art" src={artOf(b, campaign.sides[b.id])!.back} alt="" draggable={false} />
                       : <MazeField motif={b.motif} fit="cover" />}
                   </span>
                   <span className="t-door__fade" />
@@ -267,6 +271,22 @@ export function CampaignScreen({
               <DeckCard category="monster" size="sm" showCount={false} />
             </div>
             <div className="t-setting__copy">
+              {/* Which side of it (AJ7): the door turns its picture over, and the
+                  crossing carries the choice to every device. */}
+              {sides.length > 1 ? (
+                <div className="t-side" role="radiogroup" aria-label="Which side of the setting">
+                  {sides.map((s) => (
+                    <button
+                      key={s} type="button" role="radio" aria-checked={s === side}
+                      className="t-side__opt" onClick={() => setSide(s)}
+                    >
+                      {s === 'outside' ? 'Outside' : 'Inside'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="t-side__only">{side === 'outside' ? 'Outside only' : 'Inside only'}</p>
+              )}
               <p className="t-setting__flavour">{biome.flavour}</p>
               <p className="t-note">
                 The rules do not change; the names, the light and the card backs
