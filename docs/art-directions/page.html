@@ -82,6 +82,7 @@ header.top .lede { font-size: 19px; }
 .unpicked { border-top: 1px dashed var(--line); padding-top: 14px; }
 .unpicked summary { cursor: pointer; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--muted); }
 .unpicked[open] summary { margin-bottom: 16px; }
+.pending { min-height: 900px; }
 .waiting { display: flex; align-items: center; justify-content: center; min-height: 220px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 15px; padding: 16px; text-align: center; }
 .choose .q { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); width: 100%; }
 .dir[data-picked] .letter::after { content: "Your pick"; font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold); border-radius: 999px; padding: 2px 8px; margin-left: 10px; vertical-align: 6px; }
@@ -432,6 +433,15 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
   const jobs = document.getElementById('jobs');
   const index = document.getElementById('index');
   let newHeading = false;
+  const near = new Map();
+  const nearby = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting || !near.has(e.target)) continue;
+      const build = near.get(e.target);
+      near.delete(e.target); nearby.unobserve(e.target);
+      build();
+    }
+  }, { rootMargin: '900px 0px' });
   for (const [id, n, label] of SETTINGS) {
     if (n === 'New' && !newHeading) {
       newHeading = true;
@@ -445,6 +455,11 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     sec.className = 'job'; sec.id = id;
     sec.innerHTML = `<div class="job-head"><span class="kicker">${n === 'New' ? 'New setting' : n}</span><h2>${label}</h2><p class="first"></p></div>`;
     if (!dirs.length) { sec.insertAdjacentHTML('beforeend', '<p class="muted">Its directions are still being drawn.</p>'); jobs.append(sec); continue; }
+    // Drawn when it comes near the screen: twenty-odd boards at once froze the page.
+    const holder = document.createElement('div'); holder.className = 'pending';
+    sec.append(holder);
+    jobs.append(sec);
+    const build = () => {
     const row = document.createElement('div'); row.className = 'dirs';
     if (sided.length) {
       sided.forEach((d) => row.append(direction(d)));
@@ -465,11 +480,16 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
         sec.append(det);
       }
       sec.append(review(id, label, sided));
+      const saved = rounds[`${id}:review`];
+      if (saved && reviewers[id]) reviewers[id](saved);
     } else {
       dirs.forEach((d) => row.append(direction(d)));
       sec.append(row);
     }
-    jobs.append(sec);
+    holder.remove();
+    };
+    near.set(sec, build);
+    nearby.observe(sec);
   }
 
   const btnMotion = document.getElementById('motion');
