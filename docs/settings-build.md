@@ -1,6 +1,7 @@
 # Building the settings: fourteen places, inside and outside
 
-**Status:** started 2026-10-11, on the author's word ("Implement!") after the
+**Status:** built 2026-10-11 (`set/0`–`set/5`, not pushed); the decisions
+are DECISIONS S1–S11. Started the same day, on the author's word ("Implement!") after the
 designs in [art-directions/](art-directions/README.md) were drawn and shown.
 No verdicts were saved on the review page, so every design on it is taken
 as approved as drawn. Work is on the `front-door` branch, one commit per
@@ -409,3 +410,50 @@ rule allows a setting a second family as weather. Left as approved.
 - **Tests:** app 45 (4 new), art 16, rules 75; the table typechecks.
 
 **Commit:** `git log --grep set/4`.
+
+### set/5: verification, retirement and records
+
+**Changed.**
+- **The words' budget fades out instead of stopping at a box** (S9). On
+  a phone, the frozen pass's bright snow behind the tall top block was
+  dimmed as a hard-edged rectangle. Now:
+  - the budget holds one design pixel past the words, then relaxes over
+    40 CSS pixels (in the design's pixels on each screen), dithered, so
+    it reads as a shadow around the words;
+  - the phone names only its name and status as words, not the route and
+    the threat beside them, which have their own ground.
+- **The old bake is retired:**
+  - `scripts/bake-art.cjs` is gone; its backs and grounds were the old
+    scene generator's, and the game uses neither;
+  - the table's styles for a back's depth layers are gone (S5); the UI
+    library keeps the ability;
+  - the atelier's README says where the table's art comes from now.
+- **Records:**
+  - DECISIONS has S1–S11, with W2 and AJ5 amended;
+  - STATUS is rewritten;
+  - new-settings.md and art-jobs.md point here.
+
+**Verified.**
+- **A sweep of every side** (a probe script, in this session's scratch):
+  each of the 23 sides started on the board at 1600x1000 and at 390x844.
+  - All 46 draw the world (from the worker) and the vista, show the side
+    asked for, load their backs, and raise no errors.
+  - `proof/set5-all-sides.png` is the contact sheet of all 23 boards.
+- **The art check** (`check-art.cjs`, GPU) of every side, at 1600x1000 and
+  390x844, across set/3 to set/5:
+  - every region of words is within its luminance budget on every side;
+  - the colour reservation holds but for three backs and one world, all
+    over on the Wanderer's blue:
+    - the deep forest's outside back (6.6%) and inside back (5.3%);
+    - the Drowned Coast's outside back (7.6%) and world (11–12.5%).
+- **A hosted game on the GPU** (`capture-phone.cjs` against
+  `local-session.mjs`), every check reached: the phone's world starts
+  *Light*, the river lies on it, and scenes pass between board and phone.
+- **Tests:** rules 75, app 45, art 16. Both apps typecheck, and the table
+  builds.
+
+**Not done here.** Nothing is pushed. A push of `front-door` to `main`
+deploys it, the Vercel function included, which is what lets a hosted room
+carry the side to phones.
+
+**Commit:** `git log --grep set/5`.

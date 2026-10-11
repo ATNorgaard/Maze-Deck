@@ -1185,21 +1185,6 @@
 }
 .t-table .md-card[data-tilt]:not(.md-card--back) > .md-card__trim::after { opacity: 1; }
 
-/* ---------------- a back in depth ----------------
-   A setting's back is three layers — sky, far, near (bake-art.cjs) —
-   and as the card tilts they part: the sky stays, the distance moves a
-   little, the foreground most, and the nearer a layer the more it
-   comes forward. That growth is also what keeps a moving layer's edge
-   from showing: each grows by more than twice the most it moves. At
-   rest they are the one picture. */
-.t-table .md-card--back .md-card__art[data-depth] { transition: transform 200ms cubic-bezier(.2, .7, .3, 1); }
-.t-table .md-card--back[data-tilt] .md-card__art[data-depth='1'] {
-  transform: translate(calc(var(--tx, 0) * -1%), calc(var(--ty, 0) * -.8%)) scale(1.025);
-}
-.t-table .md-card--back[data-tilt] .md-card__art[data-depth='2'] {
-  transform: translate(calc(var(--tx, 0) * -2.4%), calc(var(--ty, 0) * -1.8%)) scale(1.06);
-}
-
 /* ---------------- piles with thickness ----------------
    The deck shows its edges below and to the right of its top card, as
    thick as the deck is (`--t-thick`, 0 to 1, set by the board from the

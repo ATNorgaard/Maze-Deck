@@ -70,7 +70,7 @@ to the build.
 | # | Decision |
 |---|---|
 | W1 | **One board.** `TableScreen` is the GM's board. The old board (`SessionScreen`, its `CheckPanel` and its CSS) is gone, and with it the per-device board choice: a stored `mazedeck.board` is ignored (`world/10`). |
-| W2 | **`packages/art`, as built:** seeded randomness (FNV-1a seeds, mulberry32 streams, one salt per purpose so streams never reshuffle each other), each setting's vocabulary, the styles, and the scene generator (`SceneArt`). It is pure: React only for the SVG it returns, and the palette read off the page's CSS. The table draws the vista, the route's landmarks and the storyboard from it at runtime; the atelier draws on its benches with the same code; `scripts/bake-art.cjs` bakes the card backs and their depth layers from it. |
+| W2 | **`packages/art`, as built:** seeded randomness (FNV-1a seeds, mulberry32 streams, one salt per purpose so streams never reshuffle each other), each setting's vocabulary, the styles, and the scene generator (`SceneArt`). It is pure: React only for the SVG it returns, and the palette read off the page's CSS. The table draws the vista, the route's landmarks and the storyboard from it at runtime; the atelier draws on its benches with the same code; `scripts/bake-art.cjs` bakes the card backs and their depth layers from it. *Since the settings were built (S1–S11 below), the table no longer draws with the scene generator: its backs, vista, route, storyboard and world are the approved designs in `packages/art/src/paint`, and `bake-art.cjs` is retired. The generator stays for the atelier and the print deck.* |
 | W3 | **The room's `scene` column, as built:** `jsonb`, nullable, at most 2 KB by constraint, holding `{key, category, entryId, text}`. Only the GM-only `share` op writes it, and only a scene whose key names a pick in the run's public log and the card that pick turned (W4), with 1–600 characters of text. A repeat writes nothing, `null` takes it down, and a new crossing clears it. It travels beside the view, never inside it. The authority checks for the column, so code can ship before the migration (`world/8`). |
 | W4 | **A second additive mark on the log: `turned`** on a pick's line, naming the slot and the card, and since 2026-10-09 who took the path, the round and the progress before it. It is public, because the card is face up for everyone. Any client can tell a card turned without catching the reveal phase, the authority can check a shown scene against its card (`world/8`), and the GM's chronicle draws its scenes from it, with who and when as they were, however late the GM's device catches up. |
 | W5 | **Schema changes are dated SQL files in `server/migrations/`**, run by hand, and only with the author's go-ahead: the Supabase project is shared with other apps. Each is additive, the code feature-detects it, and [DEPLOY.md](DEPLOY.md#migrations) records when each ran. |
@@ -95,10 +95,30 @@ the references read, and the jobs.
 | AJ2 | **Sky high, table low.** A daylight setting keeps its daylight above the horizon, in the vista's sky and on its back, and falls to under the luminance budget (0.023 behind the faintest text) where the board puts words. |
 | AJ3 | **Generated and seeded**, as W2; no image assets from elsewhere, and none from image models. |
 | AJ4 | **The card families' colours are reserved:** a setting lights itself with its own family, and any other family's hue stays under about 5% of a picture. |
-| AJ5 | **The backs keep still; the world moves.** Backs move only in depth, on tilt. |
+| AJ5 | **The backs keep still; the world moves.** Backs move only in depth, on tilt. *Amended by S5: a back tilts as a whole card; it has no depth layers.* |
 | AJ6 | **The vista takes the pixel style too**, setting by setting, each measured on a phone before it ships. |
 | AJ7 | **Every setting has an inside and an outside** (2026-10-11), chosen when a crossing is set up: each side its own vista and world (and, if the author keeps both, its own back). The frozen pass's peaks and ice cave were the first pair. Every art job designs both sides before building. **Except the dungeon and the tower, which stay inside only** (2026-10-11). |
 | AJ8 | **Eight more settings** (2026-10-11), each its own setting, not a journey: the King's Road and the Mire (outside), the Underdark (inside), and the High Road, the Drowned Coast, the Barrow Moor, the Ember Hold and the Sunken Jungle (both sides). See [new-settings.md](new-settings.md). Each goes through design approval, then its words, palette, dark and sound, then a build. |
+
+## The settings, built
+
+Taken 2026-10-11 while building the approved designs, on the author's word
+("Implement!"); [settings-build.md](settings-build.md) has the reasoning and
+the log, phase by phase (`set/0`–`set/5`). The author can overturn any.
+
+| # | Decision |
+|---|---|
+| S1 | **The deck shows the back of the side being played.** |
+| S2 | **A crossing's default side is the outside** where a setting has one; the campaign remembers the last choice per setting. |
+| S3 | **The designs live in `packages/art/src/paint`**: the painter (`px.js`) and one module per setting. The review page builds from them. |
+| S4 | **Each setting's designs load only when it is played**: one chunk per setting, in the page and in the world's worker. |
+| S5 | **Backs are baked PNGs** (`scripts/bake-backs.mjs`), one per side, and tilt as a whole card. |
+| S6 | **The vista is the design, drawn live on a canvas** at 12 frames a second while on screen, each design pixel a whole number of device pixels, still under reduced motion or a still world. The route's landmarks and the storyboard's scenes are stills of it. |
+| S7 | **The world is the design, drawn in a Web Worker; the GPU adds the mood.** The design works out its picture about 12 times a second, as approved; the GPU lays the mood over it at the design's size, in dithered fifths per design pixel, and scales it to the screen. *(Planned as a GPU resolve of the painter; revised because some designs shift rows of the finished picture, which only the CPU can reproduce, and a frame costs under 2 ms once only lit pixels are redrawn.)* |
+| S8 | **The world's *Off* is the side's baked still frame**, which also shows while the world loads, and is the page behind every other screen. |
+| S9 | **The world keeps the luminance budget behind the words itself.** The screen names its regions of words with their budgets (the ones `check-art.cjs` reads); behind them a design pixel brighter than the budget steps towards the dark in fifths until it is under, and the budget relaxes over 40 CSS pixels outside them, so it reads as a shadow, not a box. |
+| S10 | **The still frame is veiled in 88% of the setting's ink** wherever it shows: a still cannot know where the words are, and at 88% even its brightest pixel stays within the 0.023 budget. *Off* is a dim ghost of the place. |
+| S11 | **A setting names its own light** (`Biome.light`: gold, teal or blue, AJ4), and `biomes.test.ts` holds every setting to the same shape. |
 
 ## Build order
 

@@ -44,15 +44,16 @@ remembered per bench in localStorage.
 
 Every bench's state can be given in the URL — `?bench=back&biome=tower&seed=x&back.mode=scene`
 sets the globals and a bench's fields (see `src/ui/store.ts`). The code panel
-prints the recipe of what it is showing. That is how the art the table app
-ships is made: `scripts/bake-art.cjs` holds one recipe per biome, asks the
-running atelier for each back and ground, and saves the SVGs into
-`apps/table/src/biomes/art/`. To re-roll a setting, change its seed in the
-script and run it again:
+prints the recipe of what it is showing, so a picture can be asked for
+again exactly.
 
-```bash
-node scripts/bake-art.cjs            # flat; or: node scripts/bake-art.cjs pixel
-```
+The table app no longer ships art from here. Its backs, vistas and worlds
+are the settings' approved designs in `packages/art/src/paint`, and its
+backs and still frames are baked from them by `scripts/bake-backs.mjs`
+(docs/settings-build.md). The old bake of backs and grounds,
+`scripts/bake-art.cjs`, was retired with them. The atelier stays the
+place the scene generator's styles are explored, and the print deck's
+source.
 
 ## Where the outputs go
 
@@ -62,13 +63,11 @@ decides. The landing places are:
 
 - a back tile → `packages/ui/src/CardBack.tsx` (`FIELD`) and the
   `CardBackMotif` union in `DeckSkin.tsx`, then `motif:` in the biome file;
-- a back scene → `apps/table/src/biomes/art/back-<biome>.svg`, imported as
-  `backArt` in the biome file. `DeckSkin.backArt` carries it to `CardBack`,
-  which draws it in place of the maze; the motif stays as the print deck's
-  back and the fallback;
-- a ground → `apps/table/src/biomes/art/ground-<biome>.svg`, the top layer of
-  the biome's `--t-biome-ground` in `apps/table/src/biomes.css` (the old
-  gradient stays beneath as the fallback);
+- a back scene or a ground → the print deck, or a design to propose. The
+  table's backs and worlds are the settings' approved designs now
+  (`packages/art/src/paint`); `DeckSkin.backArt` still draws any picture
+  in place of the maze, and the motif stays as the print deck's back and
+  the fallback;
 - a palette → a new block in `biomes.css`, plus the biome's own file under
   `apps/table/src/biomes/` (see the note at the top of `index.ts` there);
 - a scene → wherever a picture is wanted. The arch frame matches the

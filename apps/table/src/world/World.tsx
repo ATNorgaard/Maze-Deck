@@ -45,9 +45,13 @@ export const BOARD_WORDS: readonly Words[] = [
   { sel: '.t-ticker', budget: 0.074 },
 ];
 
-/** The phone's words, on the same budgets. */
+/**
+ * The phone's words, on the same budgets. Its top block names only the
+ * name and the status: the route and the threat beside them carry no
+ * small words and have their own ground.
+ */
 export const PHONE_WORDS: readonly Words[] = [
-  { sel: '.t-phone__top', budget: 0.074 },
+  { sel: '.t-phone__who', budget: 0.074 },
   { sel: '.t-phone__scene', budget: 0.023 },
   { sel: '.t-phone__prompt', budget: 0.023 },
   { sel: '.t-phone__rail', budget: 0.023 },

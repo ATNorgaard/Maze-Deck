@@ -1,6 +1,7 @@
 # New settings: places a journey might pass through
 
-**Status:** decided 2026-10-11: **all eight, each a setting of its own** (not
+**Status:** decided 2026-10-11, and **built** the same day
+([settings-build.md](settings-build.md), set/4). **All eight, each a setting of its own** (not
 stops on one journey), so the deck can carry any kind of high-fantasy
 adventure, with the sides the author chose:
 

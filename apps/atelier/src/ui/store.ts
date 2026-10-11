@@ -6,7 +6,7 @@ const PREFIX = 'maze-deck.atelier.v1.';
  * A recipe in the URL. `?biome=tower&seed=x` sets the globals;
  * `?back.mode=scene&ground.animate=1` sets a bench's fields. Values
  * take the type of the field's default. This is what lets a script
- * (scripts/bake-art.cjs) ask the atelier for a specific picture.
+ * (capture-atelier.cjs) ask the atelier for a specific picture.
  */
 function fromQuery<T extends object>(key: string, initial: T): Partial<T> {
   const out: Partial<T> = {};

@@ -3,116 +3,132 @@
 Rewritten at the end of every session. Coming in cold: read this, then
 [DECISIONS.md](DECISIONS.md), then
 [reference/canonical-rules.md](reference/canonical-rules.md). Before touching
-`apps/table`, read the log at the end of [overhaul.md](overhaul.md).
+`apps/table`, read the log at the end of [overhaul.md](overhaul.md), and for
+the art, [settings-build.md](settings-build.md).
 
-**Last updated:** 2026-10-11: the first dungeon (`art/1`) taken back; designs
-up front next. The overhaul (`world/10`) is live.
+**Last updated:** 2026-10-11: **the settings are built** (`set/0`–`set/5` on
+`front-door`): fourteen settings, each side's approved design as its back,
+vista and world, and a side chosen per crossing. Not yet pushed. The overhaul
+(`world/10`) is what is live.
 
 ## Where we are
 
-**The game is built, and the overhaul is finished and live.** A GM runs a
-crossing on one screen or hosts a room that players join from their own
-phones. The server never tells any device what is in the deck that it should
-not know.
+**The game is built, the overhaul is live, and the settings are built on a
+branch.** A GM runs a crossing on one screen or hosts a room that players
+join from their own phones. The server never tells any device what is in the
+deck that it should not know.
 
 | | What | Where |
 |---|---|---|
 | Live | The whole overhaul, `world/10` (`678673d`), shipped 2026-10-09 | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `overhaul`: `main` plus this file's update, which rides along with the next ship | never pushed |
-| Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09) | Supabase, a project shared with other apps |
+| Branch | `front-door`: the designs reviewed, then built as `set/0`–`set/5` | never pushed |
+| Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
-**The ship was verified on the live site, read-only** (no room was created):
-- the served bundle carries the sound question, *Show the table*, the phone's
-  scene and throw, and the haptics, and has no trace of the old board;
-- `/api/session/view` answers an unknown code with 404 *No session with that
-  code*, and `/api/session/share` exists (an unknown op answers *No such
-  operation*);
-- a single-screen crossing on the GPU revealed 13 cards over 167 samples at
-  **0px**, with no console errors and no failed requests;
-- the threshold asks once about sound, and keeps the answer;
-- Supabase's schema-reload trigger (`pgrst_ddl_watch`) is enabled, so the
-  API sees the `scene` column.
+**What `front-door` adds** ([settings-build.md](settings-build.md) has each
+phase's log):
+- **Fourteen settings:** the six there were, redrawn, and eight new ones
+  (the King's Road, the Mire, the High Road, the Drowned Coast, the Barrow
+  Moor, the Ember Hold, the Underdark, the Sunken Jungle), each with its
+  words, light, palette, dark and sound bed.
+- **A side per crossing** (AJ7), chosen on the threshold and carried to
+  every phone: 23 sides in all.
+- **Every picture is an approved design** (S1–S11):
+  - the backs, baked to PNGs;
+  - the vista, live on a canvas;
+  - the world, drawn in a worker with the table's mood laid over it on the
+    GPU, keeping the luminance budget behind the words itself;
+  - *Off*, and the page behind the other screens, the side's still frame
+    under a veil.
 
-Not yet exercised live: a hosted room (creating one writes a row), so the
-`share` op has been proved only against `local-session.mjs`.
+**Verified** (set/5): every one of the 23 sides starts and draws its world
+and vista, at 1600x1000 and on a phone, with no errors; the art check
+passes the luminance budget for every side at both sizes; a hosted game
+passes every phone check on the GPU; all 52 sound checks pass; and the
+frame budget is within noise of the overhaul at rest and in a turn.
 
 ## Next single action
 
-**The author plays it, live.** At <https://maze-deck-six.vercel.app>, on a
-real screen with sound on, and with a real phone or two in a hosted room:
-- the board in each setting (phases 4–7);
-- the bed (phase 9). The WAVs from `node scripts/capture-sound.cjs` in
-  `proof/sound/` are a way in first;
-- a phone joining by code: the vista, *Show the table*, the hand, the
-  throw in *Players roll their own*, the vibrations (phase 8).
+**The author plays the branch.** `cd apps/table && npm run dev`, then
+<http://localhost:5180>: pick a few doors and both sides, play a crossing
+with sound on, and host one with a phone (`node scripts/local-session.mjs
+--app`, then <http://localhost:5182>). The contact sheet of all 23 boards is
+`proof/set5-all-sides.png` (regenerate with the sweep in settings-build.md,
+set/5).
 
-Then say what to change. Work goes on a branch, since a push to `main`
-deploys.
+Then three rulings, and a push:
+- **Colour findings** (the reservation, AJ4): the deep forest's backs
+  (6.6% outside, 5.3% inside) and the Drowned Coast's outside (7.6% of its
+  back, 11–12.5% of its world) are over 5% the Wanderer's blue: a night
+  sky, a storm sea. Allow a setting its weather, or grey them.
+- **Every Monster in a side is the same picture now**, and the route's
+  landmarks are the same doorway: the old scenes varied by narration line.
+  The designs could take a seed for small variations, if wanted.
+- **The world's light no longer leans to the part of the table in play**,
+  nor widens with ground gained: both would brighten behind the words.
+- **Pushing `front-door` to `main` deploys it**, the Vercel function
+  included, which is what lets a hosted room carry the side to phones.
+  Until then a phone on the live site plays the default side.
 
-**Planned next, waiting on the author's decisions:**
+**Still waiting on the author from before:**
 - [front-door.md](front-door.md): the landing, the threshold and the join
-  screen, brought up to the board (a living setting, a turn you can play,
-  the threshold as a ritual, a forecast for the dials). Decisions F1–F6.
-- [art-jobs.md](art-jobs.md): the card backs and the world, rebranded.
-  **Decided: the pixel diorama, sky high and table low** (AJ1–AJ6). Job 0,
-  the pixel renderer, is done (`art/0`), and every card back is pixel art
-  now. A first dungeon (`art/1`) was built and taken back: the author was
-  not keen. **The designs are ready** (2026-10-11): two directions for each
-  of jobs 1–6, in [art-directions/](art-directions/README.md) and on
-  <https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>. The author has picked
-  (2026-10-11): dungeon A, tower A, forest A, desert A, undercity B, and both
-  frozen pass designs. They then decided **every setting has an inside and
-  an outside** (AJ7; the dungeon and the tower stay inside only), and added
-  **eight more settings** (AJ8, [new-settings.md](new-settings.md)), each
-  being designed. Nothing is built until the author approves.
-
-Both are on the `front-door` branch.
-
-Also waiting on the author: **D9**, a size step between `sm` and `md` for
-laptops with about 657px of viewport, which get `sm` today. It is a change to
-`packages/ui` and its design-sync ([overhaul.md](overhaul.md#d9--for-the-author)).
+  screen, brought up to the board. Decisions F1–F6. The threshold's side
+  toggle (AJ7) is the only part of it built.
+- **D9**, a size step between `sm` and `md` for laptops with about 657px of
+  viewport, which get `sm` today. It is a change to `packages/ui` and its
+  design-sync ([overhaul.md](overhaul.md#d9--for-the-author)).
 
 ## What it is made of
 
-- **`packages/rules`**: the engine. Pure, seeded, 74 tests.
+- **`packages/rules`**: the engine. Pure, seeded, 75 tests.
   `createGame` → `apply(state, action)` → `available(state)`, and `view()`,
   which redacts per viewer. The log carries cues for the moments a board
   plays (`jam`, `reshuffle`, `found`, `through`, `lost`) and, on a pick's
-  line, the card it `turned`.
+  line, the card it `turned`. A run's `side`, like its biome, is inert: the
+  engine carries it and never reads it.
 - **`packages/ui`**: the card and component library, the deck's tokens, and
   the design-sync. Read [.design-sync/NOTES.md](../.design-sync/NOTES.md)
   before touching the sync.
-- **`packages/art`**: the deck's pictures from a seed: the scene generator,
-  each setting's vocabulary, the styles. The table draws with it live; the
-  atelier draws with it on its benches.
+- **`packages/art`**: the pictures.
+  - `src/paint`: the settings' approved designs, one module per setting
+    (`SIDES`, `designFor`, `vistaOf`), and the pixel painter they draw with
+    (`px.js`), which redraws only the pixels a light touches. 16 tests.
+  - The scene generator from a seed, each setting's old vocabulary, and the
+    styles: the atelier's and the print deck's.
 - **`apps/table`**: the app.
-  - The threshold: the campaign, the doors, and the party. It asks once
-    whether to play with sound.
-  - The board (`TableScreen`): the setting full-bleed behind it (a WebGL2
-    world in tiers), the vista and the scene, the route and the dark, the
-    river with its piles, the party rail and the hand. Every decision is
-    made on the table, the roll and the encounter happen at its centre, and
-    an opening and a storyboard bookend each crossing.
+  - The threshold: the campaign, fourteen doors with a side for each, and
+    the party. It asks once whether to play with sound.
+  - The board (`TableScreen`): the side's world full-bleed behind it
+    (`world/`: a worker draws the design, WebGL2 lays the mood over it, in
+    tiers), the vista and the scene, the route and the dark, the river with
+    its piles, the party rail and the hand. Every decision is made on the
+    table, the roll and the encounter happen at its centre, and an opening
+    and a storyboard bookend each crossing.
   - The phone (`PlayerScreen`): the vista, the shared scene, a hand that
     rises on your turn, a die to throw, haptics.
   - Under it all, the choreographer (`stage/`), the voices and the bed
     (`stage/sound.ts`, `stage/bed.ts`), and the transports (local, and
     remote).
-- **`apps/atelier`**: where the artwork is made and judged.
+  - Each setting is a file in `src/biomes/` (the note at the top of its
+    `index.ts` says what adding one takes). 45 tests.
+- **`apps/atelier`**: where the scene generator's artwork is explored.
 - **`api/` and `server/`**: the authority, one Vercel function backed by one
   Postgres row per room, with compare-and-swap on `version` and Supabase
   Realtime carrying only the version. Schema changes live in
   `server/migrations/` and are run by hand.
+- **`docs/art-directions/`**: the review page the designs were approved on,
+  built from `packages/art`.
 
 ## Running it
 
 ```bash
-cd packages/rules && npm test              # 74 tests, ~12s, no browser
+cd packages/rules && npm test              # 75 tests, ~12s, no browser
 cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev               # the board, http://localhost:5180, no backend needed
-cd apps/table && npm test                  # 41 tests
+cd apps/table && npm test                  # 45 tests
 cd apps/table && npm run build             # tsc --noEmit && vite build
+cd packages/art && ../../apps/table/node_modules/.bin/vitest run   # 16 tests
 cd packages/ui && npm run build            # tsup + the CSS flattening step
+node scripts/bake-backs.mjs                # every side's back and still frame, from the designs
 npx vercel dev                             # app + /api/session/*, http://localhost:3000
 node scripts/local-session.mjs --app       # a hosted game against an in-memory table, http://localhost:5182
 ```
@@ -137,7 +153,8 @@ gitignored.
 | `capture-sound.cjs` | Phase 9: every setting's bed rendered offline, measured and written as WAVs, then the live bed |
 | `capture-frames.cjs` | A deal, frame by frame |
 | `check-deck-parity.mjs` | The deck composition agrees in its three places |
-| `check-art.cjs` | The art jobs: the luminance budget behind the words at five sizes, the colour reservation, a thumbnail sheet of the backs |
+| `check-art.cjs` | The art: the luminance budget behind the words at five sizes (any setting and `--side`), the colour reservation, a thumbnail sheet of every side's back |
+| `bench-vista.mjs`, `bench-world.mjs` | What a vista frame and a world frame cost on the CPU, every side |
 
 Frame numbers drift between runs and between days. Judge a change against
 the commit before it, measured in the same session, alternating.
@@ -153,8 +170,11 @@ the commit before it, measured in the same session, alternating.
 - **The Supabase project is shared with other apps.** Nothing applies a
   migration on its own, and none is run without the author's go-ahead.
   [DEPLOY.md](DEPLOY.md#migrations) records each one.
-- **A push to `main` deploys.** The overhaul lives on its branch for that
-  reason.
+- **A push to `main` deploys.** Work lives on a branch (now `front-door`)
+  for that reason.
+- **The world draws in a Web Worker** (`world/paint.worker.ts`), which loads
+  its own copy of the setting's chunk. A world that never shows is first a
+  worker that failed: look in the console for its error.
 - **Edit CSS by script and assert the anchor exists.** A `.replace()` that
   matches nothing fails quietly; it has cost three regressions. And check for
   a duplicate rule further down before concluding a new one is wrong.
@@ -195,6 +215,7 @@ this blocks anything (O8, D8).
 | M5 | Deck and print regeneration | done |
 | — | Biomes: six settings | done |
 | — | The overhaul, `world/0`–`world/10` | done, and live since 2026-10-09 |
+| — | The settings: fourteen, 23 sides, the approved designs, `set/0`–`set/5` | done on `front-door`, not pushed |
 
 ## History
 

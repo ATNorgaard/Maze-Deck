@@ -72,6 +72,9 @@ export interface WordRegion {
 /** At most this many regions of words are kept clear. */
 export const MAX_WORDS = 6;
 
+/** How far, in CSS pixels, the words' budget takes to relax outside them. */
+const WORDS_FADE = 40;
+
 /** What the table wants the world to look like. The renderer eases towards it. */
 export interface Mood {
   /** Where the phase is, in 0..1 of the viewport (y down), or null: where a card's colour washes out from. */
@@ -119,6 +122,7 @@ uniform float u_reach, u_rime, u_storm;
 uniform vec4 u_words[${MAX_WORDS}];  // where the words are: x0, y0, x1, y1 of the viewport
 uniform float u_budget[${MAX_WORDS}];
 uniform int u_nwords;
+uniform float u_fade;     // design pixels
 out vec4 o;
 
 float lin(float v) { return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4); }
@@ -223,14 +227,17 @@ void main() {
   // Words stay readable. Behind them, a pixel brighter than the budget
   // steps towards the dark, a fifth at a time, until it is under: a
   // torch or a chain passing behind the title dims there, and the dark
-  // that is most of every world is left alone. One design pixel of
-  // margin, so a pixel the words' edge crosses counts as behind them.
+  // that is most of every world is left alone. The budget holds a
+  // design pixel past the words' edge, then relaxes over u_fade more
+  // (WORDS_FADE, in the design's pixels), so where a bright sky is
+  // dimmed it fades in like a shadow rather than stopping at a box.
   float least = 1.0;
-  vec2 px = 1.0 / span;
   for (int i = 0; i < ${MAX_WORDS}; i++) {
     if (i >= u_nwords) break;
     vec4 r = u_words[i];
-    if (uv.x >= r.x - px.x && uv.x <= r.z + px.x && uv.y >= r.y - px.y && uv.y <= r.w + px.y) least = min(least, u_budget[i]);
+    vec2 out2 = max(max(r.xy - uv, uv - r.zw), 0.0) * span;
+    float s = smoothstep(1.0, 1.0 + u_fade, length(out2) + (b - 0.5) * 2.0);
+    least = min(least, exp(mix(log(u_budget[i]), 0.0, s)));
   }
   if (least < 1.0 && lum(c) > least) {
     vec3 was = c;
@@ -345,7 +352,7 @@ export class WorldRenderer {
     this.screen = program(gl, QUAD_VS, SCREEN_FS);
     for (const n of ['u_pic', 'u_view', 'u_time', 'u_dark', 'u_threatC', 'u_flashC', 'u_light', 'u_eyeC', 'u_edgeC',
       'u_focus', 'u_flash', 'u_threat', 'u_dim', 'u_bloom', 'u_eyes', 'u_reach', 'u_rime', 'u_storm',
-      'u_words', 'u_budget', 'u_nwords']) {
+      'u_words', 'u_budget', 'u_nwords', 'u_fade']) {
       this.um[n] = gl.getUniformLocation(this.mood, n);
     }
     for (const n of ['u_mood', 'u_res', 'u_view', 'u_par']) this.us[n] = gl.getUniformLocation(this.screen, n);
@@ -515,6 +522,8 @@ export class WorldRenderer {
     gl.uniform1f(m.u_reach!, e.reach);
     gl.uniform1f(m.u_rime!, e.rime);
     gl.uniform1f(m.u_storm!, e.storm);
+    // The words' fade, from CSS pixels to the design's.
+    gl.uniform1f(m.u_fade!, (WORDS_FADE * this.scale) / k);
 
     const s = this.us;
     gl.useProgram(this.screen);

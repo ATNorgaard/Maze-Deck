@@ -70,10 +70,6 @@ export function PixelBench({ biome, seed, palette, vocab }: {
             {whole.w} × {whole.h} pixels, {whole.palette.length} colours,
             {' '}{(uri.length / 1024).toFixed(1)} KB as a data URI. The budget is 40 KB.
           </p>
-          <p className="atl-note">
-            Bake every setting&rsquo;s back and its layers with
-            {' '}<code>node scripts/bake-art.cjs pixel</code>.
-          </p>
         </Section>
       </aside>
 
