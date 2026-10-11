@@ -1,18 +1,23 @@
 /* ============================================================
    The settings' pictures in the game: loading a side's design, and
-   keeping what it has built.
+   asking for its vistas.
 
-   A design (packages/art/src/paint) builds a picture once, which costs
-   10 to 40 ms, and then redraws it at any moment for well under one.
-   So pictures are built once per size and card and kept here, shared
-   by every vista, landmark and thumbnail that shows them; the vista
-   builds the cards not yet turned while the page is idle, so a card
-   turning never waits for its picture.
+   A vista is built in a worker (vista.worker.ts), one for the page,
+   shared by every vista, landmark and thumbnail: each narration line
+   draws its card's picture its own way, so a picture is built when its
+   card turns, and building costs 8 to 40 ms that the page should not
+   spend in the middle of the card's flip. The page asks for a picture
+   at a moment and puts what comes back on a canvas.
    ============================================================ */
 
 import * as React from 'react';
-import { designFor, isSettingId, vistaOf } from '@maze-deck/art';
-import type { Category, Design, Made, Side } from '@maze-deck/art';
+import { designFor, isSettingId } from '@maze-deck/art';
+import type { Design, Side } from '@maze-deck/art';
+import { specKey } from './vistaSpec';
+import type { FromVista, ToVista, VistaSpec } from './vistaSpec';
+
+export type { VistaSpec } from './vistaSpec';
+export { specKey };
 
 /** The design a setting plays on a side, or null while it loads (or for a setting with none). */
 export function useDesign(setting: string, side: Side): Design | null {
@@ -30,87 +35,98 @@ export function useDesign(setting: string, side: Side): Design | null {
   return design && design.setting === setting && design.side === side ? design : null;
 }
 
-/** Every card a vista can show, and the place at rest. */
-export const VISTA_CARDS: readonly (Category | null)[] = [
-  null, 'clear-path', 'obstacle', 'wanderer', 'item', 'monster', 'dead-end', 'trap',
-];
+/** A narration line's seed: the setting and the entry, so the same line always comes with the same picture. */
+export const seedOf = (setting: string, entryId: string) => `${setting}:${entryId}`;
+
+let worker: Worker | null = null;
+let nextId = 1;
+const waiting = new Map<number, (m: FromVista) => void>();
+/** Buffers back from the worker, by size, to lend again. */
+const spare = new Map<number, ArrayBuffer[]>();
+
+function vistas(): Worker {
+  if (!worker) {
+    worker = new Worker(new URL('./vista.worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e: MessageEvent<FromVista>) => {
+      const done = waiting.get(e.data.id);
+      waiting.delete(e.data.id);
+      done?.(e.data);
+    };
+  }
+  return worker;
+}
 
 /**
- * Built vistas, most recently used last. A vista holds a few arrays the
- * size of the picture per light, a few MB at the board's size, so only
- * the cards of about one size are kept.
+ * The picture `spec` names, at moment `t`: RGBA, top row first, or null
+ * if it could not be drawn. Lent: hand it back with `recycle` once it is
+ * on a canvas.
  */
-const built = new Map<string, Made>();
-const KEEP = 10;
-
-const keyOf = (d: Design, W: number, H: number, c: Category | null) => `${d.id}|${W}x${H}|${c ?? 'none'}`;
-
-export function vistaMade(d: Design, W: number, H: number, c: Category | null): Made {
-  const key = keyOf(d, W, H, c);
-  let made = built.get(key);
-  if (made) {
-    built.delete(key);
-  } else {
-    made = vistaOf(d, W, H, c);
-    made.p.prepare();
-  }
-  built.set(key, made);
-  while (built.size > KEEP) built.delete(built.keys().next().value!);
-  return made;
+export function drawVista(spec: VistaSpec, t: number): Promise<Uint8ClampedArray<ArrayBuffer> | null> {
+  const size = spec.W * spec.H * 4;
+  const buffer = spare.get(size)?.pop() ?? new ArrayBuffer(size);
+  const id = nextId;
+  nextId += 1;
+  return new Promise((resolve) => {
+    waiting.set(id, (m) => {
+      if (!m.ok) {
+        console.error(m.message);
+        recycle(m.buffer);
+        resolve(null);
+      } else {
+        resolve(new Uint8ClampedArray(m.buffer));
+      }
+    });
+    const msg: ToVista = { id, spec, t, buffer };
+    vistas().postMessage(msg, [buffer]);
+  });
 }
 
-export const isBuilt = (d: Design, W: number, H: number, c: Category | null) => built.has(keyOf(d, W, H, c));
-
-/** Draw a picture at a moment into an ImageData-shaped buffer. */
-export function drawAt(made: Made, t: number, img: ImageData): void {
-  made.p.resolve(t, img);
-  made.over?.(img, t);
+export function recycle(buffer: ArrayBuffer): void {
+  const list = spare.get(buffer.byteLength) ?? [];
+  if (list.length < 4) list.push(buffer);
+  spare.set(buffer.byteLength, list);
 }
+
+export interface Crop { x: number; y: number; w: number; h: number }
 
 /**
  * A still of a vista, cropped, as a PNG data URL: the storyboard's
  * thumbnails and the route's landmarks. Kept for the page's life; a
  * crossing shows a handful.
  */
-const stills = new Map<string, string>();
+const stills = new Map<string, Promise<string>>();
 
-export interface Crop { x: number; y: number; w: number; h: number }
-
-export function stillOf(d: Design, W: number, H: number, c: Category | null, t: number, crop?: Crop): string {
-  const r = crop ?? { x: 0, y: 0, w: W, h: H };
-  const key = `${keyOf(d, W, H, c)}|${t}|${r.x},${r.y},${r.w},${r.h}`;
+function stillOf(spec: VistaSpec, t: number, crop?: Crop): Promise<string> {
+  const r = crop ?? { x: 0, y: 0, w: spec.W, h: spec.H };
+  const key = `${specKey(spec)}|${t}|${r.x},${r.y},${r.w},${r.h}`;
   let url = stills.get(key);
-  if (url) return url;
-  const canvas = document.createElement('canvas');
-  canvas.width = r.w;
-  canvas.height = r.h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return '';
-  const img = ctx.createImageData(W, H);
-  drawAt(vistaOf(d, W, H, c), t, img);
-  ctx.putImageData(img, -r.x, -r.y, r.x, r.y, r.w, r.h);
-  url = canvas.toDataURL('image/png');
-  stills.set(key, url);
+  if (!url) {
+    url = drawVista(spec, t).then((px) => {
+      if (!px) return '';
+      const canvas = document.createElement('canvas');
+      canvas.width = r.w;
+      canvas.height = r.h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.putImageData(new ImageData(px, spec.W, spec.H), -r.x, -r.y, r.x, r.y, r.w, r.h);
+      recycle(px.buffer);
+      return canvas.toDataURL('image/png');
+    });
+    stills.set(key, url);
+  }
   return url;
 }
 
-/** Run jobs one at a time when the page is idle, until cancelled. */
-export function whenIdle(jobs: (() => void)[]): () => void {
-  const idle = 'requestIdleCallback' in window;
-  let i = 0;
-  let handle = 0;
-  const next = () => {
-    if (i >= jobs.length) return;
-    handle = idle ? window.requestIdleCallback(run, { timeout: 2000 }) : window.setTimeout(run, 200);
-  };
-  const run = () => {
-    jobs[i]?.();
-    i += 1;
-    next();
-  };
-  next();
-  return () => {
-    i = jobs.length;
-    if (idle) window.cancelIdleCallback(handle); else window.clearTimeout(handle);
-  };
+/** A still, once the worker has drawn it: its URL, or null until then. */
+export function useStill(spec: VistaSpec | null, t: number, crop?: Crop): string | null {
+  const key = spec ? `${specKey(spec)}|${t}|${crop ? `${crop.x},${crop.y},${crop.w},${crop.h}` : ''}` : '';
+  const [url, setUrl] = React.useState<{ key: string; url: string } | null>(null);
+  React.useEffect(() => {
+    if (!spec) return undefined;
+    let live = true;
+    void stillOf(spec, t, crop).then((u) => { if (live && u) setUrl({ key, url: u }); });
+    return () => { live = false; };
+    // `key` stands for the spec, the moment and the crop.
+  }, [key]);
+  return url && url.key === key ? url.url : null;
 }

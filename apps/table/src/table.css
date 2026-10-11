@@ -130,6 +130,8 @@
 /* Each design pixel a whole number of device pixels (Vista's sizeFor). */
 .t-vista__layer > canvas { position: absolute; display: block; image-rendering: pixelated; }
 .t-vista__layer[data-entering] { animation: tFade 900ms ease both; }
+/* Until the worker's first frame is up (Vista.tsx). */
+.t-vista__layer[data-pending] { visibility: hidden; }
 
 /* Narrow, the page scrolls and there is no height left over to give:
    the vista is a fixed band instead. */

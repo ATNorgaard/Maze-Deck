@@ -13,6 +13,8 @@ export const DROWNED_COAST: Biome = {
   flavour: 'A wrecking coast in a storm, and the caves the wreckers use. A Clear Path is the lighthouse beam finding the way.',
   motif: 'dune',
   light: 'path',
+  // The storm sea the lighthouse shines over.
+  weather: 'wand',
   art: {
     outside: { back: backOutside, still: stillOutside },
     inside: { back: backInside, still: stillInside },

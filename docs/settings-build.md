@@ -1,7 +1,7 @@
 # Building the settings: fourteen places, inside and outside
 
-**Status:** built 2026-10-11 (`set/0`–`set/5`, not pushed); the decisions
-are DECISIONS S1–S11. Started the same day, on the author's word ("Implement!") after the
+**Status:** built 2026-10-11 (`set/0`–`set/6`, not pushed); the decisions
+are DECISIONS S1–S12. Started the same day, on the author's word ("Implement!") after the
 designs in [art-directions/](art-directions/README.md) were drawn and shown.
 No verdicts were saved on the review page, so every design on it is taken
 as approved as drawn. Work is on the `front-door` branch, one commit per
@@ -457,3 +457,73 @@ deploys it, the Vercel function included, which is what lets a hosted room
 carry the side to phones.
 
 **Commit:** `git log --grep set/5`.
+
+### set/6: the weather, and a picture per line
+
+The author's rulings on set/5's findings: "Allow the weather blue, and add
+seeded variations."
+
+**Changed.**
+- **A setting may name its weather** (AJ4, amended). One other card
+  family may show as weather, up to 15% of a picture where any other
+  stays under 5%.
+  - The deep forest's night sky and the Drowned Coast's storm sea are
+    the Wanderer's blue (`Biome.weather`).
+  - `check-art.cjs` tags it *(weather)* and holds it to the 15%.
+  - `biomes.test.ts` checks a weather is a family, and not the setting's
+    own light.
+- **Each narration line draws its card its own way** (S12).
+  - The painter has a salt (`PX.withSalt`) on every random number a
+    design draws. A line's salt moves whatever the design scatters or
+    places at random: the stones' joints and chips, stars, grass, the
+    Underdark's fungus forest, the King's Road's crows, the particles.
+  - For half a card's lines the whole picture is mirrored, so the light
+    and the subject face the other way. Narration ids end in their
+    line's number, and the mirror alternates by it from a side chosen
+    per card, so every card shows both ways round evenly. Any other seed
+    (a phone's card before the GM's scene comes) tosses for it.
+  - Seeded by the entry, as the old scenes were: a line always comes
+    with the same picture, in every crossing.
+  - The vista, the route's landmarks and the storyboard all draw the
+    line's picture. With no line (the vista at rest, the backs, the
+    world) every design is as approved, to the byte.
+- **The vista is drawn in a worker** (`components/vista.worker.ts`), one
+  for the page, shared by every vista, landmark and thumbnail. A line's
+  picture is built when its card turns, 8 to 40 ms (four times that on
+  a phone), which can no longer be prebuilt and would stall the card's
+  flip on the page.
+  - A new picture stays hidden until its first frame comes, then fades
+    in; the old one goes once the fade has run.
+  - The page's old cache and idle prebuild are gone.
+- `node scripts/variants-sheet.mjs [out.png] [setting:side:card ...]`
+  draws cards as approved and as five lines, side by side.
+
+**Verified.**
+- **Tests:** art 18 (two new):
+  - for every side, no seed is byte-identical to the approved design;
+  - a line always draws the same picture;
+  - six lines give more than three different pictures;
+  - the salt never leaks into the back built after;
+  - over every card of every setting, written as the tables write their
+    ids, each card's lines mirror as evenly as their number allows, and
+    every line's salt is its own.
+  - App 45, rules 75; both apps typecheck and the table builds.
+- **The variation is seen** (`proof/variants.png`):
+  - the desert's shafts slant one way, then the other;
+  - the Ember Hold's salamander turns about;
+  - the gibbet changes sides on the King's Road;
+  - the Underdark's fungus forest rearranges.
+  - The first mixing let a card's adjacent ids (`ud-ob1` to `ud-ob6`) all
+    fall the same way round, which the test now catches.
+- **In the game:**
+  - a desert inside walk (GPU): 7 reveals at **0px**; the storyboard's
+    two Caravan Tracks are mirrored against each other, and the route's
+    landmarks draw;
+  - a hosted game: every phone check passes. At 4x CPU the phone costs
+    0.19 s per 4 s at rest and 0.79 s for its pick, against 0.26 s and
+    1.02 s at set/2;
+  - the production build's vista draws from its worker, moves, and
+    holds still under reduced motion and a still or off world, with no
+    errors.
+
+**Commit:** `git log --grep set/6`.

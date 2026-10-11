@@ -74,6 +74,12 @@ const OWN = {
   'ember-hold': 'path', 'sunken-jungle': 'path', underdark: 'wand',
 };
 const ownOf = (b) => OWN[b] ?? 'path';
+/**
+ * A second family a setting may show as weather, up to 15% (AJ4, amended):
+ * the biome file's `weather`. Every other family stays under 5%.
+ */
+const WEATHER = { 'deep-forest': 'wand', 'drowned-coast': 'wand' };
+const WEATHER_LIMIT = 0.15;
 const FAMILIES = { path: '#E3A445', obst: '#43917B', wand: '#6B8CA6', item: '#8B4F9C', mons: '#A93343' };
 
 /* ---------- reading a PNG: what Chromium writes, 8-bit RGB(A), not interlaced ---------- */
@@ -186,8 +192,9 @@ const pct = (v) => `${(v * 100).toFixed(1)}%`;
 let failed = false;
 const judge = (what, share) => {
   const others = Object.entries(share).filter(([k]) => k !== ownOf(biome));
-  const bad = others.filter(([, v]) => v > 0.05);
-  log(`  ${what}: ${Object.entries(share).map(([k, v]) => `${k} ${pct(v)}${k === ownOf(biome) ? ' (own)' : ''}`).join(', ')}${bad.length ? '  !! over 5%' : ''}`);
+  const bad = others.filter(([k, v]) => v > (k === WEATHER[biome] ? WEATHER_LIMIT : 0.05));
+  const tag = (k) => (k === ownOf(biome) ? ' (own)' : k === WEATHER[biome] ? ' (weather)' : '');
+  log(`  ${what}: ${Object.entries(share).map(([k, v]) => `${k} ${pct(v)}${tag(k)}`).join(', ')}${bad.length ? '  !! over its limit' : ''}`);
   if (bad.length) failed = true;
 };
 

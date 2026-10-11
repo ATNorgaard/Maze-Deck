@@ -66,6 +66,12 @@ export interface Biome {
    */
   light: 'path' | 'obst' | 'wand';
   /**
+   * A second family the place may show as weather (AJ4, amended): a night
+   * sky, a storm sea. It may fill up to 15% of a picture where any other
+   * family keeps under 5% (check-art.cjs). Most settings have none.
+   */
+  weather?: 'path' | 'obst' | 'wand';
+  /**
    * Each side's pictures (AJ7), baked from its design by
    * scripts/bake-backs.mjs: the deck's back for that side, and the
    * world's still frame for when the world is off. The sides a setting

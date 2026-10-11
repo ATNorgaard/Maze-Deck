@@ -18,10 +18,23 @@ const PX = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
 
+  /*
+   * A salt on every random number a design draws, for a variation of
+   * the same picture (vistaOf, a narration line's own take on its card).
+   * 0, the default, is the picture as approved, to the byte.
+   */
+  let SALT = 0;
+  function withSalt(salt, fn) {
+    const was = SALT;
+    SALT = salt | 0;
+    try { return fn(); } finally { SALT = was; }
+  }
+
   function rng(seed) {
     let s = typeof seed === 'string'
       ? [...seed].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261) >>> 0
       : seed >>> 0;
+    if (SALT) s = Math.imul(s ^ SALT, 2654435761) >>> 0;
     return () => {
       s = (s + 0x6d2b79f5) >>> 0;
       let t = s;
@@ -31,7 +44,7 @@ const PX = (() => {
     };
   }
   function hash(x, y, s = 0) {
-    let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 982451653);
+    let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 982451653) + Math.imul(SALT, 2246822519);
     h = Math.imul(h ^ (h >>> 13), 1274126177);
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
   }
@@ -586,6 +599,6 @@ const PX = (() => {
     ['none', 'Nothing yet', 'path'],
   ];
 
-  return { BAYER, hexRgb, clamp, lerp, rng, hash, C, Painter, put, sprite, SPRITES, particles, flicker, SUBJECT, frame, CARD, CATEGORIES };
+  return { BAYER, hexRgb, clamp, lerp, rng, hash, withSalt, C, Painter, put, sprite, SPRITES, particles, flicker, SUBJECT, frame, CARD, CATEGORIES };
 })();
 export default PX;

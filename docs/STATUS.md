@@ -6,7 +6,7 @@ Rewritten at the end of every session. Coming in cold: read this, then
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md), and for
 the art, [settings-build.md](settings-build.md).
 
-**Last updated:** 2026-10-11: **the settings are built** (`set/0`–`set/5` on
+**Last updated:** 2026-10-11: **the settings are built** (`set/0`–`set/6` on
 `front-door`): fourteen settings, each side's approved design as its back,
 vista and world, and a side chosen per crossing. Not yet pushed. The overhaul
 (`world/10`) is what is live.
@@ -21,7 +21,7 @@ deck that it should not know.
 | | What | Where |
 |---|---|---|
 | Live | The whole overhaul, `world/10` (`678673d`), shipped 2026-10-09 | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `front-door`: the designs reviewed, then built as `set/0`–`set/5` | never pushed |
+| Branch | `front-door`: the designs reviewed, then built as `set/0`–`set/6` | never pushed |
 | Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
 **What `front-door` adds** ([settings-build.md](settings-build.md) has each
@@ -32,9 +32,10 @@ phase's log):
   words, light, palette, dark and sound bed.
 - **A side per crossing** (AJ7), chosen on the threshold and carried to
   every phone: 23 sides in all.
-- **Every picture is an approved design** (S1–S11):
+- **Every picture is an approved design** (S1–S12):
   - the backs, baked to PNGs;
-  - the vista, live on a canvas;
+  - the vista, live on a canvas, each narration line drawing its card its
+    own way (a salt on the design's scatter, and half mirrored);
   - the world, drawn in a worker with the table's mood laid over it on the
     GPU, keeping the luminance budget behind the words itself;
   - *Off*, and the page behind the other screens, the side's still frame
@@ -55,14 +56,7 @@ with sound on, and host one with a phone (`node scripts/local-session.mjs
 `proof/set5-all-sides.png` (regenerate with the sweep in settings-build.md,
 set/5).
 
-Then three rulings, and a push:
-- **Colour findings** (the reservation, AJ4): the deep forest's backs
-  (6.6% outside, 5.3% inside) and the Drowned Coast's outside (7.6% of its
-  back, 11–12.5% of its world) are over 5% the Wanderer's blue: a night
-  sky, a storm sea. Allow a setting its weather, or grey them.
-- **Every Monster in a side is the same picture now**, and the route's
-  landmarks are the same doorway: the old scenes varied by narration line.
-  The designs could take a seed for small variations, if wanted.
+Then a ruling, and a push:
 - **The world's light no longer leans to the part of the table in play**,
   nor widens with ground gained: both would brighten behind the words.
 - **Pushing `front-door` to `main` deploys it**, the Vercel function
@@ -90,8 +84,9 @@ Then three rulings, and a push:
   before touching the sync.
 - **`packages/art`**: the pictures.
   - `src/paint`: the settings' approved designs, one module per setting
-    (`SIDES`, `designFor`, `vistaOf`), and the pixel painter they draw with
-    (`px.js`), which redraws only the pixels a light touches. 16 tests.
+    (`SIDES`, `designFor`, `vistaOf` with a line's seed), and the pixel
+    painter they draw with (`px.js`), which redraws only the pixels a
+    light touches and takes a salt for a line's variation. 18 tests.
   - The scene generator from a seed, each setting's old vocabulary, and the
     styles: the atelier's and the print deck's.
 - **`apps/table`**: the app.
@@ -126,7 +121,7 @@ cd packages/rules && npm run simulate -- 2000
 cd apps/table && npm run dev               # the board, http://localhost:5180, no backend needed
 cd apps/table && npm test                  # 45 tests
 cd apps/table && npm run build             # tsc --noEmit && vite build
-cd packages/art && ../../apps/table/node_modules/.bin/vitest run   # 16 tests
+cd packages/art && ../../apps/table/node_modules/.bin/vitest run   # 18 tests
 cd packages/ui && npm run build            # tsup + the CSS flattening step
 node scripts/bake-backs.mjs                # every side's back and still frame, from the designs
 npx vercel dev                             # app + /api/session/*, http://localhost:3000
@@ -155,6 +150,7 @@ gitignored.
 | `check-deck-parity.mjs` | The deck composition agrees in its three places |
 | `check-art.cjs` | The art: the luminance budget behind the words at five sizes (any setting and `--side`), the colour reservation, a thumbnail sheet of every side's back |
 | `bench-vista.mjs`, `bench-world.mjs` | What a vista frame and a world frame cost on the CPU, every side |
+| `variants-sheet.mjs` | Cards as approved and as five narration lines draw them, side by side |
 
 Frame numbers drift between runs and between days. Judge a change against
 the commit before it, measured in the same session, alternating.
@@ -172,9 +168,10 @@ the commit before it, measured in the same session, alternating.
   [DEPLOY.md](DEPLOY.md#migrations) records each one.
 - **A push to `main` deploys.** Work lives on a branch (now `front-door`)
   for that reason.
-- **The world draws in a Web Worker** (`world/paint.worker.ts`), which loads
-  its own copy of the setting's chunk. A world that never shows is first a
-  worker that failed: look in the console for its error.
+- **The world and the vistas draw in Web Workers** (`world/paint.worker.ts`,
+  `components/vista.worker.ts`), each loading its own copy of the setting's
+  chunk. A world or vista that never shows is first a worker that failed:
+  look in the console for its error.
 - **Edit CSS by script and assert the anchor exists.** A `.replace()` that
   matches nothing fails quietly; it has cost three regressions. And check for
   a duplicate rule further down before concluding a new one is wrong.
@@ -215,7 +212,7 @@ this blocks anything (O8, D8).
 | M5 | Deck and print regeneration | done |
 | — | Biomes: six settings | done |
 | — | The overhaul, `world/0`–`world/10` | done, and live since 2026-10-09 |
-| — | The settings: fourteen, 23 sides, the approved designs, `set/0`–`set/5` | done on `front-door`, not pushed |
+| — | The settings: fourteen, 23 sides, the approved designs, `set/0`–`set/6` | done on `front-door`, not pushed |
 
 ## History
 

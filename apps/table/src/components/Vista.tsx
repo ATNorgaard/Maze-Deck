@@ -1,10 +1,11 @@
 import * as React from 'react';
-import type { Category, Made, Side } from '@maze-deck/art';
+import type { Category, Side } from '@maze-deck/art';
 import type { Biome } from '../biomes';
 import type { DrawnPrompt } from '../tables';
 import { MOTION, reducedMotion } from '../stage/motion';
 import { useWorldChoice } from '../world/settings';
-import { VISTA_CARDS, drawAt, isBuilt, useDesign, vistaMade, whenIdle } from './pixel';
+import { drawVista, recycle, seedOf, specKey, useDesign } from './pixel';
+import type { VistaSpec } from './pixel';
 
 interface Props {
   biome: Biome;
@@ -62,35 +63,52 @@ function sizeFor(w: number, h: number): Size {
 }
 
 interface Layer extends Size {
-  /** The picture: the design and the card. A new one fades in; a new size alone does not. */
+  /** The picture: the design, the card and its line. A new one fades in; a new size alone does not. */
   scene: string;
-  made: Made;
+  spec: VistaSpec;
 }
 
 const now = () => performance.now() / 1000;
 
 /**
  * One picture on a canvas, redrawn a few times a second while it may
- * move. Only the pixels its lights touch are worked out again.
+ * move: the worker draws each frame (pixel.ts), one at a time, and the
+ * layer puts it up when it comes. Hidden until its first frame, so a new
+ * picture fades in from its own first frame rather than from nothing.
  */
-const VistaLayer = React.memo(({ layer, animate, entering }: { layer: Layer; animate: boolean; entering: boolean }) => {
+const VistaLayer = React.memo(({ layer, animate, entering, onReady }: {
+  layer: Layer; animate: boolean; entering: boolean; onReady: (scene: string) => void;
+}) => {
   const ref = React.useRef<HTMLCanvasElement>(null);
-  const { made, W, H, k, left, top } = layer;
-  React.useLayoutEffect(() => {
+  const [ready, setReady] = React.useState(false);
+  const { spec, W, H, k, left, top, scene } = layer;
+  const key = specKey(spec);
+  React.useEffect(() => {
     const ctx = ref.current?.getContext('2d');
     if (!ctx) return undefined;
-    const img = ctx.createImageData(W, H);
+    let live = true;
+    let busy = false;
+    let first = true;
     const paint = (t: number) => {
-      drawAt(made, t, img);
-      ctx.putImageData(img, 0, 0);
+      if (busy) return;
+      busy = true;
+      void drawVista(spec, t).then((px) => {
+        busy = false;
+        if (!px) return;
+        if (live) {
+          ctx.putImageData(new ImageData(px, W, H), 0, 0);
+          if (first) { first = false; setReady(true); onReady(scene); }
+        }
+        recycle(px.buffer);
+      });
     };
     paint(animate ? now() : STILL_T);
-    if (!animate) return undefined;
-    const id = window.setInterval(() => paint(now()), 1000 / FPS);
-    return () => window.clearInterval(id);
-  }, [made, W, H, animate]);
+    const id = animate ? window.setInterval(() => paint(now()), 1000 / FPS) : 0;
+    return () => { live = false; window.clearInterval(id); };
+    // `key` stands for the spec, its size included.
+  }, [key, animate]);
   return (
-    <div className="t-vista__layer" data-entering={entering || undefined}>
+    <div className="t-vista__layer" data-entering={(entering && ready) || undefined} data-pending={!ready || undefined}>
       <canvas ref={ref} width={W} height={H} style={{ width: W * k, height: H * k, left, top }} />
     </div>
   );
@@ -125,8 +143,10 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>): boolean {
  * setting's side as its design draws it (packages/art/src/paint), with
  * the turned card in it. Before the first card turns it is the place
  * with nothing in it. A Dead End and a Trap are the way blocked, in
- * their own colours. The same card always shows the same picture: the
- * design's composition for it, as approved.
+ * their own colours. Each narration line draws its card its own way,
+ * the design's composition with a salt on its scatter and, for half the
+ * lines, mirrored; the same line always comes with the same picture. At
+ * rest it is the design as approved.
  *
  * Its light moves a few times a second while it is on screen, and holds
  * still under reduced motion or when the world is held still or off.
@@ -173,14 +193,19 @@ export function Vista({ biome, side, prompt, step = 0 }: Props) {
   const shown = box !== null && box.h >= MIN_HEIGHT && box.w > 0;
   const size = React.useMemo(() => (shown && box ? sizeFor(box.w, box.h) : null), [shown, box]);
   const card: Category | null = prompt ? prompt.category : null;
-  const scene = design ? `${design.id}|${card ?? 'none'}` : '';
+  // Seeded by the ENTRY, not the draw: the same line always comes with the
+  // same picture, in every crossing, so a table that meets it twice knows it.
+  const seed = prompt ? seedOf(biome.id, prompt.entryId) : null;
+  const scene = design ? `${design.id}|${card ?? 'none'}|${seed ?? ''}` : '';
 
   // No picture until the box is measured and the design is in: the first
   // one is composed for the box it will fill, and simply appears.
   const [layers, setLayers] = React.useState<Layer[]>([]);
   React.useEffect(() => {
     if (!design || !size) return;
-    const make = (): Layer => ({ ...size, scene, made: vistaMade(design, size.W, size.H, card) });
+    const make = (): Layer => ({
+      ...size, scene, spec: { setting: biome.id, side, W: size.W, H: size.H, card, seed },
+    });
     setLayers((prev) => {
       const last = prev[prev.length - 1];
       if (!last) return [make()];
@@ -190,23 +215,19 @@ export function Vista({ biome, side, prompt, step = 0 }: Props) {
       }
       return [...prev.slice(-1), make()];
     });
-    // `scene` stands for the design and the card.
+    // `scene` stands for the design, the card and its line.
   }, [scene, size]);
 
-  // The cards not yet turned are built while the page is idle, so a card
-  // turning finds its picture ready.
+  // The old picture goes once the new one has covered it: from the new
+  // one's first frame, when its fade begins.
+  const [readyScene, setReadyScene] = React.useState<string | null>(null);
+  const onReady = React.useCallback((s: string) => setReadyScene(s), []);
   React.useEffect(() => {
-    if (!design || !size) return undefined;
-    const todo = VISTA_CARDS.filter((c) => !isBuilt(design, size.W, size.H, c));
-    return whenIdle(todo.map((c) => () => { vistaMade(design, size.W, size.H, c); }));
-  }, [design, size]);
-
-  // The old picture goes once the new one has covered it.
-  React.useEffect(() => {
-    if (layers.length < 2) return undefined;
+    const last = layers[layers.length - 1];
+    if (layers.length < 2 || !last || readyScene !== last.scene) return undefined;
     const t = window.setTimeout(() => setLayers((l) => l.slice(-1)), reducedMotion() ? 0 : MOTION.vista + 60);
     return () => window.clearTimeout(t);
-  }, [layers]);
+  }, [layers, readyScene]);
 
   // Ground gained: the picture showing steps forward and holds. The next
   // scene is a new layer, so it comes in at rest.
@@ -238,6 +259,7 @@ export function Vista({ biome, side, prompt, step = 0 }: Props) {
           layer={l}
           animate={animate}
           entering={layers.length > 1 && i === layers.length - 1}
+          onReady={onReady}
         />
       )) : null}
     </div>

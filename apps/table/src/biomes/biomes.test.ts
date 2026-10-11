@@ -21,8 +21,14 @@ describe('the settings', () => {
     }
   });
 
-  it('are lit by gold, teal or blue only (AJ4)', () => {
-    for (const b of BIOMES) expect(['path', 'obst', 'wand'], b.id).toContain(b.light);
+  it('are lit by gold, teal or blue only, with at most one other family as weather (AJ4)', () => {
+    for (const b of BIOMES) {
+      expect(['path', 'obst', 'wand'], b.id).toContain(b.light);
+      if (b.weather) {
+        expect(['path', 'obst', 'wand'], b.id).toContain(b.weather);
+        expect(b.weather, b.id).not.toBe(b.light);
+      }
+    }
   });
 
   it('reword the cards without changing what they do', () => {

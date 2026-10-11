@@ -1,10 +1,10 @@
 import * as React from 'react';
-import type { Design, Side } from '@maze-deck/art';
+import type { Side } from '@maze-deck/art';
 import { getCategory } from '@maze-deck/ui';
 import type { Biome } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import { MOTION, reducedMotion } from '../stage/motion';
-import { stillOf, useDesign } from './pixel';
+import { seedOf, useStill } from './pixel';
 
 interface Props {
   biome: Biome;
@@ -22,15 +22,22 @@ interface Props {
   landmarks: (ChronicleEntry | null)[];
 }
 
+/** The landmark's picture: the Clear Path's vista, small, cropped to the doorway at its heart. */
+const LANDMARK = { W: 64, H: 40, crop: { x: 19, y: 5, w: 26, h: 30 } };
+
 /**
- * A waypoint's landmark: the Clear Path the party went through, the
- * doorway at the heart of its vista, as small as the design will still
- * read. Every Clear Path in a setting's side is the same picture, so the
- * route is a row of the same way, taken again and again.
+ * A waypoint's landmark: the Clear Path the party went through there,
+ * the doorway at the heart of its vista, as small as the design will
+ * still read. Drawn as that scene's line drew it, so each waypoint is
+ * the way as it was taken there.
  */
-const Landmark = React.memo(({ design }: { design: Design }) => (
-  <img src={stillOf(design, 64, 40, 'clear-path', 1.3, { x: 19, y: 5, w: 26, h: 30 })} alt="" />
-));
+const Landmark = React.memo(({ setting, side, entryId }: { setting: string; side: Side; entryId: string }) => {
+  const url = useStill(
+    { setting, side, W: LANDMARK.W, H: LANDMARK.H, card: 'clear-path', seed: seedOf(setting, entryId) },
+    1.3, LANDMARK.crop,
+  );
+  return url ? <img src={url} alt="" /> : null;
+});
 Landmark.displayName = 'Landmark';
 
 /**
@@ -48,7 +55,6 @@ Landmark.displayName = 'Landmark';
  */
 export function Route({ biome, side, value, total, landmarks }: Props) {
   const ref = React.useRef<HTMLDivElement>(null);
-  const design = useDesign(biome.id, side);
 
   // The waypoint just reached, for as long as its arrival plays. Not on
   // the first render: a board opened mid-crossing has nothing arriving.
@@ -86,7 +92,7 @@ export function Route({ biome, side, value, total, landmarks }: Props) {
         <span className="t-route__lit" />
         {Array.from({ length: steps }, (_, i) => {
           const k = i + 1;
-          const mark = k <= reached && design ? landmarks[i] ?? null : null;
+          const mark = k <= reached ? landmarks[i] ?? null : null;
           return (
             <span
               key={k}
@@ -98,7 +104,7 @@ export function Route({ biome, side, value, total, landmarks }: Props) {
               style={{ '--x': k / steps } as React.CSSProperties}
               title={mark ? `${name}: ${mark.text}` : undefined}
             >
-              {mark && design ? <Landmark design={design} /> : null}
+              {mark ? <Landmark setting={biome.id} side={side} entryId={mark.entryId} /> : null}
             </span>
           );
         })}

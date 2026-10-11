@@ -1,11 +1,11 @@
 import * as React from 'react';
-import type { Design, Side } from '@maze-deck/art';
+import type { Side } from '@maze-deck/art';
 import type { GameView } from '@maze-deck/rules';
 import { getCategory } from '@maze-deck/ui';
 import type { Biome } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import { fightLine, fightsPhrase, recap, tell } from '../story';
-import { stillOf, useDesign } from './pixel';
+import { seedOf, useStill } from './pixel';
 
 interface Props {
   view: GameView;
@@ -18,10 +18,13 @@ interface Props {
   onExit: () => void;
 }
 
-/** A scene's picture, as the vista drew it: the side's design with the card in it, held still. */
-const Thumb = React.memo(({ design, entry }: { design: Design; entry: ChronicleEntry }) => (
-  <img src={stillOf(design, 136, 76, entry.category, 1.3)} alt="" />
-));
+/** A scene's picture, as the vista drew it: the side's design with the card in it, as its line drew it, held still. */
+const Thumb = React.memo(({ setting, side, entry }: { setting: string; side: Side; entry: ChronicleEntry }) => {
+  const url = useStill(
+    { setting, side, W: 136, H: 76, card: entry.category, seed: seedOf(setting, entry.entryId) }, 1.3,
+  );
+  return url ? <img src={url} alt="" /> : null;
+});
 Thumb.displayName = 'Thumb';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -37,7 +40,6 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * campaign. A player's preview has no scenes to tell: they are the GM's.
  */
 export function Storyboard({ view, biome, side, runName, scenes, onExit }: Props) {
-  const design = useDesign(biome.id, side);
 
   const story = React.useMemo(() => tell(scenes, view), [scenes, view]);
   const through = view.outcome === 'through';
@@ -91,7 +93,7 @@ export function Storyboard({ view, biome, side, runName, scenes, onExit }: Props
                 {r.scenes.map((s) => (
                   <li className="t-story__scene" key={s.entry.key} data-category={s.entry.category} data-fight={s.fight ?? undefined}>
                     <div className="t-story__pic" aria-hidden="true">
-                      {design ? <Thumb design={design} entry={s.entry} /> : null}
+                      <Thumb setting={biome.id} side={side} entry={s.entry} />
                     </div>
                     <p className="t-kicker t-story__card">{cardName(s.entry.category)}</p>
                     <p className="t-story__text">{s.entry.text}</p>

@@ -163,17 +163,81 @@ export async function designFor(setting: SettingId, side: Side): Promise<Design>
 export type Category = 'clear-path' | 'obstacle' | 'wanderer' | 'item' | 'monster' | 'dead-end' | 'trap';
 
 /**
+ * A narration line's own take on its card's picture: a salt on every
+ * random number the design draws (the stones, the scatter, the stars,
+ * the particles, whatever it places at random), and, for half the lines,
+ * the picture mirrored, so the light falls from the other side. The
+ * composition is the approved one either way.
+ */
+export interface Variant {
+  salt: number;
+  mirror: boolean;
+}
+
+/** A seed's hash, mixed through, so seeds that differ only at the end differ in every bit. */
+function mixed(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/**
+ * A line's variation. Narration ids end in the line's number (ds-cp1 to
+ * ds-cp6), and there the mirror alternates by that number from a side
+ * chosen per card, so a card's lines show both ways round evenly; any
+ * other seed tosses for it.
+ */
+export function variantOf(seed: string): Variant {
+  const h = mixed(seed);
+  const numbered = /^(.*?)(\d+)$/.exec(seed);
+  const mirror = numbered
+    ? (Number(numbered[2]) + ((mixed(numbered[1]!) >>> 20) & 1)) % 2 === 1
+    : ((h >>> 20) & 1) === 1;
+  return { salt: 1 + (h % 65521), mirror };
+}
+
+/**
  * A vista for any card. The designs draw the five canonical cards; a Dead
  * End and a Trap are drawn as the way blocked, in their own family's
  * colours, the Obstacle's ramp and light swapped for theirs.
+ *
+ * With a `seed` (a narration line's), it is that line's variation
+ * (`variantOf`); without one it is the design as approved, to the byte.
  */
-export function vistaOf(design: Design, W: number, H: number, category: Category | null): Made {
+export function vistaOf(design: Design, W: number, H: number, category: Category | null, seed?: string | null): Made {
+  if (!seed) return vistaAsDrawn(design, W, H, category);
+  const v = variantOf(seed);
+  const made = PX.withSalt(v.salt, () => vistaAsDrawn(design, W, H, category)) as Made;
+  const over = made.over;
+  return {
+    p: made.p,
+    // The sprites and particles draw with the same salt, then the whole
+    // picture turns over: the painter's arrays stay as built.
+    over: (img, t) => {
+      if (over) PX.withSalt(v.salt, () => over(img, t));
+      if (v.mirror) mirror(img);
+    },
+  };
+}
+
+function vistaAsDrawn(design: Design, W: number, H: number, category: Category | null): Made {
   if (category === 'dead-end' || category === 'trap') {
     const made = design.vista(W, H, 'obstacle');
     recolour(made.p, 'obst', category === 'dead-end' ? 'dead' : 'trap');
     return made;
   }
   return design.vista(W, H, category ?? 'none');
+}
+
+/** Turn a picture over, left for right. */
+function mirror(img: ImageLike): void {
+  const d = new Uint32Array(img.data.buffer, img.data.byteOffset, img.width * img.height);
+  for (let y = 0; y < img.height; y += 1) d.subarray(y * img.width, (y + 1) * img.width).reverse();
 }
 
 /** Swap one card family's ramp and coloured light for another's, after a picture is painted. */

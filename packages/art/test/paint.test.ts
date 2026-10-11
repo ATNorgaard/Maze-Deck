@@ -3,7 +3,7 @@
    moment, keeps the table's luminance budget, and can show every card. */
 
 import { describe, expect, it } from 'vitest';
-import { SETTING_IDS, SIDES, designFor, designsOf, imageOf, sideOf, vistaOf } from '../src/paint';
+import { SETTING_IDS, SIDES, designFor, designsOf, imageOf, sideOf, variantOf, vistaOf } from '../src/paint';
 import type { Category, Design, Made } from '../src/paint';
 
 const draw = (made: Made, t: number) => {
@@ -113,6 +113,50 @@ describe('the settings', () => {
       }
     }
   }, 120_000);
+
+  it('draws each narration line its own variation, and nothing else changes', async () => {
+    const same = (a: ReturnType<typeof imageOf>, b: ReturnType<typeof imageOf>) => Buffer.from(a.data).equals(Buffer.from(b.data));
+    for (const d of await played()) {
+      const backBefore = draw(d.back(96, 134), 0);
+      // No seed is the design as approved, to the byte.
+      expect(same(draw(vistaOf(d, 192, 72, 'monster', null), 1.3), draw(d.vista(192, 72, 'monster'), 1.3)), d.id).toBe(true);
+      // A line always draws the same picture.
+      const a = draw(vistaOf(d, 192, 72, 'monster', `${d.setting}:line-1`), 1.3);
+      expect(same(a, draw(vistaOf(d, 192, 72, 'monster', `${d.setting}:line-1`), 1.3)), d.id).toBe(true);
+      // Lines differ from each other.
+      const pictures = ['line-1', 'line-2', 'line-3', 'line-4', 'line-5', 'line-6']
+        .map((l) => Buffer.from(draw(vistaOf(d, 192, 72, 'monster', `${d.setting}:${l}`), 1.3).data).toString('base64'));
+      expect(new Set(pictures).size, d.id).toBeGreaterThan(3);
+      // The salt is gone once the line's picture is built: the back is as approved.
+      expect(same(draw(d.back(96, 134), 0), backBefore), d.id).toBe(true);
+    }
+  }, 120_000);
+
+  it('mirrors about half the lines, even among a card’s few lines', () => {
+    // Narration ids as the tables write them: a prefix, the card, a number.
+    const prefixes = ['dg', 'tw', 'df', 'ds', 'uc', 'fp', 'kr', 'mi', 'hr', 'dc', 'bm', 'eh', 'ud', 'sj'];
+    const cards: [string, number][] = [['cp', 6], ['ob', 6], ['wa', 6], ['it', 6], ['mo', 3], ['de', 2], ['tr', 2]];
+    let all = 0;
+    let mirrored = 0;
+    for (const [i, pre] of prefixes.entries()) {
+      for (const [card, n] of cards) {
+        const lines = Array.from({ length: n }, (_, k) => variantOf(`${SETTING_IDS[i]}:${pre}-${card}${k + 1}`));
+        all += n;
+        mirrored += lines.filter((v) => v.mirror).length;
+        // A card's lines show both ways round, as evenly as their number allows.
+        const m = lines.filter((v) => v.mirror).length;
+        expect(Math.abs(2 * m - n), `${pre}-${card}`).toBeLessThanOrEqual(1);
+        expect(new Set(lines.map((v) => v.salt)).size, `${pre}-${card}`).toBe(n);
+      }
+    }
+    expect(mirrored / all).toBeGreaterThan(0.4);
+    expect(mirrored / all).toBeLessThan(0.6);
+    expect(variantOf('desert:ds-cp1')).toEqual(variantOf('desert:ds-cp1'));
+    // Seeds that are not numbered lines toss for it, about half each way.
+    const tossed = Array.from({ length: 400 }, (_, i) => variantOf(`dungeon:card:${i.toString(36)}x`).mirror).filter(Boolean).length;
+    expect(tossed).toBeGreaterThan(160);
+    expect(tossed).toBeLessThan(240);
+  });
 
   it('draws a Dead End and a Trap in their own colours, not the Obstacle’s teal', async () => {
     const d = await designFor('dungeon', 'inside');
