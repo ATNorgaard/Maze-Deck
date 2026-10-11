@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { hexToRgb, mix, readPalette, vocabOf } from '@maze-deck/art';
+import { hexToRgb, mix, readPalette } from '@maze-deck/art';
 import type { Palette, Side } from '@maze-deck/art';
 import type { CardCategory } from '@maze-deck/rules';
 import type { Biome } from '../biomes';
@@ -99,6 +99,39 @@ function edgeOf(id: string, pal: Palette): Edge {
         ...NO_EDGE, eyes: eyes(3, 1.15, 0.5, pal.parchment[100]), rime: 1,
         color: rgb(mix(pal.parchment[100], pal.cat.wand[300], 0.35)),
       };
+    // Wolves in the wheat, either side of the road.
+    case 'kings-road':
+      return { ...NO_EDGE, eyes: eyes(4, 1, 0.55, pal.cat.mons[300]), reach: 1.2 };
+    // The wisps drifting in, low over the water, to lure.
+    case 'mire':
+      return { ...NO_EDGE, eyes: eyes(6, 0.9, 0.85, pal.cat.obst[300]), reach: 1.3 };
+    // The storm closing in, rain driving across, and something big on the ridge.
+    case 'high-road':
+      return {
+        ...NO_EDGE, eyes: eyes(2, 1.15, 0, pal.cat.mons[300]), storm: 0.7,
+        color: rgb(mix(pal.parchment[300], pal.cat.wand[700], 0.5)),
+      };
+    // Drowned sailors' lights, out on the water, coming in with the tide.
+    case 'drowned-coast':
+      return { ...NO_EDGE, eyes: eyes(6, 0.55, 0.9, pal.cat.wand[300]), reach: 1.2 };
+    // Ghost-lights drifting in from the mounds, and the mist with them.
+    case 'barrow-moor':
+      return {
+        ...NO_EDGE, eyes: eyes(5, 0.9, 0.3, pal.cat.wand[300]), rime: 0.6,
+        color: rgb(mix(pal.parchment[300], pal.cat.wand[300], 0.4)),
+      };
+    // Heat haze and embers closing in; something swimming in the fire.
+    case 'ember-hold':
+      return {
+        ...NO_EDGE, eyes: eyes(3, 1, 0.6, pal.cat.path[300]), storm: 0.6,
+        color: rgb(mix(pal.cat.path[700], pal.ink[900], 0.3)),
+      };
+    // Small eyes in clusters, and the fungus light going out.
+    case 'underdark':
+      return { ...NO_EDGE, eyes: eyes(12, 0.55, 0.2, pal.cat.mons[300]), gutter: 0.7 };
+    // The vines creeping in, and eyes in the leaves.
+    case 'sunken-jungle':
+      return { ...NO_EDGE, eyes: eyes(8, 0.9, 0.4, pal.cat.path[300]), reach: 1.6 };
     default:
       return { ...NO_EDGE, eyes: eyes(4, 1, 0.3, pal.cat.mons[300]) };
   }
@@ -255,7 +288,7 @@ export function World({ biome, side, mood, words, focus, flash }: Props) {
 
     const pal = readPalette(canvas);
     const edge = edgeOf(biome.id, pal);
-    r.setting(colorsOf(pal, vocabOf(biome.id).light), edge);
+    r.setting(colorsOf(pal, biome.light), edge);
     const fit = () => r.resize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight,
       Math.min(window.devicePixelRatio || 1, 2) * SCALE[tier]);
     fit();

@@ -60,7 +60,8 @@ const flag = (name, fallback) => {
   const hit = args.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : fallback;
 };
-const ALL = ['dungeon', 'tower', 'deep-forest', 'desert', 'undercity', 'frozen-pass'];
+const ALL = ['dungeon', 'tower', 'deep-forest', 'desert', 'undercity', 'frozen-pass',
+  'kings-road', 'mire', 'high-road', 'drowned-coast', 'barrow-moor', 'ember-hold', 'sunken-jungle', 'underdark'];
 const url = flag('url', 'http://localhost:5180');
 const biomes = flag('biomes', 'all') === 'all' ? ALL : flag('biomes', '').split(',');
 const cpu = Number(flag('cpu', '4'));

@@ -1,12 +1,16 @@
 /* ============================================================
    The biomes.
 
-   One file per setting. Adding one is: a file here, a line in
-   BIOMES, a palette block in biomes.css keyed by its id, its designs
-   in @maze-deck/art (paint/settings) with their baked art (scripts/
-   bake-backs.mjs), its sound bed (stage/bed.ts) and its dark
-   (world/World.tsx). The engine, the wire and the campaign schema
-   already handle "some biome".
+   One file per setting. Adding one is:
+   - a file here (its words, its light, its sides' art), its id in
+     BiomeId (types.ts) and a line in BIOMES;
+   - a palette block in biomes.css keyed by its id;
+   - its designs in @maze-deck/art (paint/settings, SIDES) with their
+     baked art (scripts/bake-backs.mjs);
+   - its sound bed (stage/bed.ts), its dark (world/World.tsx, edgeOf),
+     and its light in check-art.cjs's OWN.
+   biomes.test.ts holds every setting to the same shape. The engine,
+   the wire and the campaign schema already handle "some biome".
    ============================================================ */
 
 import { getCategory } from '@maze-deck/ui';
@@ -18,6 +22,14 @@ import { DEEP_FOREST } from './deep-forest';
 import { DESERT } from './desert';
 import { UNDERCITY } from './undercity';
 import { FROZEN_PASS } from './frozen-pass';
+import { KINGS_ROAD } from './kings-road';
+import { MIRE } from './mire';
+import { HIGH_ROAD } from './high-road';
+import { DROWNED_COAST } from './drowned-coast';
+import { BARROW_MOOR } from './barrow-moor';
+import { EMBER_HOLD } from './ember-hold';
+import { UNDERDARK } from './underdark';
+import { SUNKEN_JUNGLE } from './sunken-jungle';
 import { SIDES, sideOf } from '@maze-deck/art';
 import type { SettingId, Side } from '@maze-deck/art';
 import type { Biome, BiomeId, SideArt } from './types';
@@ -25,9 +37,15 @@ import type { Biome, BiomeId, SideArt } from './types';
 export type { Biome, BiomeId, CardWording, SideArt } from './types';
 export type { Side } from '@maze-deck/art';
 
-/** In picker order. The dungeon first because it is the printed deck. */
+/**
+ * In picker order. The dungeon first because it is the printed deck;
+ * then the first six, then the eight added for every kind of
+ * high-fantasy adventure (AJ8), roughly from the road out of town to
+ * the deep places.
+ */
 export const BIOMES: readonly Biome[] = [
   DUNGEON, TOWER, DEEP_FOREST, DESERT, UNDERCITY, FROZEN_PASS,
+  KINGS_ROAD, MIRE, HIGH_ROAD, DROWNED_COAST, BARROW_MOOR, EMBER_HOLD, SUNKEN_JUNGLE, UNDERDARK,
 ];
 
 export const DEFAULT_BIOME: BiomeId = 'dungeon';

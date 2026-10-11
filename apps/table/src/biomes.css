@@ -270,3 +270,245 @@
     radial-gradient(ellipse 70% 45% at 50% 0%, rgba(179,204,227,0.10), transparent 70%),
     var(--md-ink-900);
 }
+
+/* ---------- KING'S ROAD — dusk umber, lamplight, wheat ---------- */
+[data-biome="kings-road"] .md-root,
+.t-door[data-biome="kings-road"] {
+  --md-ink-900: #100D0A;
+  --md-ink-800: #18140F;
+  --md-ink-700: #221C15;
+  --md-ink-600: #2F271D;
+  --md-ink-500: #443A2C;
+
+  --md-parchment-100: #F3EAD5;
+  --md-parchment-200: #E5D9BA;
+  --md-parchment-300: #C9BB97;
+  --md-parchment-400: #9B8D6E;
+
+  --md-cat-path-500: #E2A64A;
+  --md-cat-path-300: #F2CC8C;
+  --md-cat-path-700: #8A5F1F;
+  --md-cat-path-glow: rgba(226,166,74,0.42);
+
+  --md-cat-obst-500: #4A9180;
+  --md-cat-obst-300: #84BFAF;
+  --md-cat-obst-700: #27524A;
+  --md-cat-obst-glow: rgba(74,145,128,0.38);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(226,166,74,0.08), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- MIRE — bog-black, marsh-light, reed ------------------
+   Its light is the Obstacle's teal, kept blue of the Trap's acid. */
+[data-biome="mire"] .md-root,
+.t-door[data-biome="mire"] {
+  --md-ink-900: #070E0D;
+  --md-ink-800: #0C1614;
+  --md-ink-700: #13201D;
+  --md-ink-600: #1C2D29;
+  --md-ink-500: #2B423C;
+
+  --md-parchment-100: #ECEBDC;
+  --md-parchment-200: #DCDAC3;
+  --md-parchment-300: #BEBBA0;
+  --md-parchment-400: #8F8C76;
+
+  --md-cat-path-500: #D9AE4A;
+  --md-cat-path-300: #EDD08E;
+  --md-cat-path-700: #806219;
+  --md-cat-path-glow: rgba(217,174,74,0.40);
+
+  --md-cat-obst-500: #3F9686;
+  --md-cat-obst-300: #7EC6B8;
+  --md-cat-obst-700: #21544B;
+  --md-cat-obst-glow: rgba(63,150,134,0.40);
+
+  --md-cat-wand-500: #6E93A8;
+  --md-cat-wand-300: #A8C3D2;
+  --md-cat-wand-700: #34505E;
+  --md-cat-wand-glow: rgba(110,147,168,0.34);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(63,150,134,0.09), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- HIGH ROAD — granite, storm light, rain ------------- */
+[data-biome="high-road"] .md-root,
+.t-door[data-biome="high-road"] {
+  --md-ink-900: #0A0D10;
+  --md-ink-800: #10151A;
+  --md-ink-700: #181F26;
+  --md-ink-600: #222B34;
+  --md-ink-500: #344250;
+
+  --md-parchment-100: #EEF0EE;
+  --md-parchment-200: #DDE0DC;
+  --md-parchment-300: #BFC3BE;
+  --md-parchment-400: #90958F;
+
+  --md-cat-path-500: #E0A84E;
+  --md-cat-path-300: #F0CD90;
+  --md-cat-path-700: #876020;
+  --md-cat-path-glow: rgba(224,168,78,0.40);
+
+  --md-cat-wand-500: #7699BD;
+  --md-cat-wand-300: #AEC5DD;
+  --md-cat-wand-700: #385470;
+  --md-cat-wand-glow: rgba(118,153,189,0.36);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(118,153,189,0.09), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- DROWNED COAST — storm navy, lighthouse gold, spray -- */
+[data-biome="drowned-coast"] .md-root,
+.t-door[data-biome="drowned-coast"] {
+  --md-ink-900: #070B10;
+  --md-ink-800: #0C121A;
+  --md-ink-700: #121B26;
+  --md-ink-600: #1B2735;
+  --md-ink-500: #2A3A4E;
+
+  --md-parchment-100: #EEEDE6;
+  --md-parchment-200: #DEDCD0;
+  --md-parchment-300: #C0BEAF;
+  --md-parchment-400: #918F82;
+
+  --md-cat-path-500: #E2A94C;
+  --md-cat-path-300: #F2CE8E;
+  --md-cat-path-700: #89621F;
+  --md-cat-path-glow: rgba(226,169,76,0.42);
+
+  --md-cat-wand-500: #6F96B8;
+  --md-cat-wand-300: #A9C4DA;
+  --md-cat-wand-700: #33506A;
+  --md-cat-wand-glow: rgba(111,150,184,0.34);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 60% 40% at 70% 10%, rgba(226,169,76,0.07), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- BARROW MOOR — grey-green night, spectral blue ------ */
+[data-biome="barrow-moor"] .md-root,
+.t-door[data-biome="barrow-moor"] {
+  --md-ink-900: #0A0D0C;
+  --md-ink-800: #111513;
+  --md-ink-700: #191F1C;
+  --md-ink-600: #232B27;
+  --md-ink-500: #343F3A;
+
+  --md-parchment-100: #EDEEE8;
+  --md-parchment-200: #DCDED5;
+  --md-parchment-300: #BEC1B6;
+  --md-parchment-400: #8F9288;
+
+  --md-cat-wand-500: #8AA6C4;
+  --md-cat-wand-300: #BBCDE0;
+  --md-cat-wand-700: #43586F;
+  --md-cat-wand-glow: rgba(138,166,196,0.36);
+
+  --md-cat-dead-500: #8B918C;
+  --md-cat-dead-300: #C0C5C0;
+  --md-cat-dead-700: #4D534F;
+  --md-cat-dead-glow: rgba(139,145,140,0.28);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(138,166,196,0.09), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- EMBER HOLD — basalt, molten gold, ash ---------------
+   The metal runs gold and orange, and never red: red is the
+   Monster's. */
+[data-biome="ember-hold"] .md-root,
+.t-door[data-biome="ember-hold"] {
+  --md-ink-900: #0D0907;
+  --md-ink-800: #150F0B;
+  --md-ink-700: #1F1610;
+  --md-ink-600: #2B1F17;
+  --md-ink-500: #3F2E22;
+
+  --md-parchment-100: #F5E9D2;
+  --md-parchment-200: #E8D6B4;
+  --md-parchment-300: #CDB78F;
+  --md-parchment-400: #9F8A69;
+
+  --md-cat-path-500: #E89E3E;
+  --md-cat-path-300: #F5C888;
+  --md-cat-path-700: #8C5918;
+  --md-cat-path-glow: rgba(232,158,62,0.44);
+
+  --md-cat-mons-500: #A92E45;
+  --md-cat-mons-300: #D86E82;
+  --md-cat-mons-700: #651424;
+  --md-cat-mons-glow: rgba(169,46,69,0.42);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(232,158,62,0.10), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- UNDERDARK — blue-black, fungus glow, silk ----------- */
+[data-biome="underdark"] .md-root,
+.t-door[data-biome="underdark"] {
+  --md-ink-900: #06080E;
+  --md-ink-800: #0B0E17;
+  --md-ink-700: #111522;
+  --md-ink-600: #1A2030;
+  --md-ink-500: #283147;
+
+  --md-parchment-100: #ECEEF2;
+  --md-parchment-200: #DADDE5;
+  --md-parchment-300: #BBBFCA;
+  --md-parchment-400: #8C909C;
+
+  --md-cat-wand-500: #86A8D6;
+  --md-cat-wand-300: #B9CDEA;
+  --md-cat-wand-700: #3F577A;
+  --md-cat-wand-glow: rgba(134,168,214,0.36);
+
+  --md-cat-item-500: #8E5FA6;
+  --md-cat-item-300: #C29CD6;
+  --md-cat-item-700: #50305F;
+  --md-cat-item-glow: rgba(142,95,166,0.38);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(134,168,214,0.08), transparent 70%),
+    var(--md-ink-900);
+}
+
+/* ---------- SUNKEN JUNGLE — olive dark, canopy sun, stone -------
+   Its greens stay olive, clear of the Obstacle's teal and the
+   Trap's acid. */
+[data-biome="sunken-jungle"] .md-root,
+.t-door[data-biome="sunken-jungle"] {
+  --md-ink-900: #0B0D08;
+  --md-ink-800: #12150D;
+  --md-ink-700: #1A1F13;
+  --md-ink-600: #252C1B;
+  --md-ink-500: #37412A;
+
+  --md-parchment-100: #F2EDD6;
+  --md-parchment-200: #E3DCBB;
+  --md-parchment-300: #C7BF98;
+  --md-parchment-400: #989073;
+
+  --md-cat-path-500: #DDAA44;
+  --md-cat-path-300: #EFD08A;
+  --md-cat-path-700: #846319;
+  --md-cat-path-glow: rgba(221,170,68,0.42);
+
+  --md-cat-obst-500: #43927F;
+  --md-cat-obst-300: #80C1B0;
+  --md-cat-obst-700: #23524A;
+  --md-cat-obst-glow: rgba(67,146,127,0.38);
+
+  --t-biome-ground:
+    radial-gradient(ellipse 60% 45% at 50% 0%, rgba(221,170,68,0.08), transparent 70%),
+    var(--md-ink-900);
+}

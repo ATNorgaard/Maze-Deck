@@ -414,6 +414,21 @@ function bell(k: Kit, gap: [number, number]): Layer {
   return { start: () => {}, stop: () => {}, ...every(r, gap, fire) };
 }
 
+/** Thunder a long way off: a low roll, now and then, in two to four swells. */
+function thunder(k: Kit, gap: [number, number]): Layer {
+  const r = k.rng('thunder');
+  const fire = (at: number) => {
+    const dest = panned(k.c, k.wet, range(r, -0.6, 0.6));
+    const swells = 2 + Math.floor(r() * 3);
+    let t = at;
+    for (let i = 0; i < swells; i += 1) {
+      burst(k.c, dest, t, 'lowpass', range(r, 90, 170), range(r, 0.15, 0.32), range(r, 0.9, 2));
+      t += range(r, 0.25, 0.8);
+    }
+  };
+  return { start: () => {}, stop: () => {}, ...every(r, gap, fire) };
+}
+
 /** Each setting: its room, and what it is made of. */
 const RECIPES: Record<BiomeId, { room: number; wet: number; trim: number; layers: (k: Kit) => Layer[] }> = {
   'frozen-pass': { room: 1.2, wet: 0.15, trim: 1, layers: (k) => [wind(k, [180, 520], 1, 1)] },
@@ -431,6 +446,50 @@ const RECIPES: Record<BiomeId, { room: number; wet: number; trim: number; layers
     layers: (k) => [hum(k, 240, 0.12), leaves(k, 0.5), insects(k, 3)],
   },
   desert: { room: 0.6, wet: 0.1, trim: 1, layers: (k) => [hiss(k, 0.06), wind(k, [300, 1100], 0.8, 0.2)] },
+  // Wind in the wheat, a few crickets in the verge, and a church bell
+  // from the next town; wind rather than leaves, or it is the forest.
+  'kings-road': {
+    room: 0.7, wet: 0.2, trim: 1,
+    layers: (k) => [wind(k, [220, 760], 0.55, 0.3), insects(k, 2), bell(k, [24, 50])],
+  },
+  // Insects over still water, bubbles rising, the ground's low tone.
+  mire: {
+    room: 0.9, wet: 0.25, trim: 1,
+    layers: (k) => [hum(k, 110, 0.12), insects(k, 4), drips(k, [1.5, 5], 0.6)],
+  },
+  // A summer storm: rain, the falls running white, thunder off down the
+  // valley, and less wind than the frozen pass, which this must not sound like.
+  'high-road': {
+    room: 1.6, wet: 0.3, trim: 1,
+    layers: (k) => [stream(k, 0.3), hiss(k, 0.06), thunder(k, [6, 16]), wind(k, [300, 900], 0.45, 0.3)],
+  },
+  // Surf on the rocks with the sea's boom under it and spray over it, a
+  // little wind, and the bell on the buoy.
+  'drowned-coast': {
+    room: 1.8, wet: 0.3, trim: 1,
+    layers: (k) => [stream(k, 0.4), hum(k, 55, 0.12), hiss(k, 0.025), wind(k, [220, 800], 0.3, 0.5), bell(k, [14, 32])],
+  },
+  // Grass hissing in the night wind over the ground's low tone, and a
+  // bell a long way off; more grass than wind, or it is the frozen pass.
+  'barrow-moor': {
+    room: 1.4, wet: 0.35, trim: 1,
+    layers: (k) => [leaves(k, 0.35), hum(k, 80, 0.14), bell(k, [20, 40]), wind(k, [250, 700], 0.3, 0.6)],
+  },
+  // The mountain's rumble, fire close by, steam hissing.
+  'ember-hold': {
+    room: 3, wet: 0.4, trim: 1,
+    layers: (k) => [hum(k, 55, 0.3), crackle(k), hiss(k, 0.03)],
+  },
+  // A vast low drone, and drips into still water a long way off.
+  underdark: {
+    room: 6, wet: 0.7, trim: 1,
+    layers: (k) => [hum(k, 70, 0.25), drips(k, [1, 6], 0.8)],
+  },
+  // Insects and birds in the canopy, rain on leaves, water falling.
+  'sunken-jungle': {
+    room: 0.9, wet: 0.2, trim: 1,
+    layers: (k) => [insects(k, 5), leaves(k, 0.5), stream(k, 0.25)],
+  },
 };
 
 /** The bed's loudness against the voices, which play at full. */

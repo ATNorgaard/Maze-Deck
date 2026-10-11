@@ -15,6 +15,7 @@ export const DUNGEON: Biome = {
   name: 'Dungeon',
   flavour: 'Wet stone, three corridors, and no map. A Clear Path is a corridor that keeps going.',
   motif: 'fret',
+  light: 'path',
   art: {
     inside: { back: backInside, still: stillInside },
   },

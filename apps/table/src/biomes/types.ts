@@ -24,7 +24,15 @@ export type BiomeId =
   | 'deep-forest'
   | 'desert'
   | 'undercity'
-  | 'frozen-pass';
+  | 'frozen-pass'
+  | 'kings-road'
+  | 'mire'
+  | 'high-road'
+  | 'drowned-coast'
+  | 'barrow-moor'
+  | 'ember-hold'
+  | 'underdark'
+  | 'sunken-jungle';
 
 /** One card's printed copy in this setting. The mechanic is unchanged. */
 export interface CardWording {
@@ -51,6 +59,12 @@ export interface Biome {
   flavour: string;
   /** The field on the card back. Same on every card in the run. */
   motif: CardBackMotif;
+  /**
+   * The card family whose colour lights the place (AJ4): only Clear
+   * Path gold, Obstacle teal and Wanderer blue light a setting. The
+   * world's gold of getting through is this colour.
+   */
+  light: 'path' | 'obst' | 'wand';
   /**
    * Each side's pictures (AJ7), baked from its design by
    * scripts/bake-backs.mjs: the deck's back for that side, and the

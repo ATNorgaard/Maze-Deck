@@ -12,6 +12,7 @@ export const UNDERCITY: Biome = {
   name: 'Undercity',
   flavour: 'Sewer junctions and forgotten cellars. Everyone down here is going somewhere too.',
   motif: 'brick',
+  light: 'obst',
   art: {
     outside: { back: backOutside, still: stillOutside },
     inside: { back: backInside, still: stillInside },

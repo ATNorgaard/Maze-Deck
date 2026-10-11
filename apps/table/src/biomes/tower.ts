@@ -10,6 +10,7 @@ export const TOWER: Biome = {
   name: 'Tower',
   flavour: 'Stairwells and landings. Up is the only way through, and every floor was somebody’s.',
   motif: 'stair',
+  light: 'path',
   art: {
     inside: { back: backInside, still: stillInside },
   },

@@ -68,7 +68,11 @@ const REGIONS = [
 ];
 
 /** Each setting's own light, which it may use freely (docs/art-jobs.md). */
-const OWN = { dungeon: 'path', tower: 'path', desert: 'path', 'deep-forest': 'obst', undercity: 'obst', 'frozen-pass': 'wand' };
+const OWN = {
+  dungeon: 'path', tower: 'path', desert: 'path', 'deep-forest': 'obst', undercity: 'obst', 'frozen-pass': 'wand',
+  'kings-road': 'path', mire: 'obst', 'high-road': 'wand', 'drowned-coast': 'path', 'barrow-moor': 'wand',
+  'ember-hold': 'path', 'sunken-jungle': 'path', underdark: 'wand',
+};
 const ownOf = (b) => OWN[b] ?? 'path';
 const FAMILIES = { path: '#E3A445', obst: '#43917B', wand: '#6B8CA6', item: '#8B4F9C', mons: '#A93343' };
 

@@ -12,6 +12,7 @@ export const DESERT: Biome = {
   name: 'Desert',
   flavour: 'Dune lines instead of doors. Nothing here is hidden; it is only far.',
   motif: 'dune',
+  light: 'path',
   art: {
     outside: { back: backOutside, still: stillOutside },
     inside: { back: backInside, still: stillInside },

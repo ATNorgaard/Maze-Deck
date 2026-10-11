@@ -12,6 +12,7 @@ export const DEEP_FOREST: Biome = {
   name: 'Deep forest',
   flavour: 'Game trails that all look the same. The trees are older than the road, and they know it.',
   motif: 'branch',
+  light: 'obst',
   art: {
     outside: { back: backOutside, still: stillOutside },
     inside: { back: backInside, still: stillInside },

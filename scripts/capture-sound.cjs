@@ -49,7 +49,8 @@ const db = (v) => `${v.toFixed(1)} dB`;
 
 const CALM = { threat: 0, progress: 0, hush: 0, dim: 0, bloom: 0 };
 const mood = (m) => ({ ...CALM, ...m });
-const BIOMES = ['frozen-pass', 'tower', 'dungeon', 'undercity', 'deep-forest', 'desert'];
+const BIOMES = ['frozen-pass', 'tower', 'dungeon', 'undercity', 'deep-forest', 'desert',
+  'kings-road', 'mire', 'high-road', 'drowned-coast', 'barrow-moor', 'ember-hold', 'sunken-jungle', 'underdark'];
 
 /** What to render: [name, biome, seconds, moods, ducks]. */
 const CLIPS = [

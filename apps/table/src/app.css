@@ -35,14 +35,24 @@ html, body, #root {
    Under the world (world/World.tsx): the side's world as one still
    frame, baked by scripts/bake-backs.mjs and named by App.tsx as
    `--t-still`, over the setting's ink (biomes.css). It is what the
-   world's *Off* shows, and what shows while the world loads
-   (settings-build.md, S8). Pixel art: scaled up crisp, and held still. */
+   world's *Off* shows, what shows while the world loads, and the
+   page behind every screen but the board (settings-build.md, S8).
+   Pixel art: scaled up crisp, and held still.
+
+   A still cannot know where the words are, as the live world does, so
+   it is veiled in the setting's ink: at 88% even its brightest pixel
+   (white-hot metal, a lit window) stays within the 0.023 luminance
+   budget behind the faintest notes. A ghost of the place. */
 .t-app::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: var(--t-still, none) center / cover no-repeat, var(--t-biome-ground);
+  --t-veil: color-mix(in srgb, var(--md-ink-900) 88%, transparent);
+  background:
+    linear-gradient(var(--t-veil), var(--t-veil)),
+    var(--t-still, none) center / cover no-repeat,
+    var(--t-biome-ground);
   image-rendering: pixelated;
   pointer-events: none;
 }

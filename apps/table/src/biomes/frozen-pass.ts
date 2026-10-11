@@ -12,6 +12,7 @@ export const FROZEN_PASS: Biome = {
   name: 'Frozen pass',
   flavour: 'Switchbacks in whiteout. Whatever lives up here is heard long before it is seen.',
   motif: 'crystal',
+  light: 'wand',
   art: {
     outside: { back: backOutside, still: stillOutside },
     inside: { back: backInside, still: stillInside },

@@ -320,3 +320,92 @@ budget, so a bright detail behind the top bar there is as drawn.
 - **Tests:** app 41, art 16, rules 75; both apps typecheck.
 
 **Commit:** `git log --grep set/3`.
+
+### set/4: the eight new settings
+
+**Changed.**
+- **Eight new settings to play**, each a file in `apps/table/src/biomes/`:
+  the King's Road, the Mire, the High Road, the Drowned Coast, the
+  Barrow Moor, the Ember Hold, the Underdark and the Sunken Jungle. Each
+  one has:
+  - **its words**, written for its place and fitting both its sides:
+    - a name and a flavour line;
+    - the seven cards' names, their rules reworded to say exactly what
+      the card does;
+    - 31 lines of narration: six Obstacles with every check among them
+      (two at +1), six each of Clear Path, Wanderer and Item, three
+      Monsters, and two each of Dead End and Trap;
+  - **its light** (AJ4): gold for the King's Road, the Drowned Coast,
+    the Ember Hold and the Sunken Jungle; teal for the Mire; blue for
+    the High Road, the Barrow Moor and the Underdark;
+  - **its palette** in `biomes.css`, cast to its place and tuned within
+    the card families (the Ember Hold's metal never red, the Sunken
+    Jungle's greens olive);
+  - **its dark** (`World.tsx`), from new-settings.md:
+    - wolves' eyes either side of the King's Road;
+    - wisps low over the Mire's water;
+    - rain driving across the High Road, and a giant's eyes on the
+      ridge;
+    - drowned lights coming in on the tide;
+    - ghost-lights and mist over the Barrow Moor;
+    - haze and embers closing in on the Ember Hold;
+    - the Underdark's clusters of small eyes, and its fungus light
+      guttering;
+    - the Sunken Jungle's vines reaching in, with eyes in the leaves;
+  - **its sound bed** (`bed.ts`). A new layer, thunder, gives the High
+    Road its storm.
+- **A setting's light is its own** (`Biome.light`); the world no longer
+  asks the old scene generator for it.
+- **Fourteen doors on the threshold.** They scroll with arrows, as the
+  front door already allowed.
+- **The still frame is veiled** (88% of the setting's ink) on every
+  screen it shows on: the threshold, the landing, and the board when the
+  world is *Off*. Unveiled, a still put the Ember Hold's molten metal
+  straight behind the campaign's details and buttons. A still cannot
+  know where words are, as the live world does, and at 88% even
+  white-hot metal stays within the 0.023 budget. *Off* is now a dim
+  ghost of the place.
+- **A test holds every setting to the same shape**
+  (`biomes/biomes.test.ts`):
+  - art for exactly its sides;
+  - a light of gold, teal or blue;
+  - every rule still saying what its card does;
+  - full narration with unique ids and every check.
+- The scripts know all fourteen: `measure-frames.cjs`,
+  `capture-sound.cjs`, and `check-art.cjs`'s `OWN`.
+
+**Found, for the author.** The Drowned Coast's outside is gold against
+storm blue, as new-settings.md planned it, and the colour reservation
+counts the storm as the Wanderer's blue: 7.6% of the back and 11 to 12.5%
+of the world, over the 5% line. Either the sea is made greyer, or the
+rule allows a setting a second family as weather. Left as approved.
+
+**Verified.**
+- **The art** (`check-art.cjs`, GPU) of all 13 new sides at 1600x1000
+  and 390x844:
+  - every region of words is within its budget;
+  - every back and world keeps the colour reservation but the Drowned
+    Coast's outside.
+- **The threshold** at 1600x1000 and 390x844:
+  - fourteen doors;
+  - picking the Ember Hold's *Inside* stores
+    `sides: {'ember-hold': 'inside'}`;
+  - the Underdark says *Inside only*;
+  - no page errors;
+  - with the veil, the campaign's details read clearly over the forge.
+- **Walks on the GPU**, each with reveals at **0px**:
+  - the Ember Hold inside: the forge hall, its Smith in the vista;
+  - the Underdark: the fungus forest, the Many-Legs at the bridge, and
+    at one strike its small eyes at the edges.
+- **The sound** (`capture-sound.cjs`): all 52 checks pass.
+  - Every new bed is audible, under the voices, and never clips.
+  - No two of the fourteen are alike; the closest pair, the tower and
+    the King's Road, differ by 0.24 against a floor of 0.2.
+  - Getting there took three changes. The High Road first sounded like
+    the Frozen Pass (0.11), now storm and falls; the Barrow Moor too
+    (0.13), now grass over the ground's low tone; and the King's Road
+    like the Drowned Coast (0.09), whose surf now has the sea's boom
+    and spray.
+- **Tests:** app 45 (4 new), art 16, rules 75; the table typechecks.
+
+**Commit:** `git log --grep set/4`.
