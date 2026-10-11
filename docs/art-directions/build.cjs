@@ -10,7 +10,8 @@ const scenes = order
   .map((s) => path.join(dir, 'scenes', `${s}.js`))
   .filter((f) => fs.existsSync(f))
   .map((f) => fs.readFileSync(f, 'utf8'))
-  .join('\n');
+  // Each scene in its own script, so one broken file cannot blank the page.
+  .join('\n</script>\n<script>\n');
 const page = fs.readFileSync(path.join(dir, 'page.html'), 'utf8')
   .replace('/*PX*/', () => fs.readFileSync(path.join(dir, 'px.js'), 'utf8').replace("if (typeof module !== 'undefined') module.exports = PX;", ''))
   .replace('/*SCENES*/', () => scenes);

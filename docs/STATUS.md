@@ -59,8 +59,11 @@ deploys.
   now. A first dungeon (`art/1`) was built and taken back: the author was
   not keen. **The designs are ready** (2026-10-11): two directions for each
   of jobs 1–6, in [art-directions/](art-directions/README.md) and on
-  <https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>. **Next: the author
-  picks one per setting** (saved on that page); nothing is built until then.
+  <https://claude.ai/artifact/4CKTL8Pw7XAqLiUWFdtXYV>. The author has picked
+  (2026-10-11): dungeon A, tower A, forest A, desert A, undercity B, and both
+  frozen pass designs. They then decided **every setting has an inside and
+  an outside** (AJ7), so each setting's other side is being designed. Nothing
+  is built until those are approved.
 
 Both are on the `front-door` branch.
 

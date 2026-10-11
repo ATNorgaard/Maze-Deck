@@ -1,6 +1,6 @@
 /* Job 2, the tower: two directions. */
 (() => {
-  const { C, Painter, put, particles, flicker, SUBJECT, CARD, hash, clamp, lerp, rng } = PX;
+  const { C, Painter, put, sprite, particles, flicker, SUBJECT, CARD, hash, clamp, lerp, rng } = PX;
 
   const catRamp = (cat) => PX.CATEGORIES.find((c) => c[0] === cat)[2];
 
@@ -162,6 +162,70 @@
     });
   }
 
+  /* ---------- the cards at a doorway, shared by the inside and the outside ---------- */
+
+  /**
+   * A hooded traveller in a card's colour, in flat bands: the cloak dark, the side toward
+   * the lantern lit, a gold rim where the doorway is behind; a staff; the lantern held out.
+   */
+  function traveller(p, cx, L, s, ramp, u) {
+    const P = (pts) => C.poly(pts.map(([x, y]) => [cx + x * s, L + y * s]));
+    p.fill(P([[-0.36, 0], [-0.22, -0.5], [-0.17, -0.72], [-0.09, -0.86], [0, -0.92], [0.1, -0.86], [0.18, -0.7], [0.24, -0.5], [0.34, 0]]), ramp, 0.2, 7);
+    p.fill(P([[0.15, -0.66], [0.38, -0.58], [0.4, -0.53], [0.17, -0.57]]), ramp, 0.2, 7);           // the arm, held out
+    p.fill(P([[-0.07, -0.82], [0.08, -0.82], [0.07, -0.7], [-0.05, -0.7]]), 'shadow', 0, 7);         // the face, in the hood
+    p.fill(C.rect(Math.round(cx - 0.31 * s), Math.round(L - 1.04 * s), 1, Math.round(1.04 * s)), 'shadow', 1, 7); // the staff
+    p.backlit(7, 'glow', 4, 'glow', 6.2);
+    const lx = Math.round(cx + 0.39 * s); const ly = Math.round(L - 0.46 * s);
+    p.fill(C.rect(lx, Math.round(L - 0.53 * s), 1, ly - Math.round(L - 0.53 * s)), 'shadow', 1, 7); // its handle
+    // The lantern's side of the cloak: a lit band, its edge brighter.
+    p.each(C.rect(cx - 0.4 * s, L - s, 0.85 * s, s), (x, y, i) => {
+      if (p.z[i] !== 7 || p.r[i] === p.ri('shadow')) return;
+      const d = Math.hypot(x + 0.5 - lx, (y + 0.5 - ly) * 0.7);
+      if (d > 0.42 * s) return;
+      const edge = p.z[i + 1] !== 7 || p.z[i - p.w] !== 7;
+      p.r[i] = p.ri(ramp); p.v[i] = edge ? 3.2 : d < 0.26 * s ? 2.2 : 1.2;
+    });
+    p.fill(C.rect(lx - 1, ly, 3, 3), ramp, 3.2, 8);
+    p.fill(C.rect(lx, ly + 1, 1, 1), ramp, 4.2, 8);
+    p.tint(lx + 0.5, ly + 1.5, 6 * u, CARD.wand[3], 0.7, flicker(0.9, 0.12));
+    p.tint(lx + 0.5, L - 0.5, 7 * u, CARD.wand[2], 0.5, flicker(0.9, 0.12)); // its light on the landing
+  }
+
+  /** A lectern with an open grimoire on it, its pages alight. */
+  function grimoire(p, gx, L, u, ramp, hex) {
+    p.fill(C.poly([[gx - 2.5 * u, L], [gx - 1.2 * u, L - 15 * u], [gx + 1.2 * u, L - 15 * u], [gx + 2.5 * u, L]]), 'wood', 1.0, 7);
+    p.fill(C.rect(gx - 6 * u, L - 2 * u, 12 * u, 2 * u), 'wood', 1.0, 7);
+    p.fill(C.poly([[gx - 9 * u, L - 18 * u], [gx + 9 * u, L - 18 * u], [gx + 7 * u, L - 14 * u], [gx - 7 * u, L - 14 * u]]), 'wood', 1.4, 7);
+    // The book lies open: two pages rising to the spine's valley, edges lit, lines of script.
+    const by = L - 18 * u;
+    for (const m of [-1, 1]) {
+      const pg = C.poly([[gx, by], [gx + m * 11 * u, by - 1.5 * u], [gx + m * 11.5 * u, by - 7 * u], [gx + m * 1 * u, by - 5 * u]]);
+      p.fill(pg, ramp, (x, y) => 3.9 - Math.abs(x - gx) / (11 * u) * 1.0 + (((by - y) % (1.6 * u)) < 0.6 && Math.abs(x - gx) > 2 * u ? -0.9 : 0), 8);
+    }
+    p.fill(C.rect(gx - 0.5, by - 5 * u, 1, 5 * u), ramp, 2.2, 8);
+    p.backlit(7, 'glow', 4, 'glow', 6.2);
+    p.tint(gx, by - 4 * u, 26 * u, hex, 0.6, flicker(2, 0.15, 0.7));
+  }
+
+  /** A ward drawn across a doorway: a ring, a triangle, a broken inner circle of script. */
+  function ward(p, gx, wy, R, ramp, hex, u) {
+    p.each(C.circle(gx, wy, R + 1.5), (x, y, i) => {
+      const px = x + 0.5; const py = y + 0.5;
+      const d = Math.hypot(px - gx, py - wy);
+      const a = Math.atan2(py - wy, px - gx);
+      let on = Math.abs(d - R) < 0.75;
+      for (let k = 0; k < 3; k += 1) {
+        const a0 = -Math.PI / 2 + (k * 2 * Math.PI) / 3; const a1 = a0 + (2 * Math.PI) / 3;
+        const ax = gx + R * Math.cos(a0); const ay = wy + R * Math.sin(a0); const bx = gx + R * Math.cos(a1); const by = wy + R * Math.sin(a1);
+        const dist = Math.abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / Math.hypot(bx - ax, by - ay);
+        if (dist < 0.6) on = true;
+      }
+      if (Math.abs(d - R * 0.42) < 0.6 && Math.sin(a * 5) > 0.2) on = true;
+      if (on) { p.r[i] = p.ri(ramp); p.v[i] = 3.7; p.z[i] = 8; }
+    });
+    p.tint(gx, wy, 26 * u, hex, 0.5, flicker(0.5, 0.12, 0.6));
+  }
+
   /* ================= A: the stair library ================= */
 
   const RAMPS_A = {
@@ -282,7 +346,7 @@
   }
 
   const A = {
-    job: 2, setting: 'tower', key: 'A', id: 'tower-a',
+    job: 2, setting: 'tower', key: 'A', id: 'tower-a', side: 'inside',
     name: 'Tower', title: 'The stair library',
     pitch: 'Everything climbs. A spiral stair winds up past shelves of books, a candle on every few steps, to a cold moon in a lancet window at the top. Someone has been reading up here for a long time.',
     notes: [
@@ -438,61 +502,11 @@
         p.backlit(7, 'glow', 4, 'glow', 6.2);
         p.tint(gx, L - sub * 0.9, 6 * u, hex, 0.4, flicker(0.3, 0.3, 1.4));
       } else if (cat === 'wanderer') {
-        // A hooded traveller in the card's blue, in flat bands: the cloak dark, the side toward
-        // the lantern lit, a gold rim where the doorway is behind; a staff; the lantern held out.
-        const s = sub + 3 * u; const cx = gx - 3 * u;
-        const P = (pts) => C.poly(pts.map(([x, y]) => [cx + x * s, L + y * s]));
-        p.fill(P([[-0.36, 0], [-0.22, -0.5], [-0.17, -0.72], [-0.09, -0.86], [0, -0.92], [0.1, -0.86], [0.18, -0.7], [0.24, -0.5], [0.34, 0]]), ramp, 0.2, 7);
-        p.fill(P([[0.15, -0.66], [0.38, -0.58], [0.4, -0.53], [0.17, -0.57]]), ramp, 0.2, 7);           // the arm, held out
-        p.fill(P([[-0.07, -0.82], [0.08, -0.82], [0.07, -0.7], [-0.05, -0.7]]), 'shadow', 0, 7);         // the face, in the hood
-        p.fill(C.rect(Math.round(cx - 0.31 * s), Math.round(L - 1.04 * s), 1, Math.round(1.04 * s)), 'shadow', 1, 7); // the staff
-        p.backlit(7, 'glow', 4, 'glow', 6.2);
-        const lx = Math.round(cx + 0.39 * s); const ly = Math.round(L - 0.46 * s);
-        p.fill(C.rect(lx, Math.round(L - 0.53 * s), 1, ly - Math.round(L - 0.53 * s)), 'shadow', 1, 7); // its handle
-        // The lantern's side of the cloak: a lit band, its edge brighter.
-        p.each(C.rect(cx - 0.4 * s, L - s, 0.85 * s, s), (x, y, i) => {
-          if (p.z[i] !== 7 || p.r[i] === p.ri('shadow')) return;
-          const d = Math.hypot(x + 0.5 - lx, (y + 0.5 - ly) * 0.7);
-          if (d > 0.42 * s) return;
-          const edge = p.z[i + 1] !== 7 || p.z[i - p.w] !== 7;
-          p.r[i] = p.ri(ramp); p.v[i] = edge ? 3.2 : d < 0.26 * s ? 2.2 : 1.2;
-        });
-        p.fill(C.rect(lx - 1, ly, 3, 3), ramp, 3.2, 8);
-        p.fill(C.rect(lx, ly + 1, 1, 1), ramp, 4.2, 8);
-        p.tint(lx + 0.5, ly + 1.5, 6 * u, CARD.wand[3], 0.7, flicker(0.9, 0.12));
-        p.tint(lx + 0.5, L - 0.5, 7 * u, CARD.wand[2], 0.5, flicker(0.9, 0.12)); // its light on the landing
+        traveller(p, gx - 3 * u, L, sub + 3 * u, ramp, u);
       } else if (cat === 'item') {
-        // A lectern with an open grimoire, its pages alight.
-        p.fill(C.poly([[gx - 2.5 * u, L], [gx - 1.2 * u, L - 15 * u], [gx + 1.2 * u, L - 15 * u], [gx + 2.5 * u, L]]), 'wood', 1.0, 7);
-        p.fill(C.rect(gx - 6 * u, L - 2 * u, 12 * u, 2 * u), 'wood', 1.0, 7);
-        p.fill(C.poly([[gx - 9 * u, L - 18 * u], [gx + 9 * u, L - 18 * u], [gx + 7 * u, L - 14 * u], [gx - 7 * u, L - 14 * u]]), 'wood', 1.4, 7);
-        // The book lies open: two pages rising to the spine's valley, edges lit, lines of script.
-        const by = L - 18 * u;
-        for (const m of [-1, 1]) {
-          const pg = C.poly([[gx, by], [gx + m * 11 * u, by - 1.5 * u], [gx + m * 11.5 * u, by - 7 * u], [gx + m * 1 * u, by - 5 * u]]);
-          p.fill(pg, ramp, (x, y) => 3.9 - Math.abs(x - gx) / (11 * u) * 1.0 + (((by - y) % (1.6 * u)) < 0.6 && Math.abs(x - gx) > 2 * u ? -0.9 : 0), 8);
-        }
-        p.fill(C.rect(gx - 0.5, by - 5 * u, 1, 5 * u), ramp, 2.2, 8);
-        p.backlit(7, 'glow', 4, 'glow', 6.2);
-        p.tint(gx, by - 4 * u, 26 * u, hex, 0.6, flicker(2, 0.15, 0.7));
+        grimoire(p, gx, L, u, ramp, hex);
       } else if (cat === 'obstacle') {
-        // A ward drawn across the doorway: a ring, a triangle, a broken inner circle of script.
-        const wy = L - 22 * u; const R = 10 * u;
-        p.each(C.circle(gx, wy, R + 1.5), (x, y, i) => {
-          const px = x + 0.5; const py = y + 0.5;
-          const d = Math.hypot(px - gx, py - wy);
-          const a = Math.atan2(py - wy, px - gx);
-          let on = Math.abs(d - R) < 0.75;
-          for (let k = 0; k < 3; k += 1) {
-            const a0 = -Math.PI / 2 + (k * 2 * Math.PI) / 3; const a1 = a0 + (2 * Math.PI) / 3;
-            const ax = gx + R * Math.cos(a0); const ay = wy + R * Math.sin(a0); const bx = gx + R * Math.cos(a1); const by = wy + R * Math.sin(a1);
-            const dist = Math.abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / Math.hypot(bx - ax, by - ay);
-            if (dist < 0.6) on = true;
-          }
-          if (Math.abs(d - R * 0.42) < 0.6 && Math.sin(a * 5) > 0.2) on = true;
-          if (on) { p.r[i] = p.ri(ramp); p.v[i] = 3.7; p.z[i] = 8; }
-        });
-        p.tint(gx, wy, 26 * u, hex, 0.5, flicker(0.5, 0.12, 0.6));
+        ward(p, gx, L - 22 * u, 10 * u, ramp, hex, u);
       } else if (cat === 'clear-path') {
         p.light(gx, L, 60 * u, 3.6, flicker(0.2, 0.06, 0.4), { zMin: 1, sy: 1.2 });
         p.tint(gx, L - 10 * u, 34 * u, CARD.path[3], 0.35, flicker(0.4, 0.08, 0.5));
@@ -988,5 +1002,386 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
+  /* ================= C: the tower, outside ================= */
+
+  const RAMPS_C = {
+    ...RAMPS_A,
+    rock: ['#050609', '#0A0B11', '#101219', '#171923', '#20212E', '#2A2A3A', '#363548', '#46435A', '#5A566C', '#736D82'],
+    far: ['#0A0C14', '#10131D', '#171B28', '#1F2433', '#282E40', '#333A4F', '#424A60', '#565E74'],
+    mist: ['#050609', '#0A0B11', '#11131A', '#1A1D25', '#252932', '#323741', '#444952', '#5B6068', '#7A7F86', '#A3A8AF'],
+    warm: ['#07080C', '#0D0F16', '#131620', '#1F1A1E', '#30241F', '#463222', '#604526', '#7E5C2D', '#A57A36', '#C99A45', '#E3A445', '#F2CB8A'],
+  };
+  const RAVEN = { a: '#08080B', b: '#34343E' };
+  const RAVEN_FLY = [
+    ['a.....a', '.a...a.', '..aaa..', '...a...'],
+    ['.......', '.aaaaa.', 'a..a..a', '...a...'],
+  ];
+  const RAVEN_SIT = [
+    ['...aa.', '..aaab', 'aaaaa.', '.aaa..', '..a.a.'],
+    ['......', '...aab', 'aaaaa.', '.aaa..', '..a.a.'],
+  ];
+
+  /** Where a candle's light falls outside, stone and rock turn to the warm ramp (the same darks), so it climbs to amber. */
+  function warmAt(p, x, y, r, from, sy = 1) {
+    const ids = from.map((n) => p.ri(n)); const wi = p.ri('warm');
+    p.each(C.ellipse(x, y, r, r * sy), (xx, yy, i) => { if (ids.includes(p.r[i])) p.r[i] = wi; });
+  }
+
+  /**
+   * A band of mist: inside its wavy edges everything turns to the mist ramp
+   * and is drawn toward a pale value, most in the band's middle.
+   */
+  function mistBand(p, y0, y1, o) {
+    const mi = p.ri('mist');
+    p.each(C.rect(0, y0 - o.amp * 2, p.w, y1 - y0 + o.amp * 4), (x, y, i) => {
+      if (p.emit[p.r[i]] || p.z[i] > (o.zMax ?? 9)) return;
+      const top = y0 + Math.sin(x / o.wl + o.ph) * o.amp + Math.sin(x / (o.wl * 0.37) + 1.3) * o.amp * 0.5;
+      const bot = y1 + Math.sin(x / (o.wl * 0.8) + 2 + o.ph) * o.amp * 0.6;
+      if (y < top || y > bot) return;
+      const t = (y + 0.5 - top) / Math.max(1, bot - top);
+      const a = Math.min(1, t * 2.5) * Math.min(1, (1 - t) * 1.6) * (o.a ?? 0.7);
+      if (a < 0.08) return;
+      p.r[i] = mi; p.v[i] = lerp(p.v[i], o.v ?? 4, a);
+    });
+  }
+
+  /** Rock: natural slabs, lit toward the moon (up and right). */
+  function rock(p, shape, z, o = {}) {
+    p.fill(shape, 'rock', o.v ?? 1.2, z);
+    p.cells(shape, { size: o.size ?? 6, joint: 0.8, jointV: -1.0, vary: 0.8, bevel: 0.7, lit: [0.6, -0.8], seed: o.seed || 9, z });
+  }
+
+  /** A path of trodden stones, its runs given as [x, y, half-thickness]; pale where the moon finds it. */
+  function trail(p, pts, z, v) {
+    for (let k = 0; k + 1 < pts.length; k += 1) {
+      const [x0, y0, w0] = pts[k]; const [x1, y1, w1] = pts[k + 1];
+      p.fill(C.poly([[x0, y0 - w0], [x1, y1 - w1], [x1, y1 + w1], [x0, y0 + w0]]), 'rock', (x, y) => v + (hash(x >> 1, y, 3) < 0.22 ? -0.8 : 0) + (hash(x, y, 4) < 0.08 ? 0.6 : 0), z);
+      p.fill(C.circle(x1, y1, w1, 10), 'rock', v, z);
+    }
+  }
+
+  /**
+   * The tower seen from outside: a round body of laid stone, dark against
+   * the moon with a pale rim on the moon's side, a slate cone for a roof,
+   * and lancet windows climbing it in a spiral, each lit amber by the
+   * candles on the stair inside, each throwing a little warmth on the stone.
+   */
+  function towerOut(p, o) {
+    const { cx, R, top, base, u, z } = o;
+    const bat = o.batter ?? 6 * u;
+    const body = C.poly([[cx - R, top], [cx + R, top], [cx + R, base - bat], [cx + R + 2 * u, base], [cx - R - 2 * u, base], [cx - R, base - bat]]);
+    p.fill(body, 'stone', (x) => {
+      const s = clamp((x + 0.5 - cx) / R, -1, 1);
+      return o.v + (o.lit ?? 1.5) * Math.max(0, s) ** (o.litK ?? 3) - 0.6 * (1 - Math.sqrt(1 - s * s));
+    }, z);
+    p.masonry(body, { bw: o.bw, bh: o.bh, joint: -0.9, top: 0.35, vary: 0.6, chip: 0.03, seed: o.seed || 41, z });
+    // The moon's side: a pale edge.
+    const ci = p.ri('cold');
+    p.each(body, (x, y, i) => {
+      const edge = (y > base - bat ? cx + R + 2 * u * (y - base + bat) / bat : cx + R) - (x + 0.5);
+      if (edge >= 0 && edge < 1.8 * u) { p.r[i] = ci; p.v[i] = edge < 0.9 * u ? o.rimV : o.rimV - 1.4; }
+    });
+    if (o.roof) {
+      const ov = 3 * u; const eh = Math.max(2, 2.5 * u);
+      const cone = C.poly([[cx - R - ov, top], [cx + R + ov, top], [cx + 0.5, top - o.roof]]);
+      p.fill(cone, 'rock', (x, y) => 1.5 + ((Math.floor((top - y) / Math.max(2, 2.4 * u)) % 2) ? -0.35 : 0.15) + (x > cx ? 0.5 : -0.2) - ((top - y) < 1 ? 0.6 : 0), z);
+      p.fill(C.rect(Math.round(cx), Math.round(top - o.roof - 4 * u), 1, Math.round(4 * u)), 'iron', 3.4, z); // the finial
+      p.fill(C.rect(cx - R - 1.5 * u, top, 2 * R + 3 * u, eh), 'stone', 2.0, z);                            // the eaves
+      for (let x = cx - R; x < cx + R - u; x += 3.2 * u) p.fill(C.rect(Math.round(x), Math.round(top + eh), Math.max(1, Math.round(1.5 * u)), Math.max(1, Math.round(1.4 * u))), 'stone', 1.4, z);
+    }
+    const wins = [];
+    for (const w of o.windows) {
+      const s = Math.sin(w.th); const c = Math.cos(w.th);
+      if (c < 0.14) continue;
+      const x = cx + R * s; const ww = Math.max(1, Math.round(w.w * c)); const wh = Math.round(w.h);
+      const x0 = Math.round(x - ww / 2); const y0 = Math.round(w.y - wh);
+      warmAt(p, x, w.y - wh / 2, w.r * 0.95, ['stone'], 1.15);
+      const shape = ww >= 3 ? C.arch(x0 + ww / 2, y0, ww / 2, y0 + wh, 1) : C.rect(x0, y0 + 1, ww, wh - 1);
+      p.fill(shape, 'glow', (xx, yy) => w.v - ((yy - y0) / wh) * 1.0, z + 1);
+      if (ww >= 2) p.fill(C.rect(s > 0 ? x0 + ww - 1 : x0, y0 + 2, 1, wh - 2), 'glow', w.v - 2.4, z + 1); // the reveal's far side
+      p.fill(C.rect(x0 - (ww > 2 ? 1 : 0), y0 + wh, ww + (ww > 2 ? 2 : 0), 1), 'warm', 5.2, z);           // the sill, in the light
+      p.light(x + 0.5, w.y - wh / 2, w.r, w.s, o.flick ? flicker(w.th * 3.1, 0.14, 0.9) : null, { zMin: z, zMax: z, hard: true });
+      wins.push({ x0, y0, ww, wh, ph: w.th * 3.1 });
+    }
+    return wins;
+  }
+
+  /** Windows climbing a spiral: every `dth` round and `dy` up from (th0, y0), smaller as they climb. */
+  function spiral(th0, dth, y0, dy, n, size, u) {
+    return Array.from({ length: n }, (_, k) => {
+      const f = 1 - k * 0.04;
+      return { th: th0 + k * dth, y: y0 - k * dy, w: size[0] * f * u, h: size[1] * f * u, v: 6.6, r: size[2] * u, s: 2.6 };
+    });
+  }
+
+  /** Each window's candles breathing: a faint warm wash over it, frame by frame. */
+  function windowFlicker(img, wins, t) {
+    for (const w of wins) {
+      const a = 0.18 * (0.5 + 0.5 * Math.sin(t * 5.3 + w.ph) * Math.sin(t * 2.1 + w.ph * 1.7));
+      for (let y = w.y0 + 1; y < w.y0 + w.wh; y += 1) for (let x = w.x0; x < w.x0 + w.ww; x += 1) put(img, x, y, '#FFE3A8', a);
+    }
+  }
+
+  /** A dead tree on the crag: a leaning trunk and a few bare branches. */
+  function deadTree(p, x, fy, s, z, seed) {
+    const r = rng(seed);
+    const lean = (r() - 0.5) * 0.4;
+    const tx = x + lean * s;
+    p.fill(C.poly([[x - 1.2, fy], [x + 1.2, fy], [tx + 0.6, fy - s], [tx - 0.4, fy - s]]), 'shadow', 1.2, z);
+    const branch = (bx, by, a, len, depth) => {
+      const ex = bx + Math.cos(a) * len; const ey = by - Math.sin(a) * len; const n = Math.ceil(len);
+      for (let k = 0; k <= n; k += 1) p.fill(C.rect(Math.round(lerp(bx, ex, k / n)), Math.round(lerp(by, ey, k / n)), 1, 1), 'shadow', 1.2, z);
+      if (depth > 0) { branch(ex, ey, a + 0.5 + r() * 0.3, len * 0.6, depth - 1); branch(ex, ey, a - 0.5 - r() * 0.3, len * 0.55, depth - 1); }
+    };
+    branch(tx, fy - s, 1.35 + lean, s * 0.35, 2);
+    branch(lerp(x, tx, 0.6), fy - s * 0.6, 0.5, s * 0.4, 1);
+    branch(lerp(x, tx, 0.5), fy - s * 0.5, 2.5, s * 0.32, 1);
+    return [lerp(x, tx, 0.6) + Math.cos(0.5) * s * 0.32, fy - s * 0.6 - Math.sin(0.5) * s * 0.32]; // a perch on the first branch
+  }
+
+  const C3 = {
+    job: 2, setting: 'tower', key: 'C', id: 'tower-c', side: 'outside',
+    name: 'Tower', title: 'The tower on the crag',
+    pitch: 'The same tower from outside: on a crag under the moon, its windows climbing in a spiral, each lit amber by the candles on the stair inside, one bright window at the top where someone is still reading. A path winds up to the door.',
+    notes: [
+      ['Light', 'The moon behind the tower makes it a dark shape with a pale edge; the candles inside show only as amber windows climbing it, and as the open door at its foot.'],
+      ['Detail', 'Laid stone round a round tower, a slate cone and finial, lancet windows with lit sills, a winding path, a dead tree with a raven in it, mist in the valleys.'],
+      ['Vista', 'The foot of the tower on its crag, the windows climbing out of sight, ridges and mist behind. The card meets you at the door on the path: a shape in the lit doorway, the same ward on a shut door, the door flung open and gold down the path.'],
+      ['World', 'The courtyard’s worn flagstones under the table, the tower’s long shadow down the middle, warm squares from its windows far off at the top, parapets at the sides, a raven on the wall.'],
+    ],
+    palette: ['#05060A', '#171B28', '#363E55', '#3A394E', '#605660', '#20212E', '#E3A445', '#F2CB8A', '#C9D6EA'],
+
+    back(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['moon', 'glow', 'wax'] });
+      const u = H / 134;
+      const cx = W / 2 - 3 * u; const mx = W / 2 + 9 * u; const my = 41 * u; const mr = 10.5 * u;
+      // The sky: lighter toward the hills, a halo round the moon, stars.
+      p.fill(C.rect(0, 0, W, H), 'sky', (x, y) => 1.0 + (y / H) * 3.6 + 4.4 * Math.max(0, 1 - Math.hypot(x - mx, y - my) / (46 * u)) ** 2, 1);
+      const rs = rng('tower-c-stars');
+      for (let k = 0; k < 26; k += 1) { const sx = rs() * W; const sy = rs() * 80 * u; if (Math.hypot(sx - mx, sy - my) > mr * 2.2) p.fill(C.rect(Math.floor(sx), Math.floor(sy), 1, 1), 'sky', 7 + rs() * 3, 1); }
+      moonDisc(p, mx, my, mr, 1);
+      // Far ridges, mist between them and the crag.
+      p.fill(C.poly([[0, H], [0, 86 * u], [10 * u, 82 * u], [20 * u, 88 * u], [30 * u, 92 * u], [62 * u, 94 * u], [74 * u, 86 * u], [84 * u, 80 * u], [96 * u, 84 * u], [W, H]]), 'far', (x, y) => 2.6 - (y - 80 * u) / (30 * u), 2);
+      mistBand(p, 90 * u, 104 * u, { wl: 9 * u, amp: 1.5 * u, ph: 0.4, v: 4.6, a: 0.85, zMax: 2 });
+      // The crag the tower stands on, and the path up it.
+      const crag = C.poly([[0, H], [0, 116 * u], [12 * u, 110 * u], [24 * u, 104 * u], [32 * u, 98 * u], [cx - 12 * u, 96 * u], [cx + 13 * u, 96 * u], [64 * u, 100 * u], [74 * u, 106 * u], [86 * u, 112 * u], [W, 114 * u], [W, H]]);
+      rock(p, crag, 4, { size: 5 * u, seed: 12 });
+      trail(p, [[66 * u, H + 2, 2.6 * u], [72 * u, 124 * u, 2.2 * u], [36 * u, 116 * u, 1.8 * u], [58 * u, 106 * u, 1.5 * u], [cx + 2 * u, 98 * u, 1.2 * u]], 4, 4.8);
+      // The tower.
+      towerOut(p, {
+        cx, R: 11 * u, top: 44 * u, base: 97 * u, u, z: 5, v: 0.8, rimV: 6.4, bw: 5 * u, bh: 3 * u, roof: 21 * u, batter: 6 * u,
+        windows: [...spiral(-1.3, 1.0, 88 * u, 3.6 * u, 9, [3, 4.6, 6], u).filter((w) => w.y > 57.5 * u), { th: 0.1, y: 54 * u, w: 4.2 * u, h: 7 * u, v: 8.6, r: 11 * u, s: 3.2 }],
+      });
+      // The door at its foot, open, and its light on the path.
+      const door = C.arch(cx, 88 * u, 3 * u, 97 * u, 1);
+      warmAt(p, cx, 97 * u, 12 * u, ['rock', 'stone', 'cold'], 0.6);
+      p.fill(door, 'glow', (x, y) => 7.4 - (97 * u - y) / (9 * u) * 1.2, 6);
+      p.light(cx, 97 * u, 12 * u, 3.4, null, { zMin: 4, zMax: 5, sy: 0.6, hard: true });
+      // The roof and the tower's edge against the moon and its halo.
+      p.backlit(5, 'moon', 0, 'cold', 7.2);
+      p.backlit(5, 'sky', 5.4, 'cold', 5.4);
+      // Mist low over the crag, the path going into it.
+      mistBand(p, 110 * u, 128 * u, { wl: 11 * u, amp: 2 * u, ph: 1.7, v: 4.4, a: 0.75, zMax: 4 });
+      vignette(p, W, H, 2.2, 0.42);
+      p.rim(0, -1, 0.6, 4);
+      return {
+        p,
+        over(img) {
+          for (const [x, y, f] of [[24, 30, 0], [31, 26, 1], [74, 58, 0]]) sprite(img, Math.round(x * u), Math.round(y * u), RAVEN_FLY[f], RAVEN);
+          sprite(img, Math.round(cx + 1), Math.round(19 * u), RAVEN_SIT[0], RAVEN); // on the finial
+        },
+      };
+    },
+
+    vista(W, H, cat) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['moon', 'glow', 'wax'] });
+      const u = H / 100; const gx = W / 2;
+      const F = Math.round(80 * u);
+      const ramp = catRamp(cat); const hex = CARD[ramp][3];
+      const mx = gx + 64 * u; const my = 20 * u; const mr = 8 * u;
+      // The sky and the moon, off to the right of the tower.
+      p.fill(C.rect(0, 0, W, H), 'sky', (x, y) => 1.0 + (y / (60 * u)) * 3.4 + 4.2 * Math.max(0, 1 - Math.hypot(x - mx, y - my) / (40 * u)) ** 2, 1);
+      const rs = rng('tower-c-vista');
+      for (let k = 0; k < W / (7 * u); k += 1) { const sx = rs() * W; const sy = rs() * 50 * u; if (Math.hypot(sx - mx, sy - my) > mr * 2.4) p.fill(C.rect(Math.floor(sx), Math.floor(sy), 1, 1), 'sky', 7 + rs() * 3, 1); }
+      moonDisc(p, mx, my, mr, 1);
+      // Far ridges, mist in the valleys, a nearer ridge, more mist.
+      const rx = (x) => (x - gx) / u;
+      p.each(C.rect(0, 40 * u, W, 60 * u), (x, y, i) => {
+        const X = rx(x);
+        const r1 = 54 * u + (5 * Math.sin(X / 19) + 3 * Math.sin(X / 7 + 1) - 4 * Math.abs(Math.sin(X / 41))) * u;
+        const r2 = 66 * u + (4 * Math.sin(X / 13 + 2) + 2 * Math.sin(X / 5) - 3 * Math.abs(Math.sin(X / 29 + 0.5))) * u;
+        if (y >= r2) { p.r[i] = p.ri('rock'); p.v[i] = 1.4 + (y - r2 < 1 ? 1.6 : 0); p.z[i] = 3; }
+        else if (y >= r1) { p.r[i] = p.ri('far'); p.v[i] = 2.7 + (y - r1 < 1 ? 1.5 : 0) - (y - r1) / (12 * u) * 0.8; p.z[i] = 2; }
+      });
+      mistBand(p, 60 * u, 70 * u, { wl: 12 * u, amp: 2 * u, ph: 0.3, v: 4.6, a: 0.85, zMax: 2 });
+      mistBand(p, 71 * u, 82 * u, { wl: 15 * u, amp: 2 * u, ph: 2.1, v: 4.2, a: 0.75, zMax: 3 });
+      // The crag in front, rising to the tower's foot, the path climbing it to the door.
+      const crag = [];
+      for (let x = -4; x <= W + 4; x += 4) { const X = rx(x); crag.push([x, F + Math.min(16, (X / 64) ** 2 * 9) * u + Math.sin(X / 6) * 0.8 * u]); }
+      const cragShape = C.poly([[-4, H + 1], ...crag, [W + 4, H + 1]]);
+      rock(p, cragShape, 4, { size: 6 * u, seed: 14, v: 1.5 });
+      trail(p, [[gx - 150 * u, 99 * u, 2.4 * u], [gx - 96 * u, 95 * u, 2.2 * u], [gx - 58 * u, 90 * u, 2 * u], [gx - 26 * u, 86 * u, 1.8 * u], [gx - 10 * u, F + 5 * u, 1.6 * u]], 4, 5.4);
+      // A dead tree on the crag, and another far along.
+      const perch = deadTree(p, gx - 62 * u, F + 5 * u, 24 * u, 4, 7);
+      deadTree(p, gx + 124 * u, F + 10 * u, 18 * u, 4, 11);
+      // The tower: its foot here, its windows climbing out of sight.
+      const wins = towerOut(p, {
+        cx: gx, R: 25 * u, top: -20 * u, base: F, u, z: 5, v: 0.8, rimV: 5.2, lit: 2.2, litK: 2.2, bw: 8 * u, bh: 5 * u, batter: 9 * u, flick: true,
+        windows: spiral(-1.3, 0.62, 46 * u, 6.4 * u, 9, [5, 8, 11], u),
+      });
+      // The door, a candle in a niche either side of it, steps down to the path.
+      const dhw = 11 * u; const dtop = 40 * u;
+      const door = C.arch(gx, dtop, dhw, F, 1);
+      const th = Math.max(2, Math.round(3 * u));
+      const ring = C.join(C.arch(gx, dtop - th, dhw + th, F, 1), door);
+      p.fill(ring, 'stone', 2.2, 6);
+      p.shade(ring, (x, y) => (((Math.atan2(F - y, x - gx) / Math.PI) * 13) % 1 < 0.16 ? -1.1 : 0.2), 6);
+      const shut = cat === 'obstacle'; const open = cat === 'clear-path';
+      const bright = open ? 1.3 : 1;
+      if (shut) {
+        // The door is shut: planks and iron straps, the ward on it.
+        p.fill(door, 'wood', (x, y) => 1.6 + ((Math.abs(x + 0.5 - gx) % (3 * u)) < 1 ? -0.8 : 0) + (Math.abs(y - (F - 10 * u)) < 1.2 * u || Math.abs(y - (dtop + 14 * u)) < 1.2 * u ? 0.6 : 0), 6);
+        p.each(door, (x, y, i) => { if (Math.abs(y - (F - 10 * u)) < 1.1 * u || Math.abs(y - (dtop + 14 * u)) < 1.1 * u) { p.r[i] = p.ri('iron'); p.v[i] = 2.4; } });
+      } else {
+        p.glow(door, 'glow', gx, F - 6 * u, 26 * u, 8.9 * Math.min(1.12, bright), 3.4 * bright, 6, { sy: 1.4 });
+        if (open) {
+          const n = 7; const s0 = F - 2 * u;
+          p.each(door, (x, y, i) => {
+            const k = Math.floor((s0 - y) / (4 * u));
+            if (k < 0 || k >= n) return;
+            const ly = (s0 - y) - k * 4 * u; const w = dhw * (1 - k * 0.11);
+            if (Math.abs(x + 0.5 - gx) > w) return;
+            p.v[i] = 5.4 + k * 0.55 + (ly > 4 * u - 1 ? 1.2 : 0) - (ly < 1 ? 1.4 : 0);
+          });
+        }
+      }
+      const flames = [];
+      for (const sx of [gx - 19 * u, gx + 19 * u]) {
+        p.fill(C.arch(sx, 46 * u, 3 * u, 58 * u, 1), 'shadow', 0.4, 6);
+        warmAt(p, sx, 52 * u, 9 * u, ['stone', 'cold'], 1.2);
+        flames.push(candle(p, sx, 58 * u, Math.max(2, Math.round(3 * u)), { z: 6, dish: false, r: 12 * u, s: 3.6, flick: true, zMin: 5, zMax: 6 }));
+      }
+      warmAt(p, gx, F + 4 * u, 40 * u, ['rock', 'stone', 'cold'], 0.45);
+      for (let k = 0; k < 3; k += 1) {
+        const hw = (14 + k * 4) * u; const y0 = F + k * 3 * u;
+        p.fill(C.rect(gx - hw, y0, hw * 2, 3 * u + 1), 'warm', 2.2 - k * 0.3, 5);
+        p.fill(C.rect(gx - hw, y0, hw * 2, 1), 'warm', 3.6 - k * 0.4, 5);
+      }
+      // The card, at the door.
+      const sub = 30 * u;
+      if (cat === 'monster') {
+        SUBJECT.monster(p, gx, F, sub, ramp, 7);
+        p.backlit(7, 'glow', 4, 'glow', 6.2);
+        p.tint(gx, F - sub * 0.9, 6 * u, hex, 0.4, flicker(0.3, 0.3, 1.4));
+      } else if (cat === 'wanderer') {
+        traveller(p, gx - 3 * u, F, sub + 3 * u, ramp, u);
+      } else if (cat === 'item') {
+        grimoire(p, gx, F, u, ramp, hex);
+      } else if (shut) {
+        ward(p, gx, F - 22 * u, 10 * u, ramp, hex, u);
+      } else if (open) {
+        // Gold down the steps and along the path.
+        p.light(gx, F, 64 * u, 3.4, flicker(0.2, 0.06, 0.4), { zMin: 4, zMax: 6, sy: 0.6 });
+        p.tint(gx, F - 6 * u, 22 * u, CARD.path[3], 0.2, flicker(0.4, 0.08, 0.5));
+      }
+      // The door's light on the steps and the path.
+      if (!shut) p.light(gx, F, 36 * u, 3.6 * bright, flicker(1.1, 0.06, 0.5), { zMin: 4, zMax: 5, sy: 0.6 });
+      p.backlit(5, 'moon', 0, 'cold', 7);
+      vignette(p, W, H, 1.6, 0.4);
+      p.rim(0, -1, 0.6, 3);
+      return {
+        p,
+        over(img, t) {
+          for (const f of flames) flame(img, f, t);
+          windowFlicker(img, wins, t);
+          // Ravens wheeling round the tower, one sitting in the dead tree.
+          for (let k = 0; k < 4; k += 1) {
+            const a = t * (0.35 + k * 0.07) + k * 1.7;
+            const x = gx + Math.cos(a) * (40 + k * 9) * u; const y = (14 + k * 6) * u + Math.sin(a * 1.3) * 5 * u;
+            sprite(img, Math.round(x), Math.round(y), RAVEN_FLY[Math.floor(t * 5 + k) % 2], RAVEN, Math.sin(a) > 0);
+          }
+          sprite(img, Math.round(perch[0]), Math.round(perch[1]), RAVEN_SIT[Math.floor(t * 0.7) % 3 === 2 ? 1 : 0], RAVEN);
+          // Mist wisps drifting along the valleys.
+          for (let k = 0; k < Math.round(W / 10); k += 1) {
+            const r0 = hash(k, 1, 77); const r1 = hash(k, 2, 77);
+            const x = ((r0 * W + t * (2 + r1 * 3) * u) % (W + 20)) - 10; const y = (r1 < 0.5 ? 64 : 76) * u + hash(k, 3, 77) * 6 * u;
+            for (let j = 0; j < 4; j += 1) put(img, x + j, y, '#5B6068', 0.25 * (1 - Math.abs(j - 1.5) / 2));
+          }
+          if (open) for (const q of particles('mote', 14, [gx - 14 * u, F - 44 * u, 28 * u, 52 * u], t, 6)) put(img, q.x, q.y, CARD.path[4], q.a);
+          if (cat === 'item') for (const q of particles('mote', 10, [gx - 9 * u, F - 46 * u, 18 * u, 24 * u], t, 4)) put(img, q.x, q.y, CARD.item[3], q.a);
+        },
+      };
+    },
+
+    world(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['moon', 'glow', 'wax'] });
+      const u = H / 250;
+      // The courtyard: worn flagstones running away to the tower's foot.
+      p.fill(C.rect(0, 0, W, H), 'stone', 1.1, 1);
+      p.floor(C.rect(0, 0, W, H), { vx: W / 2, vy: -60 * u, rows: 4.6, size: 1.0, d0: 30 * u, joint: -1.2, top: 0.5, left: 0.3, vary: 1.0, chip: 0.07, seed: 51, z: 1 });
+      p.grain(C.rect(0, 0, W, H), 0.35, 5, 52, 1);
+      // Puddles from the last rain, holding the sky.
+      const si = p.ri('sky');
+      const puddles = [[0.22, 54, 20, 5], [0.76, 72, 17, 4.5], [0.34, 116, 22, 5.5], [0.68, 142, 18, 5], [0.14, 168, 15, 4.5]];
+      for (const [fx, y, rx, ry] of puddles) {
+        const x0 = W * fx; const y0 = y * u;
+        p.each(C.ellipse(x0, y0, rx * u, ry * u, 20), (x, y2, i) => {
+          const d = Math.hypot((x + 0.5 - x0) / (rx * u), (y2 + 0.5 - y0) / (ry * u));
+          p.r[i] = si; p.v[i] = 1.6 + (1 - d) * 1.2 + (y2 + 0.5 < y0 ? 0.5 : 0);
+        });
+      }
+      // Moonlight from beyond the tower on the stones, except in its long shadow down the middle.
+      const ci = p.ri('cold');
+      const hw = (y) => 20 * u + y * 0.24;
+      p.each(C.rect(0, 0, W, H * 0.7), (x, y, i) => {
+        const out = (Math.abs(x + 0.5 - W / 2) - hw(y)) / (5 * u);
+        if (out <= 0) { p.v[i] -= 0.35; return; }
+        const a = Math.max(0, 1 - y / (H * 0.66));
+        if (p.r[i] === si) { p.v[i] += 2.2 * a * a * Math.min(1, out); return; }
+        p.r[i] = ci; p.v[i] += 2.6 * a * a * Math.min(1, out);
+      });
+      // The moon in the near puddles, where the shadow does not reach.
+      for (const [fx, y, rx] of puddles.slice(0, 2)) p.fill(C.ellipse(W * fx + rx * 0.3 * u, y * u - 1, 2.2 * u, 0.9 * u, 10), 'sky', 9, 1);
+      // The windows' light, warm lancets on the flagstones far off, inside the shadow.
+      const wi = p.ri('warm');
+      for (const [dx, y0, s] of [[-20, 8, 1.1], [12, 24, 1.0], [-6, 42, 0.9], [20, 56, 0.85], [-22, 66, 0.75]]) {
+        const x0 = W / 2 + dx * u; const w = 8 * u * s; const h = 18 * u * s;
+        p.each(C.arch(x0, y0 * u, w, y0 * u + h, 1), (x, y, i) => {
+          const bar = Math.abs(x + 0.5 - x0) < 0.6 || Math.abs(y - (y0 * u + h * 0.55)) < 0.6;
+          p.r[i] = wi; p.v[i] += (bar ? 0.5 : 3.6) * Math.max(0.2, 1 - y / (H * 0.42));
+        });
+      }
+      // Parapets at the sides, crenellated, their merlons catching the moon.
+      for (const side of [0, 1]) {
+        const inner = (y) => (side ? W - 26 * u + 16 * u * (y / H) : 26 * u - 16 * u * (y / H));
+        const wall = C.poly(side ? [[W - 26 * u, 0], [W, 0], [W, H], [W - 10 * u, H]] : [[0, 0], [26 * u, 0], [10 * u, H], [0, H]]);
+        p.fill(wall, 'stone', 1.2, 3);
+        p.masonry(wall, { bw: 12 * u, bh: 7 * u, joint: -1, top: 0.4, vary: 0.7, chip: 0.04, z: 3, seed: 60 + side });
+        p.each(wall, (x, y, i) => {
+          const ex = side ? x + 0.5 - inner(y) : inner(y) - (x + 0.5);
+          if (ex < 0 || ex > 7 * u) return;
+          const my = y / (14 * u); const merlon = Math.floor(my) % 2 === 0;
+          const lit = Math.max(0, 1 - y / (H * 0.75));
+          if (!merlon) { p.r[i] = p.ri('shadow'); p.v[i] = ex < 4 * u ? 0.4 : 1.2; return; }
+          const edge = my - Math.floor(my) < 0.12;
+          p.r[i] = ci; p.v[i] = (ex < 4 * u ? 2.6 + 3.0 * lit : 1.6 + 1.2 * lit) + (edge ? 1 : 0) + (ex < 1.2 ? 0.8 : 0);
+        });
+      }
+      p.shade(null, (x, y) => -2.3 * Math.max(0, y / H - 0.36) - 0.8 * (Math.abs(x - W / 2) / (W / 2)) ** 4);
+      return {
+        p,
+        over(img, t) {
+          sprite(img, Math.round(21 * u), Math.round(97 * u), RAVEN_SIT[Math.floor(t * 0.8) % 3 === 2 ? 1 : 0], RAVEN, true);
+          for (let k = 0; k < 18; k += 1) {
+            const r0 = hash(k, 1, 91); const r1 = hash(k, 2, 91);
+            const side = k % 2; const x = side ? W - 40 * u + ((r0 * 40 * u + t * 3 * u) % (40 * u)) : ((r0 * 40 * u + t * 3 * u) % (40 * u));
+            const y = H * 0.55 + r1 * H * 0.4;
+            for (let j = 0; j < 5; j += 1) put(img, x + j, y, '#444952', 0.22 * (1 - Math.abs(j - 2) / 2.5));
+          }
+        },
+      };
+    },
+  };
+
+  window.DESIGNS = (window.DESIGNS || []).concat([A, B, C3]);
 })();

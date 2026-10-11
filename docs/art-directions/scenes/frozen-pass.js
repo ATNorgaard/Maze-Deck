@@ -316,7 +316,8 @@
   }
 
   const A = {
-    job: 6, setting: 'frozen-pass', key: 'A', id: 'frozen-pass-a',
+    job: 6, setting: 'frozen-pass', key: 'A', id: 'frozen-pass-a', side: 'outside',
+    revised: "You loved both: the peaks are the outside and the ice cave the inside. The ice cave’s back now looks out on the pass, its ridges and a cairn.",
     name: 'Frozen pass', title: 'The white teeth',
     pitch: 'High in the range at noon. Sunlit peaks stand round a col like teeth, the wind tears snow off their ridges, and whatever the card is waits on the pass, dark against the white.',
     notes: [
@@ -749,7 +750,7 @@
   }
 
   const B = {
-    job: 6, setting: 'frozen-pass', key: 'B', id: 'frozen-pass-b',
+    job: 6, setting: 'frozen-pass', key: 'B', id: 'frozen-pass-b', side: 'inside',
     name: 'Frozen pass', title: 'The ice cave',
     pitch: 'You shelter in a cave of old blue ice while the blizzard tears across the pass outside. Every card is a mouth in the ice, white with weather, and something stands in it.',
     notes: [

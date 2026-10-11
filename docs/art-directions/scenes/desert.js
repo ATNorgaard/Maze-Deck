@@ -290,43 +290,74 @@
   }
 
   /**
-   * A ruined gate on the crest: two pillars broken off at different
-   * heights, the lintel fallen between them and lying across the gap.
+   * The caravan road up the near face of the crest: old paving surfacing
+   * from the sand, footprints walking up it. `stop` is where they end.
    */
-  function ruinedGate(p, cx, fy, s, z, ramp) {
-    // Black against the sun, like every card here; the card's colour is in the rims and the cracks.
-    const pw = 0.13 * s;
-    const P = (pts) => C.poly(pts.map(([x, y]) => [cx + x * s, fy + y * s]));
-    // The pillars, broken off square at different heights.
-    p.fill(P([[-0.53, 0.06], [-0.53, -0.92], [-0.45, -0.98], [-0.34, -0.9], [-0.27, -0.9], [-0.27, 0.06]]), 'shadow', 0.7, z);
-    p.fill(P([[0.28, 0.06], [0.28, -0.6], [0.36, -0.6], [0.4, -0.64], [0.54, -0.62], [0.54, 0.06]]), 'shadow', 0.7, z);
-    for (const x0 of [-0.4, 0.41]) p.shade(C.rect(cx + x0 * s - pw, fy - s, pw * 2, s), (px, py) => (((fy - py) % (0.18 * s)) < 1 ? 1.2 : 0), z);
-    // The gap choked with the gate's fallen blocks, stacked anyhow, the lintel slab tipped across them.
-    for (const [x0, y0, x1, y1] of [[-0.3, 0.06, -0.06, -0.22], [-0.05, 0.06, 0.18, -0.17], [0.17, 0.06, 0.3, -0.27], [-0.25, -0.21, 0.01, -0.38], [0.02, -0.16, 0.22, -0.31]]) {
-      p.fill(P([[x0, y0], [x0, y1], [x1, y1], [x1, y0]]), 'shadow', 0.6, z + 1);
-      p.fill(P([[x0, y1], [x1, y1], [x1, y1 + 0.03], [x0, y1 + 0.03]]), 'shadow', 1.6, z + 1);
+  function caravanRoad(p, cx, fy, H, u, v, stop) {
+    const road = C.poly([[cx - 3 * u, fy], [cx + 3 * u, fy], [cx + 26 * u, H], [cx - 26 * u, H]]);
+    p.fill(road, 'sand', (x, y) => v - 1.4 * ((y - fy) / (H - fy)), 5);
+    p.floor(road, { vx: cx, vy: fy - 6 * u, rows: 3, size: 1.2, d0: 6 * u, joint: -1.5, top: 0.5, vary: 0.9, chip: 0.06, seed: 7, z: 5 });
+    if (stop === undefined) return;
+    // Footprints walking up the road, smaller with distance.
+    for (let k = 0; k < 9; k += 1) {
+      const t = k / 8; const y = Math.round(lerp(H - 2 * u, stop, t ** 0.85));
+      const sc = 1 - t * 0.6; const x = Math.round(cx + (k % 2 ? 1.6 : -1.6) * u * sc + Math.sin(k * 0.9) * u);
+      p.fill(C.rect(x, y, Math.max(1, Math.round(2 * sc)), 1), 'sand', 1.4, 5);
+      p.shade(C.rect(x, y - 1, Math.max(1, Math.round(2 * sc)), 1), 1.2, 5);
     }
-    p.fill(P([[-0.3, -0.5], [0.28, -0.42], [0.27, -0.32], [-0.31, -0.39]]), 'shadow', 0.9, z + 1);
-    // Cracks through the stone, lit from inside with the card's colour.
-    const cracks = [
-      [[-0.42, -0.84], [-0.38, -0.7], [-0.43, -0.56], [-0.39, -0.4], [-0.41, -0.2]],
-      [[0.41, -0.56], [0.44, -0.44], [0.39, -0.32], [0.42, -0.18]],
-      [[-0.2, -0.45], [-0.1, -0.4], [0.0, -0.43], [0.1, -0.36]],
-      [[-0.2, -0.12], [-0.12, -0.06], [-0.02, -0.1], [0.08, -0.02]],
-    ];
-    const lit = [];
-    for (const c of cracks) {
-      for (let k = 0; k + 1 < c.length; k += 1) {
-        const [ax, ay] = c[k]; const [bx, by] = c[k + 1];
-        const n = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) * s));
-        for (let j = 0; j <= n; j += 1) {
-          const x = Math.round(cx + lerp(ax, bx, j / n) * s); const y = Math.round(fy + lerp(ay, by, j / n) * s);
-          p.fill(C.rect(x, y, 1, 1), ramp, 2.6 + (j % 3 === 0 ? 0.8 : 0), z + 2);
-          lit.push([x, y]);
-        }
+  }
+
+  /**
+   * A great obelisk toppled across the road on the crest: black against
+   * the sun, its base on its broken plinth, its point sunk in the sand; the
+   * band of carved signs down its length glows with the card's colour.
+   * Returns where its glow falls.
+   */
+  function toppledObelisk(p, cx, fy, L, u, z, ramp) {
+    const xb = cx - L * 0.5; const xt = cx + L * 0.5; const xp = xt - L * 0.12;  // base, tip, where the point begins
+    const xa = cx - L * 0.06; const gap = 4 * u;                                  // where it broke
+    // The base piece lies tilted on its plinth; the top piece slid down past the break and sank further.
+    const cy1 = (x) => lerp(fy - 13 * u, fy - 6 * u, (x - xb) / (xt - xb));
+    const cy2 = (x) => cy1(x) + 2 * u + 2.5 * u * clamp((x - xa) / (xt - xa), 0, 1);
+    const cy = (x) => (x < xa + gap / 2 ? cy1(x) : cy2(x));
+    const th = (x) => lerp(20 * u, 10 * u, clamp((x - xb) / (xp - xb), 0, 1)) / 2;  // a strong taper to the point
+    const jag = (x0, c, t, k) => Array.from({ length: 5 }, (_, i) => [x0 + (hash(i, k, 23) - 0.5) * 2.4 * u, c - t + (2 * t * i) / 4]);
+    const a1 = xa - gap / 2; const a2 = xa + gap / 2;
+    p.fill(C.poly([[xb, cy1(xb) - th(xb)], [a1, cy1(a1) - th(a1)], ...jag(a1, cy1(a1), th(a1), 1), [a1, cy1(a1) + th(a1)], [xb, cy1(xb) + th(xb)]]), 'shadow', 0.5, z);
+    p.fill(C.poly([...jag(a2, cy2(a2), th(a2), 2).reverse(), [xp, cy2(xp) - th(xp)], [xt, cy2(xt)], [xp, cy2(xp) + th(xp)]]), 'shadow', 0.5, z);
+    // The point: its upper face a shade lighter, so it reads as faceted.
+    p.fill(C.poly([[xp, cy2(xp) - th(xp)], [xt, cy2(xt)], [xp, cy2(xp)]]), 'shadow', 1.6, z);
+    p.fill(C.rect(xp, cy2(xp) - th(xp), 1, th(xp) * 2), 'shadow', 1.2, z);
+    // The base end, square, and the broken plinth it came off.
+    p.fill(C.rect(xb, cy1(xb) - th(xb), 1, th(xb) * 2), 'shadow', 1.4, z);
+    p.fill(C.poly([[xb - 8 * u, fy + 2 * u], [xb - 8 * u, fy - 6 * u], [xb - 4 * u, fy - 7.5 * u], [xb + 2 * u, fy - 5 * u], [xb + 3 * u, fy + 2 * u]]), 'shadow', 0.8, z);
+    // Rubble in the break, drawn over the drift: chunks that came off where it snapped.
+    const rubble = () => {
+      for (const [dx, dy, w, h] of [[-3.5, -4, 3.4, 3], [0, -5.5, 2.8, 3.6], [2.8, -3.6, 3.2, 2.6], [-7, -1.5, 2.4, 1.8], [6.5, -1.2, 2.2, 1.6], [-1, -1, 1.6, 1.2]]) {
+        p.fill(C.poly([[xa + dx * u, fy + dy * u + h * u], [xa + dx * u + 0.4 * u, fy + dy * u], [xa + (dx + w) * u, fy + dy * u + 0.5 * u], [xa + (dx + w) * u, fy + dy * u + h * u]]), 'shadow', 0.9, z + 3);
+        p.fill(C.rect(xa + dx * u + 0.4 * u, fy + dy * u, (w - 0.4) * u, 1), ramp, 1.6, z + 3);
       }
+    };
+    // The inscription: small columns of carved signs set close along the face, worn and uneven;
+    // only a few of them still hold the light.
+    const glow = [];
+    let x = xb + 3 * u; let k = 0;
+    while (x < xp - 2 * u) {
+      if (Math.abs(x - xa) < gap / 2 + 1.5 * u) { x += 1; continue; }
+      const c = cy(x); const h = th(x); const X = Math.round(x);
+      const lit = Math.sin(x * 0.17 / u + 0.4) + (hash(k, 3, 29) - 0.5) * 0.8 > 0.62;
+      const rows = 2 + Math.floor(hash(k, 1, 29) * 3);
+      for (let r = 0; r < rows; r += 1) {
+        if (hash(k, r, 31) < 0.22) continue;                                     // worn away
+        const y = Math.round(c - h * 0.55 + r * Math.max(2, h * 0.42) + (hash(k, r, 37) < 0.5 ? 0 : 1));
+        const w = hash(k, r, 41) < 0.4 ? 2 : 1;
+        p.fill(C.rect(X, y, w, 1), ramp, lit ? 2.5 + hash(k, r, 43) * 1.1 : 0.7, z + 2);
+        if (lit) glow.push([X, y]);
+      }
+      x += 2 + Math.floor(hash(k, 9, 29) * 3) * (u > 0.66 ? 1 : 0.5);
+      k += 1;
     }
-    return lit;
+    return { glow, xb, xt, cy, th, rubble };
   }
 
   /** A sword driven point-first into the dune, its jewel lit with the card's colour. */
@@ -344,13 +375,14 @@
   }
 
   const A = {
-    job: 4, setting: 'desert', key: 'A', id: 'desert-a',
+    job: 4, setting: 'desert', key: 'A', id: 'desert-a', side: 'outside',
+    revised: "After your note: the Obstacle is a great obelisk, toppled and broken across the caravan road. The road runs up to it and stops.",
     name: 'Desert', title: 'Salt and sunset',
     pitch: 'The sun is going down on the dunes, enormous and close. There is nowhere to hide, and every card stands up black against the light.',
     notes: [
       ['Light', 'One giant sun sitting on the horizon. The sky burns gold around it; everything on the ground is a dark shape with a bright edge.'],
       ['Detail', 'Rock spires banded in layers, dunes with sharp crests and rippled faces, heat shimmer on the far dunes, a caravan crossing in the distance, birds circling.'],
-      ['Vista', 'Wide dunes running to spires on both sides. The card is on the crest in front of the sun: a worm arching out of the sand, a traveller with a lantern, a sword glowing where it was driven in, a ruined gate choked with blocks, an old road running into the sun.'],
+      ['Vista', 'Wide dunes running to spires on both sides. The card is on the crest in front of the sun: a worm arching out of the sand, a traveller with a lantern, a sword glowing where it was driven in, a broken obelisk lying across the caravan road, an old road running into the sun.'],
       ['World', 'The sunset only along the top, behind the vista. Under the table the dunes fall into the long shadow of a great spire, with sand blowing across.'],
     ],
     palette: ['#FEFEDD', '#FDCA72', '#F9B67F', '#FD9557', '#B9733A', '#6B3E22', '#2A1810', '#140B07', '#F47F64'],
@@ -422,7 +454,7 @@
       const ramp = catRamp(cat); const hex = CARD[ramp][3];
       const hor = 66 * u; const R = 24 * u; const sy = hor - 2 * u;
       const open = cat === 'clear-path';
-      skyA(p, W, hor + 2 * u, gx, sy, R, open ? 1.35 : cat === 'obstacle' ? 0.8 : 1, open);
+      skyA(p, W, hor + 2 * u, gx, sy, R, open ? 1.35 : 1, open);
       sunDisc(p, gx, sy, R);
       spiresA(p, W, H, gx, hor, u);
       // Far dunes, pale with distance.
@@ -455,15 +487,22 @@
         p.tint(m[0], m[1], 12 * u, hex, 0.6, flicker(2, 0.15, 0.7));
         p.tint(m[0], fy + 12 * u, 20 * u, CARD[ramp][2], 0.4, flicker(2.4, 0.2, 0.7));
       } else if (cat === 'obstacle') {
-        ruinedGate(p, gx, fy, 34 * u, 6, ramp);
-        for (const zz of [6, 7]) {
-          p.backlit(zz, 'sun', 0, ramp, 2.6);
-          p.backlit(zz, 'sky', 2, ramp, 2.3);
-          p.backlit(zz, 'sand', 6, ramp, 2.1);
-        }
-        // The cracks' light, faint, on the stone round them and the sand below.
-        p.tint(gx, fy - 4 * u, 7 * u, CARD[ramp][2], 0.3, flicker(0.5, 0.2, 0.8));
-        p.tint(gx, fy + 4 * u, 14 * u, CARD[ramp][2], 0.22, flicker(0.5, 0.12, 0.6));
+        // The caravan road runs up the crest, and its footprints stop: an obelisk lies across it.
+        caravanRoad(p, gx, fy, H, u, 5.6, fy + 9 * u);
+        const ob = toppledObelisk(p, gx, fy, 86 * u, u, 6, ramp);
+        p.backlit(6, 'sun', 0, ramp, 2.8);
+        p.backlit(6, 'sky', 1.5, ramp, 2.5);
+        // Sand drifted against its near side, a lit lip along the top.
+        const pts = [[ob.xb + 3 * u, fy + 5 * u]];
+        for (let x = ob.xb + 6 * u; x < ob.xt - 8 * u; x += 5 * u) pts.push([x, ob.cy(x) + ob.th(x) * 0.5 - 1.2 * u * Math.sin(x * 0.21 / u)]);
+        pts.push([ob.xt - 4 * u, fy + 3 * u], [ob.xt - 10 * u, fy + 7 * u], [gx, fy + 7.5 * u], [ob.xb + 8 * u, fy + 7 * u]);
+        const drift = C.poly(pts);
+        p.fill(drift, 'sand', 4, 7);
+        p.shade(drift, (x, y, i) => (p.z[i - W] !== 7 ? 2.8 : 0), 7);
+        ob.rubble();
+        // The signs' light, a little on the stone round them and on the sand at its foot.
+        for (const [x, y] of ob.glow.filter((_, k) => k % 6 === 3)) p.tint(x, y, 4 * u, CARD[ramp][2], 0.22, flicker(x, 0.2, 0.8));
+        p.tint(gx, fy + 4 * u, 22 * u, CARD[ramp][2], 0.24, flicker(0.5, 0.12, 0.6));
       } else if (open) {
         // The old road surfacing from the sand, running up over the crest into the sun.
         const road = C.poly([[gx - 3 * u, fy], [gx + 3 * u, fy], [gx + 26 * u, H], [gx - 26 * u, H]]);
@@ -485,7 +524,7 @@
             sprite(img, Math.round(x), Math.round(y), BIRD[Math.floor(t * 3 + ph) % 2], { a: '#6B3E22' });
           }
           // A caravan on the far dunes, so small it is barely there.
-          const cxv = gx + 42 * u + Math.sin(t * 0.05) * 4 * u;
+          const cxv = gx + (cat === 'obstacle' ? 66 : 42) * u + Math.sin(t * 0.05) * 4 * u;
           for (const [dx, spr, f] of [[0, CAMEL, 0], [-10, CAMEL, 1], [7, WALKER, 0]]) sprite(img, Math.round(cxv + dx), Math.round(hor + 0.5 * u), spr[Math.floor(t * 2 + f) % 2], { a: '#74402C' });
           for (const q of particles('sand', Math.round(W / 6), [0, 82 * u, W, 18 * u], t, 41)) put(img, q.x, q.y, q.big ? '#B9733A' : '#6B3E22', q.a * 0.8);
           if (cat === 'monster') for (const q of particles('drip', 6, [gx - 12 * u, 46 * u, 10 * u, 26 * u], t, 43)) put(img, q.x, q.y, '#8E5530', 0.9);
@@ -932,5 +971,433 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
+  /* ================= C: the temple halls (inside A) ================= */
+
+  // The same sandstone as A's spires, the same sand; the sun comes in only as shafts of gold.
+  const RAMPS_C = {
+    stone: RAMPS_A.rock,
+    sand: RAMPS_A.sand,
+    beam: ['#2A1708', '#4E2C10', '#7E4A1C', '#B26E2C', '#DE9A44', '#F4C26C', '#FDDC96', '#FEF4C8'],
+    dark: ['#050302', '#0B0705', '#120C08', '#1A110B'],
+    sky: RAMPS_A.sky, sun: RAMPS_A.sun, haze: RAMPS_A.haze,
+    shadow: RAMPS_A.shadow, bone: RAMPS_A.bone,
+    ...CARD,
+  };
+  const FLAME_C = { a: '#7E3A12', b: '#E08A2E', c: '#FFE08A', d: '#3A2010' };
+  const SLANT = -0.22; // the shafts lean the same way everywhere: the sun is low in the west
+
+  /** A shaft of sun through a crack in the roof: it brightens whatever it passes in front of, and pools where it lands. */
+  function shaft(p, x0, y0, y1, w0, w1, k, pool = 0, sl = SLANT, fade = 0) {
+    const x1 = x0 + sl * (y1 - y0);
+    const poly = C.poly([[x0 - w0 / 2, y0], [x0 + w0 / 2, y0], [x1 + w1 / 2, y1], [x1 - w1 / 2, y1]]);
+    p.shade(poly, (x, y) => {
+      const t = clamp((y - y0) / (y1 - y0), 0, 1);
+      const e = 1 - Math.abs(x + 0.5 - lerp(x0, x1, t)) / (lerp(w0, w1, t) / 2);
+      return k * clamp(e * (fade ? 1.4 : 2.4), 0, 1) * (0.8 + 0.2 * Math.sin(t * 11 + x0)) * (1 - fade + fade * t);
+    });
+    if (pool) p.light(x1, y1, pool, k * 0.9, null, { zMin: 1, sy: 0.32 });
+    return { x1, y1 };
+  }
+
+  /** The crack a shaft comes through: a jagged slot of daylight in the roof. */
+  function crack(p, x, y0, y1, u) {
+    for (let y = Math.floor(y0), k = 0; y < y1; y += 1, k += 1) {
+      const w = Math.max(1, Math.round((1.2 + hash(k, 0, Math.round(x)) * 1.6) * u));
+      p.fill(C.rect(Math.round(x - w / 2 + (hash(k, 1, 5) - 0.5) * 1.5 * u), y, w, 1), 'beam', 6.6, 3);
+    }
+  }
+
+  /**
+   * A sandstone column: a shaft rounded by its shading, bands under a flared
+   * papyrus capital, a square abacus, a round base, and a panel of figures
+   * cut into it.
+   */
+  function column(p, x, top, base, w, z, v, seed) {
+    const ab = w * 0.28; const cap = w * 0.85; const bh = w * 0.22; const st = top + ab + cap;
+    const shaftP = C.poly([[x - w / 2, base - bh], [x - w * 0.43, st], [x + w * 0.43, st], [x + w / 2, base - bh]]);
+    p.fill(shaftP, 'stone', v, z);
+    p.shade(shaftP, (px) => { const t = (px + 0.5 - (x - w / 2)) / w; return 0.9 * Math.cos((t - 0.35) * Math.PI * 1.1) - 0.5; }, z);
+    const capP = C.poly([[x - w * 0.43, st], [x - w * 0.78, top + ab], [x + w * 0.78, top + ab], [x + w * 0.43, st]]);
+    p.fill(capP, 'stone', v + 0.4, z);
+    p.shade(capP, (px) => (((px - x + 200 * w) % Math.max(2, w * 0.26)) < 1 ? -0.8 : 0), z);
+    p.fill(C.rect(x - w * 0.55, top, w * 1.1, ab), 'stone', v + 0.7, z);
+    p.fill(C.rect(x - w * 0.6, base - bh, w * 1.2, bh), 'stone', v + 0.5, z);
+    p.fill(C.rect(x - w * 0.6, base - bh, w * 1.2, 1), 'stone', v + 1.2, z);
+    for (let k = 0; k < 3; k += 1) p.shade(C.rect(x - w / 2, st + 1 + k * Math.max(2, w * 0.14), w, 1), -1, z);
+    // A panel of figures: little standing people cut in, each a head over a body, one arm raised.
+    const y0 = st + w * 0.7; const y1 = Math.min(base - bh - w * 0.5, y0 + w * 2.2);
+    for (let y = y0, row = 0; y + 4 < y1; y += Math.max(5, w * 0.62), row += 1) {
+      for (let fx = x - w * 0.32, k = 0; fx < x + w * 0.3; fx += Math.max(3, w * 0.24), k += 1) {
+        if (hash(row, k, seed) < 0.25) continue;
+        const X = Math.round(fx); const Y = Math.round(y);
+        p.shade(C.rect(X, Y, 1, 1), -1.1, z); p.shade(C.rect(X, Y + 2, 1, 3), -1.1, z);
+        p.shade(C.rect(X + 1, Y + (hash(row, k, seed + 1) < 0.5 ? 1 : 3), 1, 1), -1.1, z);
+        p.shade(C.rect(X - 1, Y + 2, 1, 3), 0.7, z);
+      }
+    }
+  }
+
+  /**
+   * A colossus seated on its throne and facing you: the striped headdress
+   * falling to the chest, the false beard, hands flat on the knees.
+   */
+  function colossusSeated(p, cx, base, s, z, v, c = 0) {
+    const P = (pts) => C.poly(pts.map(([x, y]) => [cx + x * s, base - y * s]));
+    p.fill(P([[-0.36, 0], [-0.36, 0.54], [0.36, 0.54], [0.36, 0]]), 'stone', v - 0.7, z);                       // the throne
+    for (const m of [-1, 1]) {
+      p.fill(P([[m * 0.02, 0.02], [m * 0.02, 0.46], [m * 0.19, 0.46], [m * 0.2, 0.02]]), 'stone', v, z);          // shins
+      p.fill(P([[m * 0.01, 0], [m * 0.01, 0.05], [m * 0.22, 0.05], [m * 0.22, 0]]), 'stone', v + 0.5, z);         // feet
+      p.fill(P([[m * 0.17, 0.5], [m * 0.18, 0.78], [m * 0.26, 0.76], [m * 0.25, 0.5]]), 'stone', v - 0.3, z);       // arms
+      p.fill(P([[m * 0.06, 0.44], [m * 0.06, 0.5], [m * 0.17, 0.5], [m * 0.17, 0.44]]), 'stone', v + 0.7, z);      // hands on the knees
+    }
+    p.fill(P([[-0.2, 0.44], [-0.2, 0.52], [0.2, 0.52], [0.2, 0.44]]), 'stone', v + 0.5, z);                     // the lap
+    p.fill(P([[-0.16, 0.5], [-0.2, 0.8], [0.2, 0.8], [0.16, 0.5]]), 'stone', v + 0.2, z);                       // the body
+    const hd = P([[-0.2, 0.62], [-0.23, 0.86], [-0.15, 0.98], [-0.07, 1.02], [0.07, 1.02], [0.15, 0.98], [0.23, 0.86], [0.2, 0.62], [0.12, 0.62], [0.11, 0.84], [-0.11, 0.84], [-0.12, 0.62]]);
+    p.fill(hd, 'stone', v + 0.2, z);
+    p.shade(hd, (px, py) => ((Math.floor((base - py) / Math.max(2, s * 0.03)) % 2) ? -0.6 : 0), z);           // its stripes
+    p.fill(P([[-0.1, 0.8], [-0.11, 0.96], [0.11, 0.96], [0.1, 0.8]]), 'stone', v + 0.9, z);                     // the face
+    p.fill(P([[-0.025, 0.71], [-0.03, 0.8], [0.03, 0.8], [0.025, 0.71]]), 'stone', v, z);                       // the beard
+    const Y = (k) => Math.round(base - k * s); const X = (k) => Math.round(cx + k * s);
+    p.fill(C.rect(X(-0.09), Y(0.915), X(0.09) - X(-0.09), 1), 'stone', v + 2, z);                               // the brow
+    p.fill(C.rect(X(-0.07), Y(0.9), Math.max(1, X(-0.02) - X(-0.07)), 1), 'stone', v - 1.4, z);                  // eyes
+    p.fill(C.rect(X(0.025), Y(0.9), Math.max(1, X(0.07) - X(0.025)), 1), 'stone', v - 1.4, z);
+    p.fill(C.rect(X(0.005), Y(0.885), 1, Math.max(2, Y(0.845) - Y(0.885))), 'stone', v - 1, z);                  // the nose's shadow
+    p.fill(C.rect(X(-0.04), Y(0.83), X(0.04) - X(-0.04), 1), 'stone', v - 1.2, z);                              // the mouth
+    for (const k of [0.18, 0.34, 0.62]) p.shade(P([[-0.36, k], [0.36, k], [0.36, k - 0.008], [-0.36, k - 0.008]]), -0.5, z); // block joints
+    if (!c) return;
+    // Modelled harder, for a small size: the throne sunk in shadow, a gap between the shins,
+    // the knees, hands and lap catching the light, the arms' outer edges lit.
+    p.shade(P([[-0.36, 0], [-0.36, 0.54], [-0.2, 0.54], [-0.2, 0]]), -c * 1.6, z);
+    p.shade(P([[0.2, 0], [0.2, 0.54], [0.36, 0.54], [0.36, 0]]), -c * 1.6, z);
+    p.shade(P([[-0.36, 0.54], [-0.36, 0.6], [-0.26, 0.6], [-0.26, 0.54]]), -c * 1.2, z);
+    p.shade(P([[0.26, 0.54], [0.26, 0.6], [0.36, 0.6], [0.36, 0.54]]), -c * 1.2, z);
+    p.fill(C.rect(X(-0.01), Y(0.44), Math.max(1, X(0.01) - X(-0.01)), Y(0.02) - Y(0.44)), 'stone', v - 2.2 * c, z);
+    p.shade(P([[-0.2, 0.47], [-0.2, 0.52], [0.2, 0.52], [0.2, 0.47]]), c * 1.4, z);
+    for (const m of [-1, 1]) {
+      p.shade(P([[m * 0.06, 0.44], [m * 0.06, 0.5], [m * 0.17, 0.5], [m * 0.17, 0.44]]), c * 1.6, z);
+      p.shade(P([[m * 0.24, 0.5], [m * 0.25, 0.77], [m * 0.27, 0.76], [m * 0.26, 0.5]]), c * 1.4, z);
+      p.shade(P([[m * 0.02, 0.36], [m * 0.02, 0.44], [m * 0.19, 0.44], [m * 0.19, 0.36]]), c * 0.9, z);
+    }
+    p.shade(P([[-0.1, 0.8], [-0.11, 0.96], [0.11, 0.96], [0.1, 0.8]]), c * 0.8, z);
+  }
+
+  /** A bronze brazier on three legs, coals glowing; the flame is a sprite per frame. Returns where the flame sits. */
+  function brazier(p, x, fy, u, z) {
+    for (const [a, b] of [[-3.2, -1.2], [3.2, 1.2], [0, 0]]) {
+      p.fill(C.poly([[x + a * u - 0.5, fy], [x + b * u - 0.5, fy - 6 * u], [x + b * u + 0.6, fy - 6 * u], [x + a * u + 0.6, fy]]), 'shadow', 2.6, z);
+    }
+    p.fill(C.poly([[x - 3.6 * u, fy - 7.6 * u], [x + 3.6 * u, fy - 7.6 * u], [x + 2.4 * u, fy - 5.6 * u], [x - 2.4 * u, fy - 5.6 * u]]), 'stone', 3.4, z);
+    p.fill(C.rect(x - 3.6 * u, fy - 7.6 * u, 7.2 * u, 1), 'stone', 5.4, z);
+    p.fill(C.ellipse(x, fy - 7.8 * u, 2.6 * u, 0.7 * u, 10), 'beam', 4.4, z + 1);
+    return [x, fy - 8 * u];
+  }
+
+  /** A cone of sand poured in from the roof, rippled, lit on top. */
+  function sandHeap(p, x, fy, w, h, z, v) {
+    const pts = []; for (let i = 0; i <= 12; i += 1) { const t = i / 12; pts.push([x - w + 2 * w * t, fy - h * Math.sin(t * Math.PI) ** 1.4]); }
+    pts.push([x + w, fy + 1], [x - w, fy + 1]);
+    p.fill(C.poly(pts), 'sand', (px, py) => v + 1.6 * (1 - Math.abs(px - x) / w) - ((py * 0.8 + px * 0.3) % 3 < 0.8 ? 0.6 : 0), z);
+  }
+
+  /**
+   * Signs cut in a line along a face: little irregular columns of marks,
+   * worn here and there; where `lit(x)` they glow in the card's colour.
+   */
+  function inscribe(p, x0, x1, cy, h, ramp, z, seed, lit, skip = () => false) {
+    const glow = []; let x = x0; let k = 0;
+    while (x < x1) {
+      if (skip(x)) { x += 1; continue; }
+      const on = lit(x, k); const rows = 2 + Math.floor(hash(k, 1, seed) * 3);
+      for (let r = 0; r < rows; r += 1) {
+        if (hash(k, r, seed + 2) < 0.22) continue;
+        const y = Math.round(cy(x) - h(x) * 0.55 + r * Math.max(2, h(x) * 0.42) + (hash(k, r, seed + 3) < 0.5 ? 0 : 1));
+        p.fill(C.rect(Math.round(x), y, hash(k, r, seed + 4) < 0.4 ? 2 : 1, 1), ramp, on ? 2.5 + hash(k, r, seed + 5) * 1.1 : 0.7, z);
+        if (on) glow.push([Math.round(x), y]);
+      }
+      x += 2 + Math.floor(hash(k, 9, seed) * 3); k += 1;
+    }
+    return glow;
+  }
+
+  /**
+   * A column come down toward you in the aisle: its drums tumbled in a
+   * heap, round fluted faces turned to you, each cut with a ring of signs;
+   * the broken stump still standing beside them. Black against the door.
+   */
+  function fallenDrums(p, cx, fy, u, z, ramp) {
+    const glow = [];
+    // The stump, still standing.
+    p.fill(C.poly([[cx - 26 * u, fy], [cx - 26 * u, fy - 24 * u], [cx - 23.5 * u, fy - 27 * u], [cx - 21 * u, fy - 23 * u], [cx - 18 * u, fy - 25 * u], [cx - 18 * u, fy]]), 'shadow', 0.6, z);
+    for (let y = fy - 22 * u; y < fy; y += 3 * u) p.fill(C.rect(cx - 26 * u, y, 8 * u, 1), 'shadow', 1.6, z);
+    const drums = [[-11, -7.5, 7.5, 3], [12, -8, 8, 1], [0, -10, 10, 7], [5, -24, 7, 5]];
+    for (const [dx, dy, r, seed] of drums) {
+      const x = cx + dx * u; const y = fy + dy * u; const R = r * u;
+      // The face: fluted round its edge, a carved ring, the dowel hole in the middle.
+      const face = C.poly(Array.from({ length: 40 }, (_, i) => { const a = (i / 40) * Math.PI * 2; const k = R * (1 - 0.06 * Math.abs(Math.sin(a * 10))); return [x + Math.cos(a) * k, y + Math.sin(a) * k]; }));
+      p.fill(face, 'stone', 1.9, z);
+      p.shade(face, (px, py) => {
+        const d = Math.hypot(px + 0.5 - x, py + 0.5 - y) / R;
+        if (d > 0.88) return -1.6;                                                // its edge, dark, so the drums part
+        let v = (y - py) / R > 0.45 ? 1.6 : 0;                                    // its top, catching the shaft
+        if (d > 0.62 && d < 0.74) v += 2.4;                                       // the carved ring
+        return v;
+      }, z);
+      p.fill(C.rect(Math.round(x) - 1, Math.round(y) - 1, 2, 2), 'stone', 0, z);
+      p.fill(C.rect(Math.round(x) - 1, Math.round(y) + 1, 2, 1), 'stone', 2.6, z);
+      // Signs cut round the ring, a few still holding the light.
+      for (let a = 0, k = 0; a < Math.PI * 2; a += 0.42 + hash(k, 0, seed) * 0.3, k += 1) {
+        if (hash(k, 1, seed) < 0.25) continue;
+        const rr = R * (0.82 + hash(k, 2, seed) * 0.08); const gx0 = Math.round(x + Math.cos(a) * rr); const gy0 = Math.round(y + Math.sin(a) * rr);
+        const on = hash(k, 3, seed) < 0.22;
+        p.fill(C.rect(gx0, gy0, 1, 1), ramp, on ? 2.8 + hash(k, 4, seed) : 0.7, z + 1);
+        if (on) glow.push([gx0, gy0]);
+      }
+    }
+    return glow;
+  }
+
+  /** The far door: a tall tapered opening in a carved frame, a winged disc on its lintel. */
+  function farDoor(p, cx, top, base, u, z) {
+    const hb = 8 * u; const ht = 6.5 * u; const f = 3.5 * u;
+    p.fill(C.poly([[cx - hb - f, base], [cx - ht - f, top - 5 * u], [cx + ht + f, top - 5 * u], [cx + hb + f, base]]), 'stone', 2.4, z);
+    p.fill(C.rect(cx - ht - f - 1.5 * u, top - 6.5 * u, 2 * (ht + f + 1.5 * u), 1.6 * u), 'stone', 3.6, z);
+    for (const m of [-1, 1]) {
+      p.fill(C.poly([[cx + m * 2 * u, top - 3.6 * u], [cx + m * (ht + f - 0.5 * u), top - 4.2 * u], [cx + m * (ht + f - 1.4 * u), top - 1.6 * u], [cx + m * 2 * u, top - 1.4 * u]]), 'stone', 3.4, z);
+    }
+    p.fill(C.circle(cx, top - 2.6 * u, 1.9 * u, 12), 'stone', 4.4, z);
+    return C.poly([[cx - hb, base], [cx - ht, top], [cx + ht, top], [cx + hb, base]]);
+  }
+
+  const DC = {
+    job: 4, setting: 'desert', key: 'C', id: 'desert-c', side: 'inside',
+    name: 'Desert', title: 'The temple halls',
+    pitch: 'Inside the buried temple, out of the sun. Columns as thick as towers, colossi on their thrones, and the sunset coming in through cracks in the roof as shafts of gold, with the sand pouring down them.',
+    notes: [
+      ['Light', 'The same gold light as outside, let in only through cracks in the roof: slanting shafts that pool on the floor. Braziers glow low between the columns; everything else is dark sandstone.'],
+      ['Detail', 'Papyrus columns with banded capitals and carved figures, seated colossi with striped headdresses, a winged disc over the far door, sand falling in the shafts and heaped on the flagstones.'],
+      ['Vista', 'Columns and colossi across the hall; the card stands in the aisle against the lit far door: the worm breaking up through the floor, a traveller with a lantern, a violet jar on an altar, a column fallen in a heap of drums, the far door open on the sunset.'],
+      ['World', 'Sand-drifted flagstones under the table, the far end’s glow along the top, a shaft of gold falling at each edge with sand sifting down it.'],
+    ],
+    palette: ['#0A0605', '#28180F', '#4A2C19', '#82502B', '#D08C46', '#F4C26C', '#FEF4C8', '#6B3E22', '#FCDC92'],
+
+    back(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['beam', 'dark'] });
+      const u = H / 134; const gx = W / 2; const floorY = Math.round(104 * u);
+      // The back wall and its carving: a winged disc above the colossus.
+      p.fill(C.rect(0, 0, W, floorY), 'stone', 0.8, 1);
+      p.masonry(C.rect(0, 0, W, floorY), { bw: 12 * u, bh: 7 * u, joint: -0.7, top: 0.3, left: 0.2, vary: 0.5, chip: 0.03, seed: 51, z: 1 });
+      const wy = 31 * u;
+      for (const m of [-1, 1]) p.fill(C.poly([[gx + m * 3 * u, wy - 1.6 * u], [gx + m * 20 * u, wy - 3.4 * u], [gx + m * 17 * u, wy + 0.4 * u], [gx + m * 3 * u, wy + 1.6 * u]]), 'stone', 2.8, 1);
+      for (let k = 1; k < 6; k += 1) for (const m of [-1, 1]) p.shade(C.rect(gx + m * (3 + k * 3) * u - (m < 0 ? 1 : 0), wy - 2.8 * u, 1, 3.6 * u), -0.9, 1);
+      p.fill(C.circle(gx, wy, 2.8 * u, 16), 'stone', 3.6, 1);
+      // The floor: flags, sand drifted over them.
+      p.fill(C.rect(0, floorY, W, H - floorY), 'stone', 1.7, 1);
+      p.floor(C.rect(0, floorY, W, H - floorY), { vx: gx, vy: floorY - 34 * u, rows: 4, size: 0.9, d0: 34 * u, joint: -1.2, top: 0.45, vary: 0.7, seed: 52, z: 1 });
+      p.fill(C.rect(0, floorY, W, H - floorY), 'sand', (x, y) => {
+        const n = Math.sin(x * 0.09 + y * 0.05) + Math.sin(x * 0.031 - y * 0.12 + 2) * 0.8;
+        return n > 0.55 ? 2 + (y - floorY) * 0.01 - ((y * 0.9 + x * 0.25) % 3 < 0.8 ? 0.6 : 0) : null;
+      }, 1);
+      // The colossus.
+      colossusSeated(p, gx, floorY, 62 * u, 2, 3.8);
+      // The roof and its beam, the crack the sun comes through.
+      p.fill(C.rect(0, 0, W, 8 * u), 'stone', 0.9, 3);
+      p.masonry(C.rect(0, 0, W, 8 * u), { bw: 20 * u, bh: 8 * u, joint: -0.8, vary: 0.5, seed: 53, z: 3 });
+      p.fill(C.rect(0, 8 * u, W, 6 * u), 'stone', 1.8, 3);
+      p.fill(C.rect(0, 14 * u - 1, W, 1), 'stone', 3, 3);
+      crack(p, 61 * u, 0, 8 * u, u);
+      // The columns either side, in front, with braziers at their feet.
+      column(p, 6 * u, 14 * u, H + 4 * u, 22 * u, 4, 2, 54);
+      column(p, W - 6 * u, 14 * u, H + 4 * u, 22 * u, 4, 2, 55);
+      const b1 = brazier(p, 25 * u, 116 * u, u, 5); const b2 = brazier(p, W - 25 * u, 116 * u, u, 5);
+      // The shaft: in at the crack, across the colossus's face, down to the heap it has poured.
+      const sh = shaft(p, 61 * u, 8 * u, floorY + 2 * u, 5 * u, 9 * u, 5.2, 18 * u);
+      sandHeap(p, sh.x1, floorY + 3 * u, 9 * u, 4 * u, 6, 3.6);
+      p.light(sh.x1, floorY + 1 * u, 16 * u, 4, null, { zMin: 6, zMax: 6 });
+      // The shaft's glow thrown back onto the colossus round it.
+      p.light(gx + 2 * u, 62 * u, 30 * u, 2, null, { zMin: 2, zMax: 2 });
+      for (const [x, y] of [b1, b2]) {
+        p.light(x, y, 40 * u, 5.4, null, { zMin: 1, hard: true });
+        p.light(x, y, 64 * u, 1.2, null, { zMin: 1 });
+      }
+      p.rim(1, 0, 0.8, 4);
+      vignette(p, W, H, 1.6, 0.5, -1);
+      return {
+        p,
+        over(img) {
+          for (const [x, y] of [b1, b2]) sprite(img, Math.round(x), Math.round(y), SPRITES.flame[x < gx ? 0 : 1], FLAME_C);
+          // Sand sifting down the shaft, caught in the light.
+          for (let k = 0; k < 14; k += 1) {
+            const y = 10 * u + hash(k, 0, 61) * (floorY - 12 * u); const x = 61 * u + SLANT * (y - 8 * u) + (hash(k, 1, 61) - 0.5) * 2 * u;
+            put(img, x, y, k % 3 ? '#F4C26C' : '#FEF4C8', 0.85);
+          }
+        },
+      };
+    },
+
+    vista(W, H, cat) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['beam', 'dark', 'sky', 'sun'] });
+      const u = H / 100; const gx = W / 2;
+      const ramp = catRamp(cat); const hex = CARD[ramp][3];
+      const open = cat === 'clear-path';
+      const far = 80 * u; const floor = 91 * u; const top = 12 * u;
+      // The back wall, two bands of carved figures along it.
+      // (A step lighter than the near columns, for depth: the far end of the hall holds the dust and the light.)
+      p.fill(C.rect(0, 0, W, far), 'stone', 1.7, 1);
+      p.masonry(C.rect(0, 0, W, far), { bw: 12 * u, bh: 7 * u, joint: -0.7, top: 0.3, left: 0.2, vary: 0.5, chip: 0.03, seed: 61, z: 1 });
+      for (const by of [24 * u, 56 * u]) {
+        p.shade(C.rect(0, by - 1, W, 1), 0.8, 1); p.shade(C.rect(0, by + 7 * u, W, 1), 0.8, 1);
+        for (let x = 1, k = 0; x < W; x += Math.max(3, 3.6 * u), k += 1) {
+          if (hash(k, Math.round(by), 63) < 0.2) continue;
+          p.shade(C.rect(x, by + 1.2 * u, 1, 1), -1, 1); p.shade(C.rect(x, by + 2.6 * u, 1, 3 * u), -1, 1);
+          p.shade(C.rect(x + 1, by + (hash(k, 1, 63) < 0.5 ? 2.6 : 4) * u, 1, 1), -1, 1);
+        }
+      }
+      // The floor: flags, sand drifted over them.
+      p.fill(C.rect(0, far, W, H - far), 'stone', 1.8, 1);
+      p.floor(C.rect(0, far, W, H - far), { vx: gx, vy: far - 22 * u, rows: 4, size: 1, d0: 22 * u, joint: -1.1, top: 0.45, vary: 0.7, seed: 64, z: 1 });
+      p.fill(C.rect(0, far, W, H - far), 'sand', (x, y) => {
+        const n = Math.sin(x * 0.05 / u + y * 0.04 / u) + Math.sin(x * 0.019 / u - y * 0.1 / u + 2) * 0.8;
+        return n > 0.6 ? 2.1 - ((y * 0.9 + x * 0.25) % (3 * u) < u ? 0.6 : 0) : null;
+      }, 1);
+      // The far door, and what is beyond it.
+      const door = farDoor(p, gx, 36 * u, far, u, 2);
+      if (open) {
+        // The sunset beyond: an orange sky deepening upward, the sun a crisp disc on the dunes.
+        p.fill(door, 'sky', (x, y) => 1.1 + 0.3 * clamp((y - 36 * u) / (far - 36 * u), 0, 1), 3);
+        p.fill(C.circle(gx, far - 6 * u, 6.5 * u, 28), 'sun', 2.4, 3);
+        p.fill(C.circle(gx - 1.5 * u, far - 7.5 * u, 3.2 * u, 16), 'sun', 3.2, 3);
+        p.fill(door, 'haze', (x, y) => (y > far - 4 * u + Math.sin(x * 0.9 / u) * u ? 1.1 : null), 3);
+      } else {
+        p.fill(door, 'beam', (x, y) => 2.6 + 2.8 * clamp((y - 36 * u) / (far - 36 * u), 0, 1) ** 1.4 * (1 - 0.5 * Math.abs(x + 0.5 - gx) / (8 * u)), 3);
+      }
+      // The colossi either side of it.
+      colossusSeated(p, gx - 27 * u, far, 48 * u, 2, 3.4, 1);
+      colossusSeated(p, gx + 27 * u, far, 48 * u, 2, 3.4, 1);
+      p.light(gx, far - 4 * u, 34 * u, open ? 3 : 1.8, null, { zMin: 2, zMax: 2 }); // the door's glow on the colossi
+      // Columns: smaller ones further back between the near ones, which stand right in front.
+      for (let d = 98; d < W / u; d += 88) for (const m of [-1, 1]) column(p, gx + m * d * u, 18 * u, far + 4 * u, 8 * u, 2, 2.8, 66 + d);
+      // The roof, its architrave, the cracks.
+      p.fill(C.rect(0, 0, W, 8 * u), 'stone', 0.8, 3);
+      p.masonry(C.rect(0, 0, W, 8 * u), { bw: 22 * u, bh: 8 * u, joint: -0.8, vary: 0.5, seed: 67, z: 3 });
+      p.fill(C.rect(0, 8 * u, W, 4 * u), 'stone', 1.7, 3);
+      p.fill(C.rect(0, top - 1, W, 1), 'stone', 2.8, 3);
+      for (let d = 54; d < W / u + 20; d += 88) for (const m of [-1, 1]) column(p, gx + m * d * u, top, floor + 3 * u, 12 * u, 4, 1.1, 68 + d);
+      // The near columns' edges, rimmed by the shafts either side of them.
+      p.rim(1, 0, 2.2, 4); p.rim(-1, 0, 1.4, 4);
+      // The shafts: two across the colossi's faces, more out along the hall, some with sand pouring down them.
+      const shafts = [[32.6, 4, 7, 4.6, false], [-21.4, 4, 7, 4.6, false]];
+      for (let d = 120; d < W / u; d += 88) shafts.push([d, 3.5, 8, 4.2, true], [-d + 12, 3.5, 8, 4.2, true]);
+      const falls = [];
+      for (const [d, w0, w1, k, sand] of shafts) {
+        const x0 = gx + d * u; if (x0 < -20 * u || x0 > W + 30 * u) continue;
+        crack(p, x0, 0, 8 * u, u);
+        const s = shaft(p, x0, 8 * u, floor, w0 * u, w1 * u, open ? k + 0.8 : k, 12 * u);
+        if (sand) { sandHeap(p, s.x1, floor + 1 * u, 7 * u, 3.2 * u, 5, 3.4); falls.push([x0, s.x1]); }
+      }
+      // Braziers between the colossi and the columns.
+      const flames = [brazier(p, gx - 45 * u, floor, u, 5), brazier(p, gx + 45 * u, floor, u, 5)];
+      for (const [x, y] of flames) {
+        p.light(x, y, 38 * u, 5.2, flicker(x, 0.16), { zMin: 1, hard: true });
+        p.light(x, y, 60 * u, 1.2, null, { zMin: 1 });
+        // Firelight up the colossus beside it: knees, hands, the arm.
+        p.light(x + (x < gx ? 6 : -6) * u, y, 34 * u, 3.4, flicker(x, 0.16), { zMin: 2, zMax: 2, hard: true });
+      }
+      // Each colossus's face and chest in its own shaft.
+      for (const m of [-1, 1]) p.light(gx + m * 27 * u, far - 41 * u, 10 * u, 2.8, null, { zMin: 2, zMax: 2 });
+      // The door's glow spilling onto the floor in front of it.
+      p.light(gx, far, 36 * u, 2.4, null, { zMin: 1, zMax: 1, sy: 0.45 });
+      // The card, in the aisle, against the far door.
+      const fy = floor;
+      if (cat === 'monster') {
+        const w = worm(p, gx, fy + 1 * u, 40 * u, ramp, 8);
+        p.backlit(8, 'beam', 1.4, 'stone', 9.4);
+        p.fill(C.poly([[gx - 6 * u, fy + 3 * u], [gx - 2 * u, fy - 2 * u], [gx + 4 * u, fy - 3 * u], [gx + 16 * u, fy + 3 * u]]), 'sand', 3.4, 9);
+        for (const [dx, dy] of [[-10, 1], [12, 0.5], [-4, 2]]) p.fill(C.rect(gx + dx * u, fy + dy * u - 1.5 * u, 4 * u, 2 * u), 'stone', 2.2, 9);
+        p.tint(w.hx, w.hy - 2 * u, 7 * u, hex, 0.4, flicker(0.3, 0.3, 1.4));
+      } else if (cat === 'wanderer') {
+        const l = traveller(p, gx, fy, 32 * u, 8, ramp);
+        p.backlit(8, 'beam', 1.4, 'stone', 9.4);
+        // The lantern: small and bright; its pool on the floor round the figure, the figure itself left in clean bands.
+        p.light(l.lx, fy, 12 * u, 2.6, flicker(0.9, 0.15), { zMin: 1, zMax: 7, sy: 0.5 });
+        p.tint(l.lx, l.ly, 3 * u, CARD[ramp][3], 0.5, flicker(0.9, 0.15));
+      } else if (cat === 'item') {
+        p.fill(C.rect(gx - 8 * u, fy - 9 * u, 16 * u, 9 * u), 'stone', 2.4, 7);
+        p.fill(C.rect(gx - 9 * u, fy - 10 * u, 18 * u, 1.4 * u), 'stone', 4, 7);
+        const m = urn(p, gx, fy - 9.5 * u, 15 * u, 8, ramp, 0.08, ramp, 1.3, null);
+        p.tint(m[0], m[1] - 1 * u, 12 * u, hex, 0.6, flicker(2, 0.15, 0.7));
+        p.tint(gx, fy - 4 * u, 20 * u, CARD[ramp][2], 0.35, flicker(2.4, 0.2, 0.7));
+      } else if (cat === 'obstacle') {
+        const glow = fallenDrums(p, gx, fy, u, 8, ramp);
+        p.backlit(8, 'beam', 1.4, ramp, 2.6);
+        for (const [x, y] of glow.filter((_, k) => k % 3 === 1)) p.tint(x, y, 3 * u, CARD[ramp][2], 0.25, flicker(x, 0.2, 0.8));
+        p.tint(gx, fy + 3 * u, 12 * u, CARD[ramp][2], 0.15, flicker(0.5, 0.12, 0.6));
+        // Sand pouring onto it through a hole in the roof.
+        crack(p, gx + 6 * u, 0, 8 * u, u);
+        shaft(p, gx + 6 * u, 8 * u, fy - 6 * u, 3 * u, 5 * u, 3.4);
+        falls.push([gx + 6 * u, gx + 6 * u + SLANT * (fy - 14 * u)]);
+      } else if (open) {
+        // The sunset outside, pouring in down the aisle.
+        p.light(gx, floor, 56 * u, 5.4, flicker(0.2, 0.06, 0.4), { zMin: 1, sy: 0.36 });
+        p.light(gx, far - 6 * u, 30 * u, 2.4, null, { zMin: 2, zMax: 2 });
+        p.tint(gx, floor + 2 * u, 22 * u, CARD.path[3], 0.25, flicker(0.2, 0.08, 0.4));
+      }
+      vignette(p, W, H, 1.3, 0.45, -1);
+      return {
+        p,
+        over(img, t) {
+          flames.forEach(([x, y], i) => sprite(img, Math.round(x), Math.round(y), SPRITES.flame[Math.floor(t * 8 + i) % 3], FLAME_C));
+          for (const [x0, x1] of falls) {
+            for (const q of particles('drip', 9, [0, 8 * u, 1, floor - 9 * u], t, Math.round(x0))) {
+              const f = (q.y - 8 * u) / (floor - 8 * u);
+              put(img, lerp(x0, x1, f) + (q.i % 3) - 1, q.y, q.i % 2 ? '#F4C26C' : '#D08C46', 0.9);
+            }
+          }
+          for (const q of particles('mote', Math.round(W / 10), [0, 12 * u, W, floor - 14 * u], t, 69)) {
+            if (p.v[Math.round(q.y) * W + Math.round(q.x)] > 5) put(img, q.x, q.y, '#FDDC96', q.a * 0.8);
+          }
+          if (open) for (const q of particles('mote', 16, [gx - 16 * u, far + 1 * u, 32 * u, floor - far], t, 71)) put(img, q.x, q.y, q.big ? '#FEF4C8' : '#F4C26C', q.a);
+          if (cat === 'item') for (const q of particles('mote', 8, [gx - 8 * u, fy - 30 * u, 16 * u, 20 * u], t, 73)) put(img, q.x, q.y, CARD.item[q.big ? 4 : 3], q.a);
+        },
+      };
+    },
+
+    world(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['beam', 'dark'] });
+      const u = H / 250;
+      // The floor: big flags in perspective, drifts of sand across them.
+      p.fill(C.rect(0, 0, W, H), 'stone', 1.6, 1);
+      p.floor(C.rect(0, 0, W, H), { vx: W / 2, vy: -90 * u, rows: 3.2, size: 1.1, d0: 50 * u, joint: -1.1, top: 0.45, left: 0.25, vary: 0.8, chip: 0.04, seed: 71, z: 1 });
+      // Drifts: long tongues of sand across the flags, rippled, their far edges catching the light from the hall.
+      // Sand over most of it; the flags show where the draught has swept them bare.
+      const dn = (x, y) => Math.sin(x * 0.022 + y * 0.012) + 0.8 * Math.sin(x * 0.009 - y * 0.045 + 2) + 0.3 * Math.sin(x * 0.07 + y * 0.03 + 1);
+      p.fill(C.rect(0, 0, W, H), 'sand', (x, y) => {
+        const n = dn(x, y);
+        if (n < -0.35) return null;
+        const rp = (y + Math.sin(x * 0.045 + y * 0.01) * 4 + x * 0.18) / (3.6 + y * 0.012);
+        return 1.9 + Math.min(0.6, (n + 0.35) * 0.5) - (rp - Math.floor(rp) < 0.24 ? 0.7 : 0) + (dn(x, y + 2) < -0.35 ? 1 : 0);
+      }, 1);
+      // The far end's glow along the top, under the vista.
+      p.light(W / 2, -24 * u, 180 * u, 2.8, flicker(0.7, 0.06, 0.5), { sx: 1.7 });
+      // A shaft of gold at each edge, sand sifting down it to a heap.
+      // (Seen from above, the parallel shafts lean apart, away from the middle.)
+      const sh = [[-8, 0.13], [W + 8, -0.13]].map(([x, sl]) => ({ ...shaft(p, x, -4, H * 0.7, 16, 30, 5.6, 0, sl, 0.75), sl, x0: x }));
+      for (const s of sh) {
+        p.light(s.x1, s.y1, 18, 4.6, null, { zMin: 1, sy: 0.4 });
+        sandHeap(p, s.x1, s.y1 + 4, 11, 5, 2, 2.6);
+      }
+      p.shade(null, (x, y) => -2 * Math.max(0, y / H - 0.36));
+      return {
+        p,
+        over(img, t) {
+          for (const s of sh) {
+            for (const q of particles('drip', 10, [0, 0, 1, s.y1], t, Math.round(s.x0))) put(img, s.x0 + s.sl * q.y + (q.i % 3) - 1, q.y, q.i % 2 ? '#F4C26C' : '#B26E2C', 0.85);
+            for (const q of particles('mote', 10, [-5, 0, 10, s.y1], t, Math.round(s.x0) + 3)) put(img, s.x0 + s.sl * q.y + q.x, q.y, '#DE9A44', q.a * 0.7);
+          }
+          for (const q of particles('dust', 30, [20, 40, W - 40, H * 0.5], t, 75)) put(img, q.x, q.y, '#4A2C19', q.a * 0.6);
+        },
+      };
+    },
+  };
+
+  window.DESIGNS = (window.DESIGNS || []).concat([A, B, DC]);
 })();

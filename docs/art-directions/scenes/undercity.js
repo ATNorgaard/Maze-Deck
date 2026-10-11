@@ -21,6 +21,9 @@
     wood: ['#050304', '#0B0708', '#120D0D', '#1A1412', '#231B17', '#2E241D', '#3B2F25', '#4A3D2F', '#5B4C3A', '#6E5E48'],
     gold: ['#0C0705', '#1E1309', '#3D2A0E', '#5F4116', '#8A5E1E', '#B98135', '#E3A445', '#F2CB8A', '#FFF1C4', '#FFFBEA'],
     warm: ['#030203', '#0D0807', '#1A100B', '#2A1A10', '#3D2715', '#55361A', '#73491F', '#98612A', '#C07F35', '#E3A445', '#F2CB8A', '#FFF1C4'],
+    skin: ['#030203', '#07080B', '#0C1114', '#111B1C', '#172625', '#1E3430', '#27453D', '#315847'], // a wet hide that can catch the glow
+    fogsky: ['#030203', '#06070D', '#0A0D16', '#0E141C', '#131D22', '#192827', '#20352F', '#29453B', '#345747', '#436D58'], // night fog lit from below by the canal
+    night: ['#030203', '#050409', '#080811', '#0B0C18', '#10111F', '#151727', '#1B1E30', '#232838', '#2B3240'], // the sky over the forgotten city
     ...CARD,
   };
   const EMIT = ['glow', 'sky', 'gold'];
@@ -714,20 +717,99 @@
     return { deck: wl - h * 0.7, h };
   }
 
-  /** Something rising from the water: hunched shoulders, a long head trailing weed, a hand on the kerb; eyes in the card's colour. */
-  function riser(p, cx, wl, s, ramp, z, kerb) {
-    const P = (pts) => C.poly(pts.map(([x, y]) => [cx + x * s, wl + y * s]));
-    p.fill(P([[-0.55, 0.05], [-0.5, -0.28], [-0.34, -0.48], [-0.16, -0.55], [-0.15, -0.76], [-0.08, -0.9], [0.06, -0.92], [0.14, -0.8], [0.15, -0.57], [0.32, -0.5], [0.5, -0.3], [0.56, 0.05]]), 'shadow', 0.3, z);
-    p.fill(P([[0.38, -0.36], [0.6, -0.52], [0.72, -0.6], [0.8, -0.56], [0.66, -0.42], [0.5, -0.22]]), 'shadow', 0.3, z);
-    if (kerb !== undefined) for (let k = 0; k < 3; k += 1) p.fill(C.rect(cx + s * (0.72 + k * 0.05), kerb - 1, 1, 3), 'shadow', 0.3, z);
-    for (const [dx, len] of [[-0.12, 0.3], [-0.04, 0.42], [0.05, 0.36], [0.12, 0.24]]) p.fill(C.rect(cx + dx * s, wl - s * 0.86, 1, s * len), 'shadow', 0.6, z);
-    const ey = Math.round(wl - s * 0.78);
-    p.fill(C.rect(Math.round(cx - s * 0.07) - 1, ey, 2, 1), ramp, 4, z + 1);
-    p.fill(C.rect(Math.round(cx + s * 0.05), ey, 2, 1), ramp, 4, z + 1);
+  /* ---------- what lives in the canal ---------- */
+
+  /** A Catmull-Rom curve through the points, sampled about every `step` pixels. */
+  function spline(pts, step = 0.4) {
+    const out = [];
+    for (let i = 0; i < pts.length - 1; i += 1) {
+      const a = pts[Math.max(0, i - 1)]; const b = pts[i]; const c = pts[i + 1]; const d = pts[Math.min(pts.length - 1, i + 2)];
+      const n = Math.max(2, Math.ceil(Math.hypot(c[0] - b[0], c[1] - b[1]) / step));
+      for (let k = 0; k < n; k += 1) {
+        const t = k / n; const t2 = t * t; const t3 = t2 * t;
+        const f = (q) => 0.5 * (2 * b[q] + (c[q] - a[q]) * t + (2 * a[q] - 5 * b[q] + 4 * c[q] - d[q]) * t2 + (3 * b[q] - a[q] - 3 * c[q] + d[q]) * t3);
+        out.push([f(0), f(1)]);
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  /** A filled disc of pixels, at least the one under its centre. */
+  function disc(p, cx, cy, r, ramp, v, z) {
+    if (r < 0.75) { dot(p, cx - 0.5, cy - 0.5, ramp, v, z); return; }
+    const ri = p.ri(ramp);
+    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y += 1) {
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x += 1) {
+        if (x < 0 || y < 0 || x >= p.w || y >= p.h || (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 > r * r) continue;
+        const i = y * p.w + x; p.r[i] = ri; p.v[i] = v; p.z[i] = z;
+      }
+    }
+  }
+  /**
+   * A tentacle out of the water: a dark curve tapering from its base to a
+   * curled tip, hidden below the surface line `wy`, a row of suckers on its
+   * inner side (`side`) in the card's colour. Returns where it breaks the water.
+   */
+  function tentacle(p, pts, w0, ramp, z, side, wy, skin = 'shadow') {
+    const path = spline(pts);
+    const i0 = Math.max(0, path.findIndex(([, y]) => y <= wy)); // where it breaks the water
+    const L = [0];
+    for (let i = 1; i < path.length; i += 1) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+    const L0 = L[i0]; const span = L[L.length - 1] - L0;
+    const rad = (i) => Math.max(0.5, (w0 / 2) * (1 - Math.max(0, (L[i] - L0) / span) ** 1.6));
+    for (let i = 0; i < path.length; i += 1) {
+      if (path[i][1] > wy) continue;
+      disc(p, path[i][0], path[i][1], rad(i), skin, 0.6 + ((L[i] - L0) / span) * 1.2, z);
+    }
+    // Suckers: a spaced row on the inner side, larger where the arm is thick.
+    let next = L0 + span * 0.08;
+    for (let i = i0 + 1; i < path.length - 1; i += 1) {
+      if (L[i] < next) continue;
+      const r = rad(i); next = L[i] + Math.max(2.4, r * 1.5);
+      if (L[i] > L0 + span * 0.85 || r < 1.1) continue;
+      const dx = path[i + 1][0] - path[i - 1][0]; const dy = path[i + 1][1] - path[i - 1][1]; const l = Math.hypot(dx, dy) || 1;
+      const sx = path[i][0] - (dy / l) * side * (r - 0.9); const sy = path[i][1] + (dx / l) * side * (r - 0.9);
+      dot(p, sx - 0.5, sy - 0.5, ramp, r > 2 ? 2.6 : 2.1, z + 1);
+      if (r > 2.6) dot(p, sx - 0.5 + (dx / l), sy - 0.5 + (dy / l), ramp, 1.4, z + 1);
+    }
+    return [path[i0][0], wy];
+  }
+  /** Rings spreading on the water where something breaks it. */
+  function ringsAt(p, x, y, w) {
+    const rw = p.ri('water');
+    for (const [k, dv] of [[1.4, 2], [2.6, 1.2]]) {
+      const rx = Math.max(2, w * k); const ry = Math.max(1, rx * 0.28);
+      p.shade(C.join(C.ellipse(x, y + 0.5, rx, ry), C.ellipse(x, y + 0.5, rx - 1, Math.max(0.5, ry - 0.7))), (px, py, i) => (p.r[i] === rw ? dv : 0));
+    }
+  }
+  /**
+   * An eye under the water: one great almond, red, with a slit pupil, a dark
+   * ring round it so it stands off the water; rows nudged or dimmed where a
+   * ripple passes, and its light caught on the ripples round it in red flecks.
+   */
+  function drownedEye(p, cx, cy, s, ramp, seed) {
+    const rw = p.ri('water'); const rr = p.ri(ramp); const rs = p.ri('shadow');
+    p.each(C.ellipse(cx, cy, s * 2.6, s * 0.75), (x, y, i) => {
+      if (p.r[i] !== rw || hash(y, 25, seed) < 0.3) return;
+      const d = Math.hypot((x + 0.5 - cx) / (s * 2.6), (y + 0.5 - cy) / (s * 0.75));
+      if (d < 0.45 || hash(Math.floor((x + hash(y, 23, seed) * 9) / 3), y, seed + 24) > 0.42 - d * 0.32) return;
+      p.r[i] = rr; p.v[i] = 1.5 * (1 - d);
+    });
+    const almond = (k) => C.poly([[cx - s * k, cy], [cx - s * 0.55 * k, cy - s * 0.44 * k], [cx + s * 0.55 * k, cy - s * 0.44 * k], [cx + s * k, cy], [cx + s * 0.55 * k, cy + s * 0.44 * k], [cx - s * 0.55 * k, cy + s * 0.44 * k]]);
+    p.each(almond(1.2), (x, y, i) => { if (p.z[i] === 0) { p.r[i] = rs; p.v[i] = 0.4; } });
+    p.each(almond(1), (x, y) => {
+      const ripple = hash(y, 21, seed) < 0.22;
+      const nx = x + (hash(y, 22, seed) < 0.3 ? 1 : 0);
+      if (nx >= p.w) return;
+      const j = y * p.w + nx; if (p.z[j] !== 0) return;
+      const d = Math.hypot((x + 0.5 - cx) / s, (y + 0.5 - cy) / (s * 0.44));
+      p.r[j] = rr; p.v[j] = Math.abs(x + 0.5 - cx) < Math.max(0.6, s * 0.09) ? 0.15 : 3.9 - d * 2 - (ripple ? 1.2 : 0);
+    });
   }
 
   const B = {
-    job: 5, setting: 'undercity', key: 'B', id: 'undercity-b',
+    job: 5, setting: 'undercity', key: 'B', id: 'undercity-b', side: 'inside',
+    revised: "After your note: the Monster is a tentacled thing rising from the canal, red suckers and one red eye under the water.",
     name: 'Undercity', title: 'The drowned canal',
     pitch: 'The old sewer canal, flooded and still. Fungus glows along the tunnel walls, the black water gives it back in broken lines, and a rotten boat waits at the steps for whoever comes down.',
     notes: [
@@ -874,12 +956,27 @@
       boatSide(p, bx, bwl, BL, { rope: [bx - 26 * u, kerb + 2], z: 8 });
       p.light(gx, walk + 6 * u, 40 * u, 3.4 * g.far, null, { zMin: 8, zMax: 9, sy: 0.7 });
       if (cat === 'monster') {
-        const save = { r: p.r.slice(), v: p.v.slice(), z: p.z.slice() };
-        riser(p, gx + 2 * u, wl + 8 * u, 50 * u, ramp, 6, kerb);
-        for (let i = (wl + 2) * W; i < W * H; i += 1) if (p.z[i] === 6 || p.z[i] === 7) { p.r[i] = save.r[i]; p.v[i] = save.v[i]; p.z[i] = save.z[i]; }
-        rimFrom(p, 6, [['glow', 4], ['brick', 6]], 'cap', 4.4);
-        p.tint(gx + 2 * u, wl + 8 * u - 50 * u * 0.78, 7 * u, hex, 0.45, breathe(0.3, 0.3, 1.4));
-        for (const [rx, ry] of [[24, 3], [34, 4.5]]) p.shade(C.join(C.ellipse(gx + 2 * u, wl + 8 * u, rx * u, ry * u), C.ellipse(gx + 2 * u, wl + 8 * u, rx * u - 1.2, ry * u - 0.8)), (x, y, i) => (p.r[i] === p.ri('water') ? 1.6 : 0));
+        // Something under the canal: its eye red below the surface, tentacles curling up out of the black water
+        // round the arch, one over the kerb, one round a mooring post, one gripping the boat's stern.
+        const X = (a) => gx + a * u; const Y = (b) => wl + b * u;
+        drownedEye(p, X(-1.5), Y(16.5), 9 * u, ramp, 5);
+        const post = X(31);
+        p.fill(C.rect(post - 1.3 * u, walk - 9 * u, 2.6 * u, 9 * u + 2), 'iron', 2.2, 8);
+        p.fill(C.rect(post - 1.8 * u, walk - 9.6 * u, 3.6 * u, 1.4), 'iron', 4.4, 8);
+        const arms = [
+          { e: 6, w: 10, side: 1, pts: [[-11, 12], [-11, 0], [-9, -14], [-12, -28], [-18, -38], [-24, -37], [-25, -31], [-21, -29.5]] },
+          { e: 8, w: 9, side: -1, pts: [[8, 14], [9, 2], [7, -12], [9, -23], [14, -29], [19.5, -26], [18.5, -21], [15, -21.5]] },
+          { e: 3, w: 7, side: 1, pts: [[-25, 10], [-25.5, 0], [-27, -7], [-30.5, -11.4], [-37, -11.8], [-43, -11.4], [-47.5, -13], [-48, -17]] },
+          { e: 4, w: 7, side: -1, pts: [[24, 10], [24.5, 0], [27, -8], [32, -10.5], [29.8, -13.4], [29, -15.8], [33, -17.4], [34, -20.5], [30.8, -23]] },
+          { e: 19, w: 6.4, side: 1, pts: [[15, 26], [15, 17], [17, 11], [22, 10.5], [23, 14], [20.5, 14.5]] },
+          { e: 10, w: 6, side: -1, pts: [[-18, 16], [-18.5, 6], [-21.5, -2], [-25.5, -6.5], [-28, -3.5], [-25.8, -1]] },
+        ];
+        for (const a of arms) {
+          const [bxw, byw] = tentacle(p, a.pts.map(([x, y]) => [X(x), Y(y)]), a.w * u, ramp, 9, a.side, Y(a.e));
+          ringsAt(p, bxw, byw, a.w * u);
+        }
+        p.fill(C.rect(post - 1.3 * u, walk - 5.6 * u, 2.6 * u, 1.6 * u), 'iron', 2.2, 10); // the coil passes behind the post here
+        rimFrom(p, 9, [['glow', 4], ['brick', 5.5], ['water', 4.5], ['wet', 4]], 'cap', 4.4);
       } else if (cat === 'obstacle') {
         // The flood door is shut: riveted plates filling the arch, two bands, a wheel to turn that will not turn.
         const door = C.arch(gx, g.top + 1, g.hw - 1, walk);
@@ -938,6 +1035,10 @@
         glowAt(p, x, y - 4 * u, 30 * u, 2.2, k, [[1, 1]], { sy: 0.7 });
         refl(p, x + (x < W / 2 ? 15 : -15) * u, y + 2 * u, y + 36 * u, 2 * u, 3.5 * u, 2.2, 70 + i, k, { gaps: 0.3 });
       }
+      // One tip breaking the water by the right-hand walkway, below the river: the thing in the canal is still here.
+      const tip = tentacle(p, [[285, 184], [285.5, 173], [287, 165.5], [291, 160.5], [294.8, 162.5], [293, 166]], 5.6, 'mons', 8, -1, 173);
+      ringsAt(p, tip[0], tip[1], 5);
+      rimFrom(p, 8, [['water', 1.6], ['wet', 2]], 'cap', 6.4);
       p.shade(null, (x, y) => -2 * Math.max(0, y / H - 0.4));
       return {
         p,
@@ -958,5 +1059,337 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
+  /* ================= C: the city above (outside) ================= */
+
+  const FOG_DARK = PX.hexRgb('#232B2D'); const FOG_LIT = PX.hexRgb('#4F9482');
+  const RISE = PX.hexRgb(CARD.obst[3]); // the canal's light coming up through the grates
+  const GAS = PX.hexRgb('#C3CFC8'); // a guttering gas mantle, cold and pale
+
+  /**
+   * Fog over the snapped picture: soft banks drifting sideways in a few
+   * dithered steps, grey where the night holds it and teal where the glow
+   * from below lights it. lit(x, y) → 0..1; keep(x, y) → whether to draw there.
+   */
+  function fog(img, y0, y1, a, t, seed, lit, keep) {
+    for (let y = Math.max(0, Math.floor(y0)); y < Math.min(img.height, Math.ceil(y1)); y += 1) {
+      const prof = Math.sin(((y + 0.5 - y0) / (y1 - y0)) * Math.PI);
+      for (let x = 0; x < img.width; x += 1) {
+        if (keep && !keep(x, y)) continue;
+        const n = Math.sin(x * 0.06 + t * 0.15 + seed + Math.sin(y * 0.35 + seed) * 1.6) * Math.sin(x * 0.021 - t * 0.06 + y * 0.09 + seed * 1.7);
+        const k = clamp(n * 1.3 + 0.35, 0, 1) * prof;
+        const step = Math.floor(k * 4 + BAYER[(y & 3) * 4 + (x & 3)] - 0.35) / 4;
+        if (step <= 0) continue;
+        const l = lit ? clamp(lit(x, y), 0, 1) : 0;
+        put(img, x, y, [lerp(FOG_DARK[0], FOG_LIT[0], l), lerp(FOG_DARK[1], FOG_LIT[1], l), lerp(FOG_DARK[2], FOG_LIT[2], l)], step * a);
+      }
+    }
+  }
+  /** A gas lamp guttering: mostly a low glow, now and then catching, now and then nearly out. */
+  const gutter = (t, ph) => clamp(0.45 + 0.55 * (Math.sin(t * 6.1 + ph) * Math.sin(t * 2.3 + ph * 1.7) + 0.4 * Math.sin(t * 13.7 + ph * 3)), 0.06, 1);
+  function lampGlass(img, x, y, k) {
+    for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) put(img, x + dx, y + dy, GAS, k * (dx || dy ? 0.45 : 1));
+  }
+  /** A street lamp: an iron post and a lantern with dead glass. Returns the glass's centre. */
+  function lampPost(p, x, base, h, z = 4) {
+    x = Math.round(x); const ly = Math.round(base - h);
+    p.fill(C.rect(x, ly, 1, h), 'iron', 2.4, z);
+    p.fill(C.rect(x - 1, base - 1, 3, 1), 'iron', 3, z);
+    p.fill(C.rect(x - 1, ly - 3, 3, 3), 'shadow', 1.8, z);
+    p.fill(C.rect(x - 2, ly - 4, 5, 1), 'iron', 3.4, z);
+    p.fill(C.rect(x, ly - 5, 1, 1), 'iron', 3.4, z);
+    p.fill(C.rect(x - 2, ly, 5, 1), 'iron', 3, z);
+    return [x, ly - 2];
+  }
+  /**
+   * A house on the skyline, side on: a leaning front of old brick or
+   * plaster, a steep roof and a chimney black against the fog, rows of dead
+   * windows, now and then one lit teal from inside by what grew there.
+   */
+  function houseFront(p, x, base, w, h, seed, o = {}) {
+    const r = rng(seed); const z = o.z ?? 2;
+    const lean = (o.lean ?? (r() - 0.5) * 0.18) * h;
+    const front = C.poly([[x, base], [x + w, base], [x + w + lean, base - h], [x + lean, base - h]]);
+    const plaster = r() < 0.4;
+    p.fill(front, 'brick', o.v ?? (plaster ? 1.8 : 1.4), z);
+    if (plaster) p.grain(front, 0.7, 3, seed, z);
+    else p.masonry(front, { bw: 6, bh: 3, joint: -0.9, top: 0.25, vary: 0.6, seed, z, irregular: false });
+    const rh = h * (0.3 + r() * 0.3); const x0 = x + lean - 1; const x1 = x + w + lean + 1; const pk = lerp(x0, x1, 0.35 + r() * 0.3);
+    if (r() < 0.72) p.fill(C.poly([[x0, base - h], [x1, base - h], [pk, base - h - rh]]), 'shadow', 1.1, z);
+    else p.fill(C.poly([[x0, base - h], [x1, base - h], [x1 - 1.5, base - h - rh * 0.55], [x0 + 1.5, base - h - rh * 0.55]]), 'shadow', 1.1, z);
+    if (r() < 0.7) { const cx = lerp(x0 + 2, x1 - 3, r()); p.fill(C.rect(Math.round(cx), base - h - rh * (0.5 + r() * 0.4), 2, rh * 0.7), 'shadow', 1.4, z); }
+    const cols = Math.max(1, Math.round(w / 7)); const rows = Math.max(1, Math.floor((h - 4) / 8));
+    for (let i = 0; i < rows; i += 1) {
+      for (let j = 0; j < cols; j += 1) {
+        const f = (i + 0.7) / (rows + 0.4); const wy = Math.round(base - h * f - 2);
+        const wx = Math.round(x + lean * f + (j + 0.5) * (w / cols) - 1);
+        if (r() < 0.15) continue;
+        const lit = r() < (o.litP ?? 0.05);
+        p.fill(C.rect(wx, wy, 2, 3), lit ? 'cap' : 'shadow', lit ? (o.litV ?? 6.5) : 0.4, z);
+        p.fill(C.rect(wx, wy + 3, 2, 1), 'brick', 2.4, z);
+        if (lit) p.light(wx + 1, wy + 1.5, 7, 2.2, null, { zMin: z, zMax: z });
+      }
+    }
+  }
+  /** A drain grate set in the cobbles, the canal's glow in its slots. */
+  function streetGrate(p, x, y, w, h, z = 3, v = 7.5) {
+    p.fill(C.rect(Math.round(x - w / 2) - 1, Math.round(y - h / 2) - 1, Math.round(w) + 2, Math.round(h) + 2), 'iron', 2.6, z);
+    for (let k = 0; k * 2 < w - 1; k += 1) p.fill(C.rect(Math.round(x - w / 2) + k * 2, Math.round(y - h / 2), 1, Math.round(h)), 'glow', v - (k % 3 === 1 ? 1 : 0), z);
+  }
+
+  const Cd = {
+    job: 5, setting: 'undercity', key: 'C', id: 'undercity-c', side: 'outside',
+    name: 'Undercity', title: 'The streets above',
+    pitch: 'The city over the drowned canal, at night and long abandoned. Fog fills the lanes between leaning houses, the lamps are dead, and the canal’s teal glow breathes up through every grate in the street.',
+    notes: [
+      ['Light', 'No lamp is lit but one, guttering. The light comes from below: teal rising through drain grates and pouring out of the canal mouth onto the black river, lighting the fog from underneath.'],
+      ['Detail', 'Leaning houses of old brick and plaster, steep roofs and chimneys against the fog, dead windows with one lit teal by what grows inside, iron lamps and railings, a humped bridge over the canal mouth, outfalls trickling teal, steps down to the black river.'],
+      ['Vista', 'The river embankment the width of the board, the skyline above it and a bridge over the canal mouth. The card meets you at the mouth: the canal’s tentacles out in the river, a boat poling out, the outfall grate down, gold in the tunnel.'],
+      ['World', 'Wet cobbles under the table, grates in the gutters at the edges breathing teal light up into the fog. Black by the hand.'],
+    ],
+    palette: ['#030203', '#0B0C18', '#1B1E30', '#2C2624', '#3D3C35', '#235347', '#47977F', '#A8DCC9', '#C3CFC8'],
+
+    back(W, H) {
+      const p = new Painter(W, H, RAMPS, { emit: EMIT });
+      const u = H / 134;
+      const gx = W / 2; const wl = Math.round(98 * u); const sky = 64 * u;
+      const mx = 62 * u; const my = 37 * u; const mr = 4.2 * u; // the moon, veiled
+      // The night: fog lit teal from below, palest low over the roofs and round the moon.
+      p.fill(C.rect(0, 0, W, wl), 'fogsky', (x, y) => 1 + 7 * Math.min(1, (y + 0.5) / sky) ** 0.9 + 2.6 * Math.max(0, 1 - Math.hypot(x + 0.5 - mx, y + 0.5 - my) / (22 * u)) ** 1.5, 0);
+      p.fill(C.circle(mx, my, mr), 'sky', (x, y) => 4.6 - (Math.abs(y + 0.5 - (my + 1.2 * u)) < 0.8 ? 1.2 : 0) - (x + 0.5 > mx + mr * 0.4 ? 0.6 : 0), 1);
+      // The broken skyline, black against it: leaning roofs, chimneys, one spire.
+      const r = rng('c-back-roofs');
+      for (let x = -8 * u, k = 0; x < W + 8 * u; k += 1) {
+        const w = (7 + r() * 7) * u; const h = (9 + r() * 15) * u;
+        houseFront(p, Math.round(x), sky + 2 * u, w, h, 600 + k, { z: 2, v: 0.6, brick: false, litP: k === 2 || k === 6 ? 0.35 : 0, litV: 4.6 });
+        x += w - 1;
+      }
+      const sp = 33 * u; // the church: a tower and its spire
+      p.fill(C.rect(sp - 3.5 * u, 40 * u, 7 * u, sky - 38 * u), 'brick', 0.5, 3);
+      p.fill(C.poly([[sp - 4.2 * u, 40 * u], [sp + 4.2 * u, 40 * u], [sp + 0.5, 22 * u], [sp - 0.5, 22 * u]]), 'brick', 0.5, 3);
+      p.fill(C.rect(sp - 1, 45 * u, 2, 3 * u), 'cap', 3.6, 3); // a slit window with a little of the glow in it
+      p.fill(C.rect(sp, 19 * u, 1, 3 * u), 'iron', 2.4, 3);
+      // The bridge: a span across the picture, its parapet catching the fog light, one lamp on it.
+      const parTop = (x) => sky - 2 * u - 2 * u * Math.max(0, 1 - ((x - gx) / (60 * u)) ** 2);
+      const run = (dy, rev) => Array.from({ length: 25 }, (_, i) => { const f = rev ? 1 - i / 24 : i / 24; const x = -2 + f * (W + 4); return [x, parTop(x) + dy]; });
+      const par = C.poly([...run(0, false), ...run(5 * u, true)]);
+      p.fill(par, 'brick', 1.8, 3);
+      p.masonry(par, { bw: 7, bh: 5, joint: -1.1, top: 1.4, vary: 0.6, seed: 73, z: 3 });
+      const face = C.poly([...run(5 * u, false), [W + 2, wl], [-2, wl]]);
+      p.fill(face, 'brick', 1.4, 1);
+      p.masonry(face, { bw: 9, bh: 4, joint: -1.2, top: 0.4, left: 0.2, vary: 0.9, chip: 0.06, seed: 74, z: 1 });
+      p.shade(C.rect(0, wl - 7 * u, W, 7 * u), (x, y) => (y < wl - 7 * u + 1 ? 0.8 : -0.6), 1);
+      const joints = jointMask(p, 0.5);
+      const gas = lampPost(p, 30 * u, parTop(30 * u), 12 * u, 4);
+      lampPost(p, 72 * u, parTop(72 * u), 12 * u, 4);
+      p.light(gas[0], gas[1], 14 * u, 2.2, null, { zMin: 3, zMax: 4 });
+      // The canal mouth under it, small and low, the same teal light deep inside.
+      const hw = 11 * u; const top = 75 * u;
+      const tg = { cx: gx, hw, top, floor: wl, vy: wl - 9 * u, zf: 3, seed: 14, water: true, ledge: { w: 3 * u, h: 1.5 * u }, light: 8, far: 1, farIn: 11.6, farFall: 5, farMid: 0.85, amb: 0.35, reach: 1.3, waterZ: 0 };
+      const T = tunnel(p, tg);
+      brickArch(p, gx, top, hw, wl, { th: 3.5 * u, hb: 3, bh: 4, seed: 75, v: 2.4 });
+      p.light(gx, wl - 6 * u, hw * 2, 3, null, { zMin: 3, zMax: 3 });
+      p.light(gx, wl, hw * 3, 3.6, null, { zMin: 1, zMax: 1, sy: 0.5 });
+      for (const [x, k] of [[30, 0], [36, 1], [62, 2], [68, 3]]) threads(p, joints, x * u, wl - 2 * u, 12 + k * 3, 530 + k, { v: 3.2, knot: 2 });
+      glowAt(p, 33 * u, wl - 2 * u, 12 * u, 3.4, null, [[1, 1]]); glowAt(p, 65 * u, wl - 2 * u, 12 * u, 3.4, null, [[1, 1]]);
+      mirror(p, tg, { seed: 15 });
+      // The black river in front: the bridge, the mouth and the moon given back in ripple lines.
+      p.fill(C.rect(0, wl, W, H - wl), 'water', 1.1, 0);
+      ripples(p, C.rect(0, wl, W, H - wl), 18, 0.5);
+      flipMirror(p, 0, W, wl, H, 19, 0.55);
+      glints(p, gx, T.farFloor, H, T.hwf * 0.9, 16 * u, 7.5, 20, { density: 0.42, floor: 0.06, fall: 0.3 });
+      refl(p, mx, wl + 8 * u, H, 2 * u, 4 * u, 4.4, 21, null, { gaps: 0.35 });
+      vignette(p, W, H, 1.6, 0.42);
+      p.rim(0, -1, 0.5, 3);
+      return {
+        p,
+        over(img) {
+          fog(img, 52 * u, sky + 4 * u, 0.2, 0, 8, (x) => 0.55 - Math.abs(x - gx) / (50 * u));
+          fog(img, wl - 6 * u, wl + 12 * u, 0.28, 0, 4, (x) => 1.1 - Math.abs(x - gx) / (24 * u));
+          lampGlass(img, gas[0], gas[1], 0.6);
+        },
+      };
+    },
+
+    vista(W, H, cat) {
+      const p = new Painter(W, H, RAMPS, { emit: EMIT });
+      const u = H / 100; const gx = W / 2;
+      const street = Math.round(36 * u); const wl = Math.round(82 * u);
+      const ramp = catRamp(cat); const hex = CARD[ramp][3];
+      let plume = null;
+      // The night over the city, paler low where fog holds the glow from below.
+      p.fill(C.rect(0, 0, W, street), 'fogsky', (x, y) => 1.6 + 7 * ((y + 0.5) / street) ** 0.7 + 1.2 * Math.max(0, 1 - Math.abs(x + 0.5 - gx) / (70 * u)), 0);
+      // The skyline: leaning houses packed along the embankment.
+      const r = rng('c-skyline');
+      for (let x = -14 * u, k = 0; x < W + 14 * u; k += 1) {
+        const w = (12 + r() * 12) * u; const h = (10 + r() * 13) * u;
+        houseFront(p, Math.round(x), street, w, h, 400 + k, { z: 2, litP: 0.12, litV: 4.4, v: 0.6 + r() * 0.4 });
+        x += w - 1;
+      }
+      // The street along the top of the embankment: a coping, an iron railing, dead lamps.
+      const archHw = 21 * u; const archTop = 40 * u; const bridge = 40 * u;
+      const parTop = (x) => street - 5 * u - 8 * u * Math.max(0, 1 - ((x - gx) / bridge) ** 2);
+      p.fill(C.rect(0, street, W, 3 * u), 'brick', 2.4, 3);
+      p.fill(C.rect(0, street, W, 1), 'brick', 3.6, 3);
+      for (let x = 0; x < W; x += 1) {
+        if (Math.abs(x + 0.5 - gx) < bridge) continue;
+        if (x % 2 === 0) p.fill(C.rect(x, street - 5 * u, 1, 5 * u), 'iron', 1.6, 3);
+      }
+      p.fill(C.rect(0, street - 5 * u, W, 1), 'iron', 2.8, 3);
+      // The embankment: big old stones, stained, down to the black river.
+      const bank = C.rect(0, street + 3 * u, W, wl - street - 3 * u);
+      p.fill(bank, 'brick', 1.3, 1);
+      p.masonry(bank, { bw: 11, bh: 5, oy: street + 3 * u, joint: -1.2, top: 0.4, left: 0.2, vary: 0.9, chip: 0.06, seed: 65, z: 1 });
+      p.shade(C.rect(0, wl - 7 * u, W, 7 * u), (x, y) => (y < wl - 7 * u + 1 ? 0.7 : -0.6), 1);
+      // The bridge over the canal mouth: a humped parapet, the arch of the mouth under it.
+      const par = C.poly([...Array.from({ length: 25 }, (_, i) => { const x = gx - bridge + (i / 24) * bridge * 2; return [x, parTop(x)]; }), ...Array.from({ length: 25 }, (_, i) => { const x = gx + bridge - (i / 24) * bridge * 2; return [x, parTop(x) + 5 * u]; })]);
+      p.fill(par, 'brick', 2, 3);
+      p.masonry(par, { bw: 7, bh: 5 * u, joint: -1.1, top: 0.5, vary: 0.7, seed: 66, z: 3 });
+      p.fill(C.poly([[gx - bridge, street + 3 * u], ...Array.from({ length: 25 }, (_, i) => { const x = gx - bridge + (i / 24) * bridge * 2; return [x, parTop(x) + 5 * u]; }), [gx + bridge, street + 3 * u], [gx + bridge, wl], [gx - bridge, wl]]), 'brick', 1.6, 1);
+      p.masonry(C.rect(gx - bridge, parTop(gx) + 5 * u, bridge * 2, wl - parTop(gx)), { bw: 9, bh: 4, oy: 1, joint: -1.2, top: 0.4, vary: 0.8, seed: 67, z: 1 });
+      // The canal mouth: the tunnel running back under the city, lit from deep inside.
+      const g = { cx: gx, hw: archHw, top: archTop, floor: wl, vy: wl - 15 * u, zf: 1.7, seed: 11, water: true, ledge: { w: 5 * u, h: 2 * u }, far: 1, light: 8, amb: 0.4, farFall: 4, farMid: 0.8, waterZ: 0 };
+      if (cat === 'obstacle') g.far = 0.4;
+      if (cat === 'clear-path') { g.far = 1.1; g.ramp = 'warm'; g.floorRamp = 'warm'; g.farRamp = 'gold'; g.farIn = 9.6; }
+      tunnel(p, g);
+      brickArch(p, gx, archTop, archHw, wl, { th: 5 * u, hb: 3.4, bh: 3, seed: 68, v: 2.6 });
+      p.light(gx, wl - 10 * u, archHw * 1.6, 2.6 * g.far, null, { zMin: 3, zMax: 3 });
+      p.light(gx, wl, archHw * 2.2, 3.4 * g.far, null, { zMin: 1, zMax: 1, sy: 0.5 });
+      // Steps down the embankment to a landing at the water, left of the mouth; a mooring post on it.
+      for (let k = 0; k < 13; k += 1) {
+        const sx = gx - 28 * u - k * 3 * u; const sy = wl - (k + 1) * 3.3 * u;
+        p.fill(C.rect(sx - 3 * u, sy, 3 * u + 1, wl - sy), 'brick', (x, y) => 1.9 + (((Math.floor((y - sy) / (5 * u)) + k) % 2) && ((x + k * 3) % 9 === 0) ? -1 : 0), 3);
+        p.fill(C.rect(sx - 3 * u, sy, 3 * u + 1, 1), 'wet', 4.6, 3);
+        p.fill(C.rect(sx - 3 * u, sy + 1, 3 * u + 1, 1), 'wet', 1, 3);
+      }
+      p.fill(C.rect(gx - 28 * u, wl - 2 * u, 7 * u, 2 * u), 'wet', 2.4, 3);
+      p.fill(C.rect(gx - 28 * u, wl - 2 * u, 7 * u, 1), 'wet', 4, 3);
+      const post = gx - 25 * u;
+      p.fill(C.rect(post - 1, wl - 7 * u, 2, 5 * u), 'iron', 2.4, 4);
+      p.fill(C.rect(post - 1.5, wl - 7.6 * u, 3, 1), 'iron', 4, 4);
+      // Outfalls along the bank: round culverts, the canal's glow trickling out of them.
+      const falls = [];
+      for (let k = 1; gx + k * 62 * u - 8 * u < W; k += 1) for (const m of [-1, 1]) falls.push([gx + m * k * 62 * u + (m > 0 ? 6 : -16) * u, k]);
+      falls.forEach(([x, k], i) => {
+        const cy = wl - 13 * u; const rr = 4.4 * u;
+        p.fill(C.join(C.circle(x, cy, rr + 1.6 * u), C.circle(x, cy, rr)), 'brick', 2.8, 3);
+        p.fill(C.circle(x, cy, rr), 'shadow', 0.6, 3);
+        p.fill(C.ellipse(x, cy + rr * 0.55, rr * 0.75, rr * 0.35), 'glow', 6.5, 3);
+        p.fill(C.rect(Math.round(x), cy + rr, 1, wl - cy - rr), 'glow', 6, 3);
+        glowAt(p, x, cy + rr, 16 * u, 4.2, breathe(i * 1.7, 0.3, 0.7), [[1, 1], [3, 3]]);
+        refl(p, x, wl + 1, H, 1.5 * u, 3 * u, 5, 120 + i, breathe(i * 1.7, 0.3, 0.7));
+      });
+      // Lamps on the street, all dead but the one on the bridge, guttering over the mouth.
+      const lamps = [];
+      for (let k = 1; gx + k * 46 * u < W + 4 * u; k += 1) for (const m of [-1, 1]) if (k > 0) lamps.push(lampPost(p, gx + m * (k * 46 * u + 8 * u), street, 15 * u, 4));
+      const gas = lampPost(p, gx, parTop(gx), 13 * u, 4);
+      p.light(gas[0], gas[1], 14 * u, 1.6, (t) => gutter(t, 0.7), { zMin: 2, zMax: 3 });
+      // The river: black water giving back the mouth, the wall and every glow in ripple lines.
+      ripples(p, C.rect(0, wl, W, H - wl), 15, 0.5);
+      flipMirror(p, 0, W, wl, H, 16, 0.6);
+      glints(p, gx, wl, H, archHw * 0.45, archHw * 1.2, 8 * g.far, 17, { density: 0.44, floor: 0.06, fall: 0.25 });
+      if (cat === 'clear-path') {
+        p.tint(gx, wl + 8 * u, 26 * u, CARD.path[2], 0.4, breathe(0.2, 0.08, 0.5));
+        p.tint(gx, wl - 6 * u, 20 * u, CARD.path[2], 0.35, breathe(0.2, 0.08, 0.5));
+      }
+      // The card, at the canal mouth.
+      const BL = 34 * u; const bwl = wl + 5 * u; const bh = Math.max(4, BL * 0.2);
+      if (cat === 'wanderer') {
+        SUBJECT.wanderer(p, gx + 6 * u, bwl - bh * 0.5, 38 * u, 'shadow', 6, false);
+        const rs = p.ri('shadow');
+        for (let i = 0; i < p.v.length; i += 1) if (p.z[i] === 6 && p.r[i] === rs) p.v[i] = p.v[i] < 1.3 ? 1 : 2; // clean bands, no dither
+        rimFrom(p, 6, [['glow', 4], ['brick', 6]], 'cap', 4.4);
+        const lx = gx + 6 * u + 38 * u * 0.3; const ly = bwl - bh * 0.5 - 38 * u * 0.62;
+        p.fill(C.rect(lx - 1.5, ly, 4, 4), ramp, 4, 7);
+        p.fill(C.rect(lx - 0.5, ly - 2, 2, 2), 'iron', 3, 7);
+        boatSide(p, gx, bwl, BL, { z: 8 });
+        p.light(lx, ly + 2, 16 * u, 4, breathe(0.9, 0.08, 2), { zMin: 0, zMax: 8, hard: true });
+        for (let k = 0; k < 4; k += 1) { const yy = Math.round(wl + (wl - ly) * 0.55 + k * 2 * u); dot(p, lx - 1 + (k % 2), yy, ramp, 2.2 - k * 0.4, 1); dot(p, lx + (k % 2), yy, ramp, 1.8 - k * 0.4, 1); } // its light broken on the water
+      } else if (cat === 'item') {
+        plume = chest(p, gx + 1 * u, bwl - bh * 1.1, 18 * u, ramp, 6);
+        p.tint(gx + 1 * u, plume.y, 24 * u, hex, 0.55, breathe(2, 0.15, 1));
+        p.tint(gx + 1 * u, wl + 14 * u, 12 * u, hex, 0.45, breathe(2, 0.15, 1));
+        boatSide(p, gx, bwl, BL, { rope: [post, wl - 6 * u], z: 8 });
+      } else if (cat === 'monster') {
+        // The thing from the canal has come out with it: arms up out of the river round the mouth,
+        // one over the parapet, one round the mooring post, its eye red under the black water.
+        const X = (a) => gx + a * u; const Y = (b) => wl + b * u;
+        drownedEye(p, X(1.5), Y(12), 8 * u, ramp, 6);
+        const arms = [
+          { e: 4, w: 9, side: 1, pts: [[-9, 10], [-10, 0], [-8, -14], [-11, -28], [-16, -36], [-22, -35], [-22.5, -29.5], [-19, -28.5]] },
+          { e: 5, w: 8.6, side: -1, pts: [[9, 12], [10, 0], [8, -14], [11, -26], [16, -40], [22, -44], [27, -41], [25.5, -37]] },
+          { e: 3, w: 6.6, side: -1, pts: [[-19, 8], [-20, 0], [-22, -4], [-24.5, -7.5], [-21.6, -9.5], [-21, -12], [-24.6, -13.5], [-25, -16.5], [-22, -18]] },
+          { e: 3, w: 6.4, side: 1, pts: [[22, 9], [23, 0], [25, -8], [24, -15], [28, -20], [32, -19], [31, -15.5]] },
+          { e: 14, w: 6, side: 1, pts: [[-2, 22], [-2, 13], [0.5, 8], [5, 7.5], [6, 10.5], [3.5, 11]] },
+        ];
+        for (const a of arms) {
+          const [bxw, byw] = tentacle(p, a.pts.map(([x, y]) => [X(x), Y(y)]), a.w * u, ramp, 9, a.side, Y(a.e), 'skin');
+          ringsAt(p, bxw, byw, a.w * u);
+        }
+        p.light(gx, wl - 4 * u, 54 * u, 7, null, { zMin: 9, zMax: 9, sy: 1 });
+        p.fill(C.rect(post - 1, wl - 5 * u, 2, 1.4 * u), 'iron', 2.4, 10); // the coil passes behind the post here
+        rimFrom(p, 9, [['glow', 4], ['brick', 5.5], ['water', 4.5], ['wet', 4], ['fogsky', 4]], 'cap', 4.4);
+      } else if (cat === 'obstacle') {
+        // The outfall grate is down across the mouth, the canal's rubbish banked against it.
+        const step = Math.max(4, Math.round(5 * u));
+        p.each(C.arch(gx, archTop, archHw, wl + 1), (x, y, i) => {
+          const bx2 = (x - gx + step * 40) % step;
+          const cross = Math.abs(y - (archTop + archHw * 0.85)) < 1 || Math.abs(y - (wl - 10 * u)) < 1;
+          if (bx2 >= 2 && !cross) return;
+          p.r[i] = p.ri(ramp); p.z[i] = 4; p.v[i] = (cross ? 2.6 : 2.1) + (bx2 < 1 ? 0.4 : 0);
+        });
+        const junk = C.poly([[gx - archHw, wl + 1], [gx - 12 * u, wl - 4 * u], [gx - 3 * u, wl - 2.5 * u], [gx + 5 * u, wl - 5 * u], [gx + 14 * u, wl - 2 * u], [gx + archHw, wl + 1]]);
+        p.fill(junk, 'wood', 2.2, 5);
+        p.cells(junk, { size: 2.6 * u, sx: 2.2, joint: 0.7, jointV: -1.4, vary: 1.2, bevel: 0.7, seed: 4, z: 5 });
+        p.tint(gx, wl - 16 * u, 28 * u, hex, 0.3, breathe(0.5, 0.12, 0.6));
+      }
+      if (cat !== 'wanderer' && cat !== 'item') boatSide(p, gx - 52 * u, wl + 4 * u, 30 * u, { rope: [post, wl - 6 * u], z: 8 });
+      vignette(p, W, H, 1.6, 0.45);
+      p.rim(0, -1, 0.5, 3);
+      const lampFlick = (t) => gutter(t, 0.7);
+      return {
+        p,
+        over(img, t) {
+          if (plume) beam(img, plume.x, plume.y - 20 * u, plume.w * 1.6, plume.x, plume.y, plume.w * 0.85, 0.72 + 0.12 * Math.sin(t * 1.3), 0, VIOLET, true);
+          fog(img, 12 * u, street + 2 * u, 0.18, t, 2, (x) => 0.6 - Math.abs(x - gx) / (60 * u));
+          fog(img, wl - 8 * u, wl + 12 * u, 0.3, t * 1.3, 9, (x) => 1 - Math.abs(x - gx) / (34 * u));
+          lampGlass(img, gas[0], gas[1], lampFlick(t));
+          for (const [x] of falls) for (let k = 0; k < 2; k += 1) { const f = (t * 0.9 + k * 0.5 + x * 0.013) % 1; put(img, x, wl - 13 * u + 4.4 * u + f * (9 * u), '#A8DCC9', 0.8); }
+        },
+      };
+    },
+
+    world(W, H) {
+      const p = new Painter(W, H, RAMPS, { emit: EMIT });
+      const u = H / 250;
+      // Wet setts under the table, a gutter down each side.
+      p.fill(C.rect(0, 0, W, H), 'wet', 1.7, 1);
+      p.floor(C.rect(0, 0, W, H), { vx: W / 2, vy: -70 * u, rows: 9, size: 1.05, d0: 40 * u, joint: -1.2, top: 0.5, left: 0.25, vary: 0.8, chip: 0.05, seed: 61, z: 1 });
+      for (const side of [0, 1]) {
+        const xb = side ? W - 15 * u : 15 * u; const xt = side ? W - 19 * u : 19 * u; const e = side ? -1 : 1;
+        p.shade(C.poly([[xt, 0], [xt + e * 5 * u, 0], [xb + e * 6 * u, H], [xb, H]]), -0.7, 1);
+      }
+      const r = rng('undercity-c-world');
+      for (let k = 0; k < 7; k += 1) {
+        const x = r() < 0.5 ? r() * 26 * u : W - r() * 26 * u; const y = 20 * u + r() * H * 0.8;
+        p.fill(C.ellipse(x, y, (8 + r() * 14) * u, (2 + r() * 2.5) * u), 'water', (px, py) => 2 + (hash(Math.floor(px / 4), py, k) < 0.2 ? 0.8 : 0), 1);
+      }
+      // Grates in the gutters near the edges, the canal's light breathing up through them.
+      const grates = [[19 * u, 120 * u], [W - 19 * u, 96 * u], [20 * u, 214 * u], [W - 20 * u, 206 * u], [19 * u, 34 * u], [W - 19 * u, 28 * u]];
+      const ks = grates.map((_, i) => breathe(i * 2.1, 0.4, 0.55 + i * 0.07));
+      grates.forEach(([x, y], i) => {
+        streetGrate(p, x, y, 10 * u, 4 * u, 3, 7);
+        glowAt(p, x, y, 36 * u, 4.6, ks[i], [[1, 1]], { sy: 0.7 });
+      });
+      p.shade(null, (x, y) => -2.1 * Math.max(0, y / H - 0.42));
+      return {
+        p,
+        over(img, t) {
+          grates.forEach(([x, y], i) => beam(img, x, y - 40 * u, 7 * u, x, y - 1, 4 * u, 0.3 * ks[i](t), 0, RISE, true));
+          fog(img, 0, 70 * u, 0.2, t, 5, null, (x) => x < 50 * u || x > W - 50 * u);
+        },
+      };
+    },
+  };
+
+  window.DESIGNS = (window.DESIGNS || []).concat([A, B, Cd]);
 })();

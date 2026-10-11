@@ -304,6 +304,9 @@ judged by a script before anyone's eyes.
   vista behind the doors, and its bed if sound is on. Choosing another door
   cross-fades all three. The four sample cards fold into the chosen door, so
   turning it shows the faces in this setting's words.
+- **Inside or outside** (AJ7, decided 2026-10-11): each door offers its
+  two sides, as a toggle on the chosen door that turns its picture over. The
+  choice travels with the crossing to every device, as the setting does.
 - **The order is the ritual:** door, party, dials, start, top to bottom. The
   crossing's name moves to the last step, beside the button that opens it,
   with a visible edit mark.

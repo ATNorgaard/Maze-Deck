@@ -61,14 +61,24 @@
     const lit = o.lit || [0, 0];
     const fw = o.fw || 3; const seed = o.seed || 1; const plate = o.plate || 8;
     const fn = typeof v === 'function';
+    // Each segment's box, padded by the limb's widest half: a pixel can only be nearest a segment whose box holds it.
+    const pad = Math.max(w0, w1) / 2 + 2; const nseg = pts.length - 1;
+    const box = new Float32Array(nseg * 4);
+    for (let i = 0; i < nseg; i += 1) {
+      box[i * 4] = Math.min(pts[i][0], pts[i + 1][0]) - pad; box[i * 4 + 1] = Math.max(pts[i][0], pts[i + 1][0]) + pad;
+      box[i * 4 + 2] = Math.min(pts[i][1], pts[i + 1][1]) - pad; box[i * 4 + 3] = Math.max(pts[i][1], pts[i + 1][1]) + pad;
+    }
     p.fill(shape, ramp, (x, y) => {
       const px = x + 0.5; const py = y + 0.5;
       let best = 1e9; let bi = 0; let bt = 0;
-      for (let i = 0; i + 1 < pts.length; i += 1) {
-        const ax = pts[i][0]; const ay = pts[i][1]; const dx = pts[i + 1][0] - ax; const dy = pts[i + 1][1] - ay;
-        const t = clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-        const qx = ax + dx * t - px; const qy = ay + dy * t - py; const d = qx * qx + qy * qy;
-        if (d < best) { best = d; bi = i; bt = t; }
+      for (let pass = 0; pass < 2 && best === 1e9; pass += 1) {
+        for (let i = 0; i < nseg; i += 1) {
+          if (!pass && (px < box[i * 4] || px > box[i * 4 + 1] || py < box[i * 4 + 2] || py > box[i * 4 + 3])) continue;
+          const ax = pts[i][0]; const ay = pts[i][1]; const dx = pts[i + 1][0] - ax; const dy = pts[i + 1][1] - ay;
+          const t = clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+          const qx = ax + dx * t - px; const qy = ay + dy * t - py; const d = qx * qx + qy * qy;
+          if (d < best) { best = d; bi = i; bt = t; }
+        }
       }
       const ax = pts[bi][0]; const ay = pts[bi][1]; const dx = pts[bi + 1][0] - ax; const dy = pts[bi + 1][1] - ay;
       const len = Math.hypot(dx, dy) || 1; const nx = -dy / len; const ny = dx / len;
@@ -307,11 +317,13 @@
   /** Soft ground: mounds from a smooth noise, lit on the slopes that face up (toward the light beyond the vista). */
   function mounds(p, shape, o) {
     const { sx, sy, seed, z } = o; const amp = o.amp ?? 1.2; const lit = o.lit ?? 9;
+    // The noise once per pixel (a row above and below the picture for the slope), the slope from the rows either side.
+    const W = p.w; const n = new Float32Array(W * (p.h + 4));
+    for (let y = -2; y < p.h + 2; y += 1) for (let x = 0; x < W; x += 1) n[(y + 2) * W + x] = fbm(x / sx, y / sy, seed);
     p.each(shape, (x, y, i) => {
       if (z !== undefined && p.z[i] !== z) return;
-      const n = fbm(x / sx, y / sy, seed);
-      const slope = fbm(x / sx, (y + 1.5) / sy, seed) - fbm(x / sx, (y - 1.5) / sy, seed);
-      p.v[i] += (n - 0.5) * amp + slope * lit;
+      const c = (y + 2) * W + x;
+      p.v[i] += (n[c] - 0.5) * amp + (n[c + W] + n[c + 2 * W] - n[c - W] - n[c - 2 * W]) * 0.25 * lit;
     });
   }
 
@@ -338,6 +350,18 @@
           const by = foot * (0.2 + r() * 0.45); const sd = r() < 0.5 ? -1 : 1; const bl = R.w * (2 + r() * 3);
           const bx = x + lean * (1 - by / foot);
           limb(p, [[bx, by], [bx + sd * bl * 0.6, by - bl * 0.45], [bx + sd * bl, by - bl * 1.1]], Math.max(1, w * 0.45), 0.8, R.ramp || 'night', val, R.z, { texMin: 99, edge: 0 });
+        }
+      }
+      // Bushes at the trees' feet, as pale as the row they stand in; the row's mist then covers their foot.
+      if (R.bushes) {
+        const br = rng(R.seed + 500);
+        for (const x of xs) {
+          if (br() > R.bushes) continue;
+          const bx = x + (br() - 0.5) * R.sp; const rx = R.w * (3 + br() * 2.6); const ry = rx * 0.55;
+          if (Math.abs(bx - cx) < R.gap + rx * 1.3) continue;
+          const by = R.foot - ry * 0.35; const b = bg(bx, by) * R.fade;
+          leafCluster(p, bx, by, rx, ry, R.ramp || 'night', (px, py) => bg(px + 0.5, py + 0.5) * R.fade * 0.95, R.z, 700 + Math.round(bx * 7),
+            { n: 5, lit: Math.max(1.3, b * 0.4), dark: Math.max(0.6, b * 0.2), leaf: Math.max(1.2, R.w * 0.9) });
         }
       }
       if (R.mist) R.mist();
@@ -408,8 +432,70 @@
     shadow: ['#020305', '#05070B', '#090D13', '#0E141B'],
     wood: ['#0B0806', '#150F0A', '#21170F', '#2F2115', '#3F2C1C', '#523A25'],
     lamp: ['#030506', '#06090D', '#0A0F15', '#0E151D', '#131C27', '#1A2532', '#22303F', '#2C3D4E', '#34495C', '#4B6680', '#6B8CA6', '#A6C0D4'],
+    leaf: ['#020405', '#04090B', '#070F10', '#0A1615', '#0E1E1C', '#132823', '#19322C', '#203E36', '#284B41', '#325A4E', '#3F6D5E', '#538672', '#6FA38C', '#94C2AC'],
     ...CARD,
   };
+
+  /**
+   * A cluster of leaves: a few rounded clumps, back to front, each in three
+   * clean bands (a lit top where the moon catches it, the body, a dark
+   * underside) and fringed with single leaves at its edge, the lower ones
+   * hanging. `val(x, y)` is the body's value, so a far bush can take the
+   * mist's value and fade like the trees.
+   */
+  function leafCluster(p, cx, cy, rx, ry, ramp, val, z, seed, o = {}) {
+    const r = rng(seed); const n = o.n ?? 5; const lit = o.lit ?? 1.6; const dark = o.dark ?? 1; const leaf = o.leaf ?? 1.5; const hang = o.hang ?? 0.6;
+    const V = typeof val === 'function' ? val : () => val;
+    const clumps = [];
+    for (let i = 0; i < n; i += 1) {
+      const a = r() * Math.PI * 2; const d = Math.sqrt(r()) * 0.65; const s = 0.45 + r() * 0.35;
+      clumps.push([cx + Math.cos(a) * d * rx, cy + Math.sin(a) * d * ry, s * rx * 0.62 + 0.8, s * ry * 0.85 + 0.6]);
+    }
+    clumps.sort((a, b) => a[1] - b[1]);
+    for (const [x, y, ax, ay] of clumps) {
+      // A lit crescent along the clump's top, a dark one along its underside, the body between.
+      const band = (px, py) => {
+        const nx = (px + 0.5 - x) / ax; const ny = (py + 0.5 - y) / ay;
+        if (nx * nx + (ny - 0.5) ** 2 > 1 && ny < 0.2) return lit;
+        if (nx * nx + (ny + 0.45) ** 2 > 1 && ny > 0) return -dark;
+        return 0;
+      };
+      const m = Math.max(6, Math.round((ax + ay) * 1.3));
+      for (let k = 0; k < m; k += 1) {
+        const t = (k / m) * Math.PI * 2 + r() * 0.4;
+        const ex = x + Math.cos(t) * ax * 0.85; const ey = y + Math.sin(t) * ay * 0.85;
+        let dx = Math.cos(t); let dy = Math.sin(t) + hang; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+        const len = leaf * (0.9 + r() * 0.8);
+        p.fill(C.poly([[ex - dy * 0.8, ey + dx * 0.8], [ex + dx * len, ey + dy * len], [ex + dy * 0.8, ey - dx * 0.8]]), ramp, (px, py) => V(px, py) + band(px, py), z);
+      }
+      p.fill(C.ellipse(x, y, ax, ay, 16), ramp, (px, py) => { const b = band(px, py); return V(px, py) + b + (b >= 0 && hash(px >> 1, py, seed + 3) < 0.1 ? 0.7 : 0); }, z);
+    }
+  }
+
+  /** Ivy up a trunk: a thin vine along `path(t)` (t 0 at the foot, 1 at the top), leaves either side, each lit along its top. */
+  function ivy(p, path, n, ramp, v, z, seed, u, lit = 1.4) {
+    const r = rng(seed);
+    let prev = path(0);
+    for (let i = 1; i <= n * 3; i += 1) { const q = path(i / (n * 3)); p.fill(ribbon([prev, q], 1.2, 1.2), ramp, v - 0.8, z); prev = q; }
+    for (let i = 0; i < n; i += 1) {
+      const [x, y] = path((i + 0.2 + r() * 0.5) / n); const s = i % 2 ? 1 : -1; const l = (1.5 + r()) * u;
+      p.fill(C.poly([[x, y], [x + s * l * 1.2, y - l * 0.7], [x + s * l * 1.4, y + l * 0.3], [x + s * l * 0.5, y + l * 0.7]]), ramp, v, z);
+      p.fill(C.rect(Math.round(x + s * l * 0.7 - (s < 0 ? 1 : 0)), Math.round(y - l * 0.5), 2, 1), ramp, v + lit, z);
+    }
+  }
+
+  /** Leaves drifting down with the fireflies, turning as they fall: two pixels each, a lit face and a dark one. */
+  function driftLeaves(img, n, area, t, seed, lit, dark) {
+    const r = rng(seed); const [ax, ay, aw, ah] = area;
+    for (let i = 0; i < n; i += 1) {
+      const bx = r() * aw; const by = r() * ah; const ph = r() * 6.283; const sp = 0.6 + r() * 0.8;
+      const y = ay + ((by + t * 3 * sp) % ah);
+      const x = ax + (((bx + Math.sin(t * 0.9 * sp + ph) * 5 + t * 1.2 * sp) % aw) + aw) % aw;
+      const turn = Math.sin(t * 2.6 * sp + ph);
+      put(img, x, y, turn > 0 ? lit : dark);
+      if (turn > 0.3) put(img, x + 1, y, dark); else if (turn < -0.3) put(img, x, y + 1, dark);
+    }
+  }
 
   /** The light of the clearing: a pool of moonlit mist, and a band of it the width of the wood. */
   function glowA(u, cx, hz, cy, rx, ry, bright, band = 2.6, reach = 140) {
@@ -417,8 +503,138 @@
       + band * bright * Math.exp(-(((y - hz + 3 * u) / (6.5 * u)) ** 2)) * (0.35 + 0.65 * Math.max(0, 1 - Math.abs(x - cx) / (reach * u)));
   }
 
+  /*
+   * A's vista in passes, so what does not change between cards is built once:
+   * the wood behind the card, the card, the wood in front of it, the finish.
+   * Monster, wanderer and item share one picture of the wood (per size); the
+   * card is drawn into a copy and the wood in front is put back over it.
+   * A finished vista is kept too, so turning the same kind of card again is free.
+   */
+  const vistaMemoA = new Map(); const vistaBaseA = new Map();
+  function ctxA(W, H, cat) {
+    const u = H / 100; const gx = W / 2;
+    const warm = cat === 'clear-path'; const bright = cat === 'obstacle' ? 0.9 : 1;
+    return { W, H, u, gx, hz: 70 * u, floor: 87 * u, warm, bright, bg: glowA(u, gx, 70 * u, 62 * u, 62, 48, bright) };
+  }
+
+  /** The wood behind the card: the glow, the floor of the clearing, the rows of trees and bushes in the mist, the moonbeams. */
+  function sceneBackA(p, c) {
+    const { W, H, u, gx, hz, floor, warm, bright, bg } = c;
+    p.fill(C.rect(0, 0, W, H), 'night', (x, y) => bg(x + 0.5, y + 0.5), 0);
+    // The gap in the canopy the moon comes through, a faint haze the leaves stand against.
+    p.shade(C.ellipse(gx, 8 * u, 34 * u, 16 * u), (x, y) => 2.6 * bright * Math.max(0, 1 - Math.hypot((x + 0.5 - gx) / (34 * u), (y + 0.5 - 8 * u) / (16 * u))) ** 1.1, 0);
+    const ground = C.rect(0, hz - 2 * u, W, H - hz + 2 * u);
+    p.fill(ground, 'moss', (x, y) => {
+      const d = (y - hz) / (H - hz);
+      const pool = 6 * bright * Math.max(0, 1 - Math.hypot((x - gx) / (40 * u), (y - floor) / (8 * u))) ** 1.1;
+      return 1.2 + bg(x, hz) * 0.75 * Math.exp(-d * 4) + pool;
+    }, 1);
+    turf(p, ground, { vx: gx, vy: hz - 12 * u, k: 5, sx: 2.4, z: 1, seed: 6, vary: 0.7, top: 0.4 });
+    leaves(p, C.rect(0, hz + 10 * u, W, H - hz), Math.round(W / 4), 7, 1, 'litter', 0.6, 1.4);
+    p.shade(C.poly([[gx - 1.5 * u, floor - 2 * u], [gx + 1.5 * u, floor - 2 * u], [gx + 12 * u, H], [gx - 9 * u, H]]), (x, y) => 1.1 * (1 - (y - floor) / (H - floor) * 0.5), 1);
+    const gain = (x) => clamp(bg(x, hz) / 12, 0.18, 1);
+    const open = warm ? 1.6 : 1;
+    treeRows(p, W, gx, bg, [
+      { z: 2, sp: 7.5 * u, w: 1.5 * u, fade: 0.84, foot: hz + 0.5 * u, footJ: u, gap: 6 * u * open, lean: 2 * u, seed: 31, bushes: 0.3, mist: () => { mist(p, W, hz - 1.5 * u, 4 * u, 2.6 * bright, gain, 1); mist(p, W, hz - 17 * u, 2.5 * u, 1.6 * bright, gain, 7); } },
+      { z: 3, sp: 11 * u, w: 2.6 * u, fade: 0.6, foot: hz + 3 * u, footJ: 1.5 * u, gap: 12 * u * open, lean: 4 * u, seed: 32, branches: 1, leaners: 0.15, crowns: 0.35, rim: 0.1, bushes: 0.5, mist: () => { mist(p, W, hz + 1.5 * u, 4 * u, 1.8 * bright, gain, 2); mist(p, W, hz - 10 * u, 2 * u, 0.9 * bright, gain, 8); } },
+      { z: 4, sp: 17 * u, w: 4.4 * u, fade: 0.34, foot: hz + 6 * u, footJ: 2 * u, gap: 20 * u * open, lean: 6 * u, seed: 33, branches: 2, leaners: 0.12, rim: 0.3, bushes: 0.45, mist: () => mist(p, W, hz + 5 * u, 4 * u, 1.2 * bright, gain, 3) },
+    ]);
+    // Moonlight coming down into the clearing.
+    if (!warm) {
+      shaft(p, gx - 20 * u, 4 * u, gx - 6 * u, hz + 2 * u, 4 * u, 12 * u, 1.5 * bright, (t) => 0.75 + 0.25 * Math.sin(t * 0.8), { zMax: 4 });
+      shaft(p, gx + 10 * u, 6 * u, gx + 16 * u, hz + 2 * u, 3 * u, 7 * u, 1.1 * bright, (t) => 0.75 + 0.25 * Math.sin(t * 0.8 + 1.5), { zMax: 4 });
+    }
+  }
+
+  /** The card, in the clearing. Returns where its motes rise from, if it has any. */
+  function subjectA(p, c, cat) {
+    const { u, gx, hz, floor, warm } = c;
+    const ramp = catRamp(cat); const hex = CARD[ramp][3];
+    const sx = gx; const sy = floor;
+    if (cat === 'monster') {
+      const e = stalker(p, sx, sy, 34 * u, ramp, 5);
+      p.backlit(5, 'night', 5, 'night', 11);
+      p.tint(e[0], e[1], 5 * u, hex, 0.5, flicker(0.3, 0.3, 1.4));
+    } else if (cat === 'wanderer') {
+      wanderer(p, sx - 3 * u, sy, 28 * u, 5, 'night', 5, ['moss', 'litter'], [1, 1], 22 * u);
+    } else if (cat === 'item') {
+      p.fill(C.ellipse(sx, sy, 13 * u, 3.5 * u), 'moss', 4, 5);
+      p.cells(C.ellipse(sx, sy, 13 * u, 3.5 * u), { size: 3 * u, z: 5, seed: 3, vary: 0.8, bevel: 0.7 });
+      chest(p, sx, sy - 1 * u, 20 * u, ramp, 5);
+      limb(p, [[sx - 15 * u, sy + 1 * u], [sx - 10 * u, sy - 5 * u], [sx - 5 * u, sy - 3 * u]], 2.4 * u, 1, 'bark', 2.4, 8, { lit: [0, -1], rim: 1.6, texMin: 99 });
+      p.light(sx, sy - 2 * u, 20 * u, 2.4, flicker(2, 0.15, 0.7), { zMin: 1, zMax: 1, sy: 0.4 });
+      p.tint(sx, sy - 12 * u, 13 * u, hex, 0.65, flicker(2, 0.15, 0.7));
+      return [sx, sy - 12 * u];
+    } else if (cat === 'obstacle') {
+      thornWall(p, sx, sy, 38 * u, 36 * u, ramp, 5, 9, u, 0.15);
+      p.backlit(5, 'night', 5.5, ramp, 3);
+    } else if (warm) {
+      reramp(p, gx, hz - 6 * u, 50 * u, 38 * u, ['night'], 'sun');
+      reramp(p, gx, hz + 1 * u, 44 * u, 7 * u, ['moss', 'litter'], 'sun', 0.6);
+      reramp(p, gx, floor + 4 * u, 26 * u, 16 * u, ['moss', 'litter'], 'sun', 0.6);
+      p.light(gx, hz - 2 * u, 34 * u, 2.4, flicker(0.2, 0.06, 0.4), { zMax: 4 });
+    }
+    return null;
+  }
+
+  /** The wood in front of the card: the near trees with their moss, ivy, roots and undergrowth; the canopy and its vines. Everything here is on layer 6 or above. */
+  function sceneFrontA(p, c) {
+    const { W, u, gx, warm, bright } = c;
+    // The near trees, black but for the side that faces the clearing.
+    const near = [];
+    { const r = rng(41); let d = 31 * u;
+      while (d < W / 2 + 24 * u) { for (const s of [-1, 1]) near.push([gx + s * (d + (r() - 0.5) * 6 * u), s]); d += (24 + r() * 24) * u; } }
+    near.forEach(([x, s], i) => {
+      const r = rng(50 + i);
+      const foot = (95 + r() * 7) * u; const w = (7 + r() * 7) * u; const lean = (r() - 0.35) * 7 * u * s;
+      const k01 = clamp(1 - Math.abs(x - gx) / (100 * u), 0, 1);
+      const rimK = (0.6 + 4.4 * k01 ** 1.4) * bright * (warm ? 0.7 : 1);
+      const path = [[x, foot + 3 * u], [x + lean * 0.4, 50 * u], [x + lean, -4 * u]];
+      const sh = limb(p, path, w * 1.3, w * 0.85, 'bark', 1.2 + k01 * 1.4, 6,
+        { lit: [-s, 0], side: 0.5 + k01 * 1.6, rim: rimK, fw: 3 * u + 0.5, seed: i, plate: 8 * u });
+      // Moss up the lower trunk; ivy climbing the side that faces the clearing.
+      p.each(sh, (px, py, j) => { if (p.z[j] === 6 && py > 58 * u && fbm(px / (3 * u), py / (5 * u), 30 + i) > 0.56) p.r[j] = p.ri('moss'); });
+      if (k01 > 0.12) {
+        const cAt = (yy) => (yy > 50 * u ? lerp(path[1][0], path[0][0], (yy - 50 * u) / (foot + 3 * u - 50 * u)) : lerp(path[2][0], path[1][0], (yy + 4 * u) / (54 * u)));
+        ivy(p, (t) => { const yy = lerp(foot, 22 * u, t); return [cAt(yy) - s * w * (0.25 + 0.2 * Math.sin(t * 9 + i)), yy]; }, 12, 'leaf', 2.2 + k01 * 1.6, 6, 140 + i, u, 1.6 + k01 * 1.4);
+      }
+      for (const sd of [-1, 1]) {
+        root(p, [[x + sd * w * 0.3, foot], [x + sd * w * 0.9, foot + 2 * u], [x + sd * w * (1.5 + r()), foot + 4.5 * u]], w * 0.45, 1, 1.4 + k01, 7, { rim: rimK * 0.5, seed: i * 3 + sd });
+      }
+      // Undergrowth at its feet.
+      leafCluster(p, x - s * w * 0.9, foot - 3 * u, w * 1.4, w * 0.7, 'leaf', 1.8 + k01 * 1.4, 7, 400 + i, { n: 6, lit: 2 + k01 * 1.8, dark: 1, leaf: 1.6 * u });
+      if (r() < 0.7) fern(p, x - s * w * (1.6 + r()), foot + 3 * u, (6 + r() * 4) * u, 'leaf', 2 + k01 * 1.8, 7, 90 + i, 5);
+    });
+    // The canopy closing over the clearing: a bough from each of the nearest trees, clusters of leaves across the top,
+    // lower and brighter toward the gap the moon comes through, and vines hanging from it.
+    for (const s of [-1, 1]) {
+      const [tx] = near.find(([, ss]) => ss === s);
+      limb(p, [[tx, 20 * u], [lerp(tx, gx, 0.5), 10 * u], [gx + s * 12 * u, 12 * u]], 4 * u, 1.2, 'bark', 1.4, 7, { lit: [0, -1], side: 0.8, rim: 1.4, texMin: 99 });
+    }
+    for (let x = -10 * u, k = 0; x < W + 10 * u; x += (12 + hash(k, 1, 7) * 8) * u, k += 1) {
+      const dx = Math.abs(x - gx); if (dx < 11 * u) continue;
+      const n01 = clamp(1 - dx / (70 * u), 0, 1);
+      const y = (hash(k, 2, 7) * 6 - 1) * u + n01 * 9 * u * (0.4 + hash(k, 5, 7) * 0.6);
+      leafCluster(p, x, y, (9 + hash(k, 3, 7) * 6) * u, (5 + hash(k, 4, 7) * 2) * u, 'leaf', 1.8, 8, 60 + k, { n: 5, lit: 2.2 + 3 * n01, dark: 1, leaf: 1.6 * u, hang: 0.9 });
+    }
+    for (const [dx, len] of [[-24, 20], [-16, 12], [17, 15], [27, 22]]) {
+      const x0 = gx + dx * u;
+      ivy(p, (t) => [x0 + Math.sin(t * 2.4 + dx) * 1.5 * u, (7 + t * len) * u], Math.round(len / 3.4), 'leaf', 2.4, 8, 200 + dx, u, 1.8);
+    }
+    if (warm) reramp(p, gx, 62 * u, 64 * u, 46 * u, ['bark', 'moss', 'leaf'], 'sun', 0.55);
+  }
+
+  /** The finish over everything: the clearing's breath, the vignette, the lit top edges. */
+  function finishA(p, c) {
+    const { W, H, u, gx, hz, bright } = c;
+    p.light(gx, hz - 8 * u, 64 * u, 1.3 * bright, (t) => 0.5 + 0.5 * Math.sin(t * 0.8), { zMax: 4, sx: 1.8 });
+    vignette(p, W, H, 1.2, 0.5);
+    p.rim(0, -1, 0.6, 6);
+  }
+
   const A = {
-    job: 3, setting: 'deep-forest', key: 'A', id: 'deep-forest-a',
+    job: 3, setting: 'deep-forest', key: 'A', id: 'deep-forest-a', side: 'outside',
+    revised: "After your note: more foliage. Leafy boughs close over the clearing, ferns at the trunks’ feet, bushes fading into the mist, ivy on the near trunks, leaves drifting with the fireflies.",
     name: 'Deep forest', title: 'The firefly hollow',
     pitch: 'Every card is a gap between two old trunks. Beyond it, rows of trees go back into the mist to a clearing where the moonlight pools, the fireflies drift, and something always stands.',
     notes: [
@@ -435,6 +651,8 @@
       const hz = 88 * u; const floor = 100 * u;
       const bg = glowA(u, cx, hz, 82 * u, 34, 50, 1.08, 3, 44);
       p.fill(C.rect(0, 0, W, H), 'night', (x, y) => bg(x + 0.5, y + 0.5), 0);
+      // The gap in the leaves overhead that the moon comes through.
+      p.shade(C.ellipse(cx, 22 * u, 16 * u, 13 * u), (x, y) => 2.4 * Math.max(0, 1 - Math.hypot((x + 0.5 - cx) / (16 * u), (y + 0.5 - 22 * u) / (13 * u))) ** 1.2, 0);
       // The floor of the clearing, the mist lying on it far off, a pool of light where the card stands.
       const ground = C.rect(0, hz - 2 * u, W, H - hz + 2 * u);
       p.fill(ground, 'moss', (x, y) => {
@@ -447,28 +665,53 @@
       p.shade(C.poly([[cx - 1.5 * u, floor - 3 * u], [cx + 1.5 * u, floor - 3 * u], [cx + 10 * u, H], [cx - 7 * u, H]]), (x, y) => 1.1 * (1 - (y - floor) / (H - floor) * 0.6), 1);
       const gain = (x) => clamp(bg(x, hz) / 12, 0.2, 1);
       treeRows(p, W, cx, bg, [
-        { z: 2, sp: 6.5 * u, w: 1.3 * u, fade: 0.84, foot: hz + 0.5 * u, footJ: u, gap: 3 * u, lean: 2 * u, seed: 11, mist: () => { mist(p, W, hz - 2 * u, 3.5 * u, 2.6, gain, 1); mist(p, W, hz - 22 * u, 2.5 * u, 1.6, gain, 7); } },
-        { z: 3, sp: 8.5 * u, w: 2.2 * u, fade: 0.6, foot: hz + 3 * u, footJ: 1.5 * u, gap: 7 * u, lean: 3 * u, seed: 12, branches: 1, leaners: 0.15, crowns: 0.3, rim: 0.1, mist: () => { mist(p, W, hz + 2 * u, 3.5 * u, 1.8, gain, 2); mist(p, W, hz - 13 * u, 2 * u, 0.9, gain, 8); } },
-        { z: 4, sp: 14 * u, w: 3.6 * u, fade: 0.34, foot: hz + 7 * u, footJ: 2 * u, gap: 12 * u, lean: 4 * u, seed: 13, branches: 2, leaners: 0.12, rim: 0.3, mist: () => mist(p, W, hz + 6 * u, 3.5 * u, 1.1, gain, 3) },
+        { z: 2, sp: 6.5 * u, w: 1.3 * u, fade: 0.84, foot: hz + 0.5 * u, footJ: u, gap: 3 * u, lean: 2 * u, seed: 11, bushes: 0.3, mist: () => { mist(p, W, hz - 2 * u, 3.5 * u, 2.6, gain, 1); mist(p, W, hz - 22 * u, 2.5 * u, 1.6, gain, 7); } },
+        { z: 3, sp: 8.5 * u, w: 2.2 * u, fade: 0.6, foot: hz + 3 * u, footJ: 1.5 * u, gap: 7 * u, lean: 3 * u, seed: 12, branches: 1, leaners: 0.15, crowns: 0.3, rim: 0.1, bushes: 0.55, mist: () => { mist(p, W, hz + 2 * u, 3.5 * u, 1.8, gain, 2); mist(p, W, hz - 13 * u, 2 * u, 0.9, gain, 8); } },
+        { z: 4, sp: 14 * u, w: 3.6 * u, fade: 0.34, foot: hz + 7 * u, footJ: 2 * u, gap: 12 * u, lean: 4 * u, seed: 13, branches: 2, leaners: 0.12, rim: 0.3, bushes: 0.5, mist: () => mist(p, W, hz + 6 * u, 3.5 * u, 1.1, gain, 3) },
       ]);
       // Moonlight coming down into the clearing through a gap in the leaves.
       shaft(p, cx - 12 * u, 20 * u, cx - 3 * u, hz + 2 * u, 3 * u, 8 * u, 1.6, null, { zMax: 4 });
       shaft(p, cx + 4 * u, 22 * u, cx + 8 * u, hz + 2 * u, 2 * u, 5 * u, 1.2, null, { zMax: 4 });
       // The two trunks that make the arch, leaning in until their crowns meet; lit on the side that faces the clearing.
       const rimA = (x, y) => 0.8 + 5 * clamp(1 - Math.hypot((x - cx) / (38 * u), (y - 84 * u) / (58 * u)), 0, 1) ** 1.2;
+      const trunkPath = [[9, 140], [11, 110], [13, 84], [15, 64], [18, 46], [25, 30], [36, 18], [52, 8]];
+      const trunkX = (y) => { // the left trunk's centre at height y (in u), along its path
+        for (let k = 0; k + 1 < trunkPath.length; k += 1) {
+          const [x0, y0] = trunkPath[k]; const [x1, y1] = trunkPath[k + 1];
+          if (y <= y0 && y >= y1) return lerp(x0, x1, (y0 - y) / (y0 - y1));
+        }
+        return 18;
+      };
       for (const s of [-1, 1]) {
         const X = (x) => cx + s * (cx - x);
-        limb(p, [[X(9), 140 * u], [X(11), 110 * u], [X(13), 84 * u], [X(15), 64 * u], [X(18), 46 * u], [X(25), 30 * u], [X(36), 18 * u], [X(52), 8 * u]],
+        const sh = limb(p, trunkPath.map(([x, y]) => [X(x * u), y * u]),
           20 * u, 8 * u, 'bark', (x, y) => 1.4 + 1.8 * clamp(1 - Math.hypot((x - cx) / (40 * u), (y - 86 * u) / (54 * u)), 0, 1), 6,
           { lit: [-s, 0.25], side: 1.4, rim: rimA, fw: 3.2 * u, seed: 20 + s, plate: 9 * u });
+        // Moss in patches up the lower trunk, and ivy climbing its lit side.
+        p.each(sh, (x, y, i) => { if (p.z[i] === 6 && y > 70 * u && fbm(x / (3 * u), y / (5 * u), 20 + s) > 0.55) p.r[i] = p.ri('moss'); });
+        ivy(p, (t) => {
+          const y = lerp(126, 52, t); const hwT = 9.5 - 3.4 * (126 - y) / 74;
+          return [X((trunkX(y) + hwT * 0.4 + Math.sin(t * 11 + s) * hwT * 0.3) * u), y * u];
+        }, 13, 'leaf', 3.4, 6, 45 + s, u, 2.6);
         limb(p, [[X(16), 52 * u], [X(8), 38 * u], [X(-2), 30 * u]], 4 * u, 1.5 * u, 'bark', 1.2, 6, { lit: [0, -1], side: 0.6, fw: 2.5 * u, seed: 30 + s });
         root(p, [[X(13), 116 * u], [X(22), 122 * u], [X(32), 128 * u], [X(40), 136 * u]], 6 * u, 1.5 * u, 2.2, 7, { rim: 2, seed: 40 + s });
         root(p, [[X(16), 110 * u], [X(24), 111 * u], [X(31), 115 * u]], 4 * u, 1 * u, 2.6, 7, { rim: 2.4, seed: 50 + s });
         root(p, [[X(8), 122 * u], [X(2), 128 * u], [X(-4), 131 * u]], 6 * u, 3 * u, 1.4, 7, { seed: 60 + s });
-        fern(p, X(24), 108 * u, 7 * u, 'moss', 2.6, 7, 80 + s, 4);
+        // Undergrowth at the trunk's feet: ferns and low leaves.
+        leafCluster(p, X(4), 112 * u, 10 * u, 6 * u, 'leaf', 1.5, 7, 90 + (s > 0 ? 1 : 0), { n: 6, lit: 1.8, dark: 0.9, leaf: 1.8 * u });
+        leafCluster(p, X(20), 119 * u, 7 * u, 4 * u, 'leaf', 1.9, 7, 92 + (s > 0 ? 1 : 0), { n: 4, lit: 2.2, dark: 0.9, leaf: 1.6 * u });
+        fern(p, X(25), 109 * u, 9 * u, 'leaf', 2.6, 7, 80 + s, 5);
+        fern(p, X(7), 126 * u, 10 * u, 'leaf', 1.8, 7, 84 + s, 5);
       }
-      // Leaves where the crowns meet, black against the dark.
-      for (let k = 0; k < 7; k += 1) foliage(p, cx + (k - 3) * 14 * u, (3 + hash(k, 1, 3) * 7) * u, 12 * u, 6 * u, 'bark', 1.0, 8, 70 + k, 7, [0, -1], 0.7);
+      // The canopy closing over the clearing: a bough from each trunk, leaves hanging round the gap the moon comes through.
+      for (const s of [-1, 1]) {
+        const X = (x) => cx + s * (cx - x);
+        limb(p, [[X(20), 42 * u], [X(30), 32 * u], [X(42), 31 * u]], 3 * u, 1.2, 'bark', 1.6, 7, { lit: [0, -1], side: 0.8, rim: 1.2, texMin: 99 });
+        [[4, 12, 11, 6], [17, 5, 12, 6], [32, 9, 12, 6], [9, 30, 8, 5], [24, 25, 9, 5], [34, 32, 7, 4.5], [41, 26, 5, 3.5]].forEach(([x, y, rx, ry], k) => {
+          const near = clamp(1 - Math.hypot(x - cx / u, y - 26) / 30, 0, 1);
+          leafCluster(p, X(x * u), y * u, rx * u, ry * u, 'leaf', 1.3, 8, 70 + k * 2 + (s > 0 ? 1 : 0), { n: 5, lit: 1.8 + 2.4 * near, dark: 0.9, leaf: 1.8 * u, hang: 0.9 });
+        });
+      }
       p.light(cx, 86 * u, 40 * u, 1.8, null, { zMin: 6 });
       vignette(p, W, H, 1.8, 0.58);
       p.rim(0, -1, 0.7, 6);
@@ -476,6 +719,7 @@
       return {
         p,
         over(img) {
+          driftLeaves(img, 4, [26 * u, 40 * u, 44 * u, 56 * u], 2.2, 13, '#538672', '#203E36');
           flies(img, fl, 1);
           put(img, Math.round(67 * u), Math.round(77 * u), '#A3D8C6', 0.65); put(img, Math.round(69 * u), Math.round(77 * u), '#A3D8C6', 0.65);
         },
@@ -483,97 +727,44 @@
     },
 
     vista(W, H, cat) {
+      const key = `${W}x${H}:${cat}`;
+      if (vistaMemoA.has(key)) return vistaMemoA.get(key);
+      const c = ctxA(W, H, cat);
+      const { u, gx, warm } = c;
       const p = new Painter(W, H, RAMPS_A);
-      const u = H / 100; const gx = W / 2;
-      const hz = 70 * u; const floor = 87 * u;
-      const ramp = catRamp(cat); const hex = CARD[ramp][3];
-      const warm = cat === 'clear-path';
-      const bright = cat === 'obstacle' ? 0.9 : 1;
-      const bg = glowA(u, gx, hz, 62 * u, 62, 48, bright);
-      p.fill(C.rect(0, 0, W, H), 'night', (x, y) => bg(x + 0.5, y + 0.5), 0);
-      const ground = C.rect(0, hz - 2 * u, W, H - hz + 2 * u);
-      p.fill(ground, 'moss', (x, y) => {
-        const d = (y - hz) / (H - hz);
-        const pool = 6 * bright * Math.max(0, 1 - Math.hypot((x - gx) / (40 * u), (y - floor) / (8 * u))) ** 1.1;
-        return 1.2 + bg(x, hz) * 0.75 * Math.exp(-d * 4) + pool;
-      }, 1);
-      turf(p, ground, { vx: gx, vy: hz - 12 * u, k: 5, sx: 2.4, z: 1, seed: 6, vary: 0.7, top: 0.4 });
-      leaves(p, C.rect(0, hz + 10 * u, W, H - hz), Math.round(W / 4), 7, 1, 'litter', 0.6, 1.4);
-      p.shade(C.poly([[gx - 1.5 * u, floor - 2 * u], [gx + 1.5 * u, floor - 2 * u], [gx + 12 * u, H], [gx - 9 * u, H]]), (x, y) => 1.1 * (1 - (y - floor) / (H - floor) * 0.5), 1);
-      const gain = (x) => clamp(bg(x, hz) / 12, 0.18, 1);
-      const open = warm ? 1.6 : 1;
-      treeRows(p, W, gx, bg, [
-        { z: 2, sp: 7.5 * u, w: 1.5 * u, fade: 0.84, foot: hz + 0.5 * u, footJ: u, gap: 6 * u * open, lean: 2 * u, seed: 31, mist: () => { mist(p, W, hz - 1.5 * u, 4 * u, 2.6 * bright, gain, 1); mist(p, W, hz - 17 * u, 2.5 * u, 1.6 * bright, gain, 7); } },
-        { z: 3, sp: 11 * u, w: 2.6 * u, fade: 0.6, foot: hz + 3 * u, footJ: 1.5 * u, gap: 12 * u * open, lean: 4 * u, seed: 32, branches: 1, leaners: 0.15, crowns: 0.35, rim: 0.1, mist: () => { mist(p, W, hz + 1.5 * u, 4 * u, 1.8 * bright, gain, 2); mist(p, W, hz - 10 * u, 2 * u, 0.9 * bright, gain, 8); } },
-        { z: 4, sp: 17 * u, w: 4.4 * u, fade: 0.34, foot: hz + 6 * u, footJ: 2 * u, gap: 20 * u * open, lean: 6 * u, seed: 33, branches: 2, leaners: 0.12, rim: 0.3, mist: () => mist(p, W, hz + 5 * u, 4 * u, 1.2 * bright, gain, 3) },
-      ]);
-      // Moonlight coming down into the clearing.
-      if (!warm) {
-        shaft(p, gx - 20 * u, 4 * u, gx - 6 * u, hz + 2 * u, 4 * u, 12 * u, 1.5 * bright, (t) => 0.75 + 0.25 * Math.sin(t * 0.8), { zMax: 4 });
-        shaft(p, gx + 10 * u, 6 * u, gx + 16 * u, hz + 2 * u, 3 * u, 7 * u, 1.1 * bright, (t) => 0.75 + 0.25 * Math.sin(t * 0.8 + 1.5), { zMax: 4 });
-      }
-      // The card, in the clearing.
-      const sx = gx; const sy = floor;
-      let rise = null;
-      if (cat === 'monster') {
-        const e = stalker(p, sx, sy, 34 * u, ramp, 5);
-        p.backlit(5, 'night', 5, 'night', 11);
-        p.tint(e[0], e[1], 5 * u, hex, 0.5, flicker(0.3, 0.3, 1.4));
-      } else if (cat === 'wanderer') {
-        wanderer(p, sx - 3 * u, sy, 28 * u, 5, 'night', 5, ['moss', 'litter'], [1, 1], 22 * u);
-      } else if (cat === 'item') {
-        p.fill(C.ellipse(sx, sy, 13 * u, 3.5 * u), 'moss', 4, 5);
-        p.cells(C.ellipse(sx, sy, 13 * u, 3.5 * u), { size: 3 * u, z: 5, seed: 3, vary: 0.8, bevel: 0.7 });
-        chest(p, sx, sy - 1 * u, 20 * u, ramp, 5);
-        limb(p, [[sx - 15 * u, sy + 1 * u], [sx - 10 * u, sy - 5 * u], [sx - 5 * u, sy - 3 * u]], 2.4 * u, 1, 'bark', 2.4, 8, { lit: [0, -1], rim: 1.6, texMin: 99 });
-        p.light(sx, sy - 2 * u, 20 * u, 2.4, flicker(2, 0.15, 0.7), { zMin: 1, zMax: 1, sy: 0.4 });
-        p.tint(sx, sy - 12 * u, 13 * u, hex, 0.65, flicker(2, 0.15, 0.7));
-        rise = [sx, sy - 12 * u];
-      } else if (cat === 'obstacle') {
-        thornWall(p, sx, sy, 38 * u, 36 * u, ramp, 5, 9, u, 0.15);
-        p.backlit(5, 'night', 5.5, ramp, 3);
-      } else if (warm) {
-        reramp(p, gx, hz - 6 * u, 50 * u, 38 * u, ['night'], 'sun');
-        reramp(p, gx, hz + 1 * u, 44 * u, 7 * u, ['moss', 'litter'], 'sun', 0.6);
-        reramp(p, gx, floor + 4 * u, 26 * u, 16 * u, ['moss', 'litter'], 'sun', 0.6);
-        p.light(gx, hz - 2 * u, 34 * u, 2.4, flicker(0.2, 0.06, 0.4), { zMax: 4 });
-      }
-      // The near trees, black but for the side that faces the clearing.
-      const near = [];
-      { const r = rng(41); let d = 31 * u;
-        while (d < W / 2 + 24 * u) { for (const s of [-1, 1]) near.push([gx + s * (d + (r() - 0.5) * 6 * u), s]); d += (24 + r() * 24) * u; } }
-      near.forEach(([x, s], i) => {
-        const r = rng(50 + i);
-        const foot = (95 + r() * 7) * u; const w = (7 + r() * 7) * u; const lean = (r() - 0.35) * 7 * u * s;
-        const k01 = clamp(1 - Math.abs(x - gx) / (100 * u), 0, 1);
-        const rimK = (0.6 + 4.4 * k01 ** 1.4) * bright * (warm ? 0.7 : 1);
-        limb(p, [[x, foot + 3 * u], [x + lean * 0.4, 50 * u], [x + lean, -4 * u]], w * 1.3, w * 0.85, 'bark', 1.2 + k01 * 1.4, 6,
-          { lit: [-s, 0], side: 0.5 + k01 * 1.6, rim: rimK, fw: 3 * u + 0.5, seed: i, plate: 8 * u });
-        for (const sd of [-1, 1]) {
-          root(p, [[x + sd * w * 0.3, foot], [x + sd * w * 0.9, foot + 2 * u], [x + sd * w * (1.5 + r()), foot + 4.5 * u]], w * 0.45, 1, 1.4 + k01, 7, { rim: rimK * 0.5, seed: i * 3 + sd });
+      let rise;
+      if (cat === 'monster' || cat === 'wanderer' || cat === 'item') {
+        // The wood is the same for these three: built once per size, copied, the card drawn in, the wood in front put back.
+        const bk = `${W}x${H}`;
+        let base = vistaBaseA.get(bk);
+        if (!base) {
+          base = new Painter(W, H, RAMPS_A);
+          sceneBackA(base, c); sceneFrontA(base, c);
+          vistaBaseA.set(bk, base);
         }
-        if (r() < 0.6) fern(p, x - s * w * (1.2 + r()), foot + 4 * u, (6 + r() * 4) * u, 'moss', 1.8 + k01 * 1.6, 7, 90 + i, 5);
-      });
-      if (warm) reramp(p, gx, 62 * u, 64 * u, 46 * u, ['bark', 'moss'], 'sun', 0.55);
-      // Leaves overhead, with the gap the moon comes through.
-      for (let x = -8 * u, k = 0; x < W + 8 * u; x += (11 + hash(k, 1, 7) * 9) * u, k += 1) {
-        if (Math.abs(x - gx) < 24 * u) continue;
-        foliage(p, x, (hash(k, 2, 7) * 5 - 1) * u, (9 + hash(k, 3, 7) * 6) * u, (4 + hash(k, 4, 7) * 3) * u, 'bark', 0.9, 8, 60 + k, 6, [0, 1], 0.5);
+        p.r.set(base.r); p.v.set(base.v); p.z.set(base.z);
+        p.fields = base.fields.slice(); p.tints = base.tints.slice();
+        rise = subjectA(p, c, cat);
+        for (let i = 0; i < base.z.length; i += 1) if (base.z[i] >= 6) { p.r[i] = base.r[i]; p.v[i] = base.v[i]; p.z[i] = base.z[i]; }
+      } else {
+        sceneBackA(p, c);
+        rise = subjectA(p, c, cat);
+        sceneFrontA(p, c);
       }
-      // The breath of the clearing.
-      p.light(gx, hz - 8 * u, 64 * u, 1.3 * bright, (t) => 0.5 + 0.5 * Math.sin(t * 0.8), { zMax: 4, sx: 1.8 });
-      vignette(p, W, H, 1.2, 0.5);
-      p.rim(0, -1, 0.6, 6);
+      finishA(p, c);
       const watch = [[gx - 52 * u, 46 * u, 0.1], [gx + 70 * u, 38 * u, 0.55], [gx - 96 * u, 52 * u, 0.8], [gx + 118 * u, 50 * u, 0.3]].map(([x, y, ph]) => [Math.round(x), Math.round(y), ph]);
-      return {
+      const made = {
         p,
         over(img, t) {
           flies(img, particles('firefly', Math.round(W / 9), [0, 30 * u, W, 60 * u], t, 7), 1);
           flies(img, particles('firefly', warm ? 16 : 8, [gx - 36 * u, 44 * u, 72 * u, 46 * u], t, 8), 1);
+          driftLeaves(img, Math.round(W / 30), [0, 10 * u, W, 80 * u], t, 9, warm ? '#8A5E1E' : '#538672', '#203E36');
           if (cat === 'monster') watchers(img, watch, t, CARD.mons[2]);
           if (rise) rising(img, rise[0], rise[1], 10 * u, 22 * u, 6, t, 5, CARD.item[3]);
         },
       };
+      vistaMemoA.set(key, made);
+      return made;
     },
 
     world(W, H) {
@@ -582,9 +773,12 @@
       const all = C.rect(0, 0, W, H);
       p.fill(all, 'moss', 1.6, 1);
       mounds(p, all, { sx: 22 * u, sy: 13 * u, seed: 9, z: 1, amp: 0.9, lit: 7 });
-      // Drifts of fallen leaves in the hollows between the moss.
+      // Drifts of fallen leaves in the hollows between the moss (the drift's edge is broken in 2-pixel blocks, so its noise is taken at half size).
+      const hw2 = (W + 1) >> 1; const drift = new Float32Array(hw2 * ((H + 1) >> 1));
+      for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) drift[(y >> 1) * hw2 + (x >> 1)] = fbm(x / (40 * u), y / (26 * u), 3);
+      const li = p.ri('litter');
       p.each(all, (x, y, i) => {
-        if (fbm(x / (40 * u), y / (26 * u), 3) > 0.56 + hash(x >> 1, y >> 1, 3) * 0.08) { p.r[i] = p.ri('litter'); p.v[i] += (hash(x, y, 4) - 0.5) * 0.7; }
+        if (drift[(y >> 1) * hw2 + (x >> 1)] > 0.56 + hash(x >> 1, y >> 1, 3) * 0.08) { p.r[i] = li; p.v[i] += (hash(x, y, 4) - 0.5) * 0.7; }
       });
       leaves(p, all, 420, 13, 1, 'litter', 1.9, 2.2, -0.9);
       leaves(p, all, 200, 14, 1, 'moss', 1.5, 1.8, -0.6);
@@ -617,8 +811,18 @@
           const y = (24 + k * 58 + R() * 16) * u;
           root(p, wander([x - side * 14 * u, y], [x - side * 30 * u, y + 8 * u], [x - side * (46 + R() * 20) * u, y + (16 + R() * 10) * u], 12, 3 * u, 1.5, R() * 6), 14 * u, 2, 2.2, 5, { rim: 1.8, seed: 100 + k * side, fw: 3 * u, taper: 2 });
         }
-        fern(p, x - side * 34 * u, 240 * u, 20 * u, 'moss', 2.4, 6, 120 + side, 6);
-        fern(p, x - side * 26 * u, 104 * u, 14 * u, 'moss', 2.2, 6, 130 + side, 5);
+        // Ivy up the tree's inner side, undergrowth along its foot, leaves hanging from above.
+        ivy(p, (t) => [x - side * (17 + Math.sin(t * 9 + side) * 4 + Math.sin(t * 23) * 1.5) * u, lerp(H + 2, -2, t)], 52, 'leaf', 2.6, 6, 150 + side, u * 1.2, 2);
+        // A bank of undergrowth all down the edge, clumps overlapping, the near ones lower.
+        for (let yy = 8, k = 0; yy < 262; yy += 19 + hash(k, side + 5, 2) * 8, k += 1) {
+          const ox = 16 + (k % 2) * 12 + hash(k, side + 7, 2) * 6;
+          leafCluster(p, x - side * ox * u, yy * u, (13 + hash(k, side + 9, 2) * 6) * u, (7 + hash(k, side + 11, 2) * 3) * u, 'leaf', 1.6, 6, 160 + k * 2 + side, { n: 6, lit: 2, dark: 1, leaf: 2.2 * u });
+        }
+        leafCluster(p, x - side * 18 * u, 4 * u, 20 * u, 10 * u, 'leaf', 1.6, 8, 170 + side, { n: 7, lit: 2.4, dark: 1, leaf: 2.4 * u, hang: 1 });
+        leafCluster(p, x - side * 48 * u, -3 * u, 18 * u, 8 * u, 'leaf', 1.5, 8, 172 + side, { n: 6, lit: 2.2, dark: 1, leaf: 2.4 * u, hang: 1 });
+        leafCluster(p, x - side * 46 * u, 250 * u, 28 * u, 12 * u, 'leaf', 1.5, 6, 174 + side, { n: 8, lit: 1.9, dark: 1, leaf: 2.4 * u });
+        fern(p, x - side * 34 * u, 240 * u, 20 * u, 'leaf', 2.4, 6, 120 + side, 6);
+        fern(p, x - side * 26 * u, 104 * u, 14 * u, 'leaf', 2.2, 6, 130 + side, 5);
       }
       // The clearing's light coming down from behind the vista, breathing.
       p.light(W / 2, -24 * u, 170 * u, 2.8, (t) => 0.92 + 0.08 * Math.sin(t * 0.8), { sx: 1.9 });
@@ -636,6 +840,7 @@
         p,
         over(img, t) {
           driftMist(img, bands, t);
+          driftLeaves(img, 10, [0, 0, W, H], t, 31, '#325A4E', '#132823');
           flies(img, particles('firefly', 20, [0, 10 * u, W, H - 20 * u], t, 21), 0.9, false);
           watchers(img, watch, t, '#A3D8C6');
         },
@@ -978,5 +1183,341 @@
     },
   };
 
-  window.DESIGNS = (window.DESIGNS || []).concat([A, B]);
+
+  /* ================= C: the heartwood hall (inside A's wood) ================= */
+
+  const RAMPS_C = {
+    night: RAMPS_A.night,
+    grain: ['#030409', '#060810', '#0A0D17', '#0E131F', '#131A27', '#19222F', '#202B37', '#28363F', '#324349', '#3E5354', '#506862', '#688274'],
+    bark: RAMPS_A.bark,
+    glow: ['#203D37', '#2E5749', '#43917B', '#7FC0AC', '#C8F0E2'],
+    moss: RAMPS_A.moss, leaf: RAMPS_A.leaf, litter: RAMPS_A.litter, shadow: RAMPS_A.shadow,
+    wood: RAMPS_A.wood, lamp: RAMPS_A.lamp, sun: RAMPS_A.sun,
+    ...CARD,
+  };
+  const breath = (ph) => (t) => 0.85 + 0.15 * Math.sin(t * 0.8 + ph); // the fungi glow with the forest's breath
+
+  /** The inside of the trunk: grain running up the curved wall (wider apart near us, closer toward the heart), bending round knots. */
+  function grainWall(p, shape, o) {
+    const { cx, f, sp, z, seed, u } = o; const knots = o.knots || [];
+    p.each(shape, (x, y, i) => {
+      if (z !== undefined && p.z[i] !== z) return;
+      let X = x + 0.5 - cx;
+      for (const [kx, ky, kr] of knots) {
+        const dx = x + 0.5 - kx; const dy = (y + 0.5 - ky) * 0.55;
+        X += Math.sign(dx) * kr * 1.5 * Math.exp(-(dx * dx + dy * dy) / (kr * kr * 1.6));
+      }
+      const th = Math.atan(X / f) * f * 0.6 + X * 0.4 + Math.sin(y * 0.07 / u + X * 0.02) * 2 * u;
+      const line = Math.floor(th / sp); const fr = th / sp - line;
+      let dv = (hash(line, 0, seed) - 0.5) * 0.6;
+      if (fr < 0.17) dv -= 0.85; else if (fr < 0.32) dv += 0.3;
+      p.v[i] += dv;
+    });
+    for (const [kx, ky, kr] of knots) {
+      p.shade(C.ellipse(kx, ky, kr * 0.6, kr, 16), (x, y) => {
+        const d = Math.hypot((x + 0.5 - kx) / (kr * 0.6), (y + 0.5 - ky) / kr);
+        return d < 0.4 ? -1.8 : (Math.floor(d * 4) % 2 ? -0.6 : 0.35);
+      }, z);
+    }
+  }
+
+  /** A shelf fungus on the wall, seen from the front: a half-disc, a pale top edge, its gills in shadow underneath. */
+  function bracket(p, x, y, w, z) {
+    const h = Math.max(2, w * 0.6);
+    p.fill(C.ellipse(x, y + 0.5, w * 0.9, Math.max(1, h * 0.35), 14), 'glow', (px, py) => (py + 0.5 > y ? 0.3 : null), z);
+    p.fill(C.ellipse(x, y, w, h, 16), 'glow', (px, py) => (py + 0.5 > y ? null : (y - (py + 0.5) > h - 1.2 ? 3 : 2)), z);
+  }
+
+  /** The far wall of the heart: a tall rough-pointed recess, glowing up from its floor, its grain showing in the light. */
+  function heartRecess(p, cx, top, hw, bottom, g, z, u, ramp = 'night', flood = false) {
+    const sh = [C.arch(cx, top, hw, bottom, 0.45)[0].map(([x, y], i) => [x + (hash(i, 6, 3) - 0.5) * 1.4 * u, y])];
+    p.fill(sh, ramp, (x, y) => {
+      if (flood) return 1.2 + g * clamp(0.62 + 0.38 * (y - top) / (bottom - top) - ((x + 0.5 - cx) / hw) ** 2 * 0.3, 0, 1);
+      const d = Math.hypot((x + 0.5 - cx) / (hw * 1.1), (y + 0.5 - bottom) / ((bottom - top) * 0.95));
+      return 1.2 + g * Math.max(0, 1 - d) ** 1.15;
+    }, z);
+    p.shade(sh, (x, y) => ((((x - cx) / (2.4 * u) + Math.sin(y * 0.12 / u) * 0.5) % 1 + 1) % 1 < 0.2 ? -0.7 : 0), z);
+    return sh;
+  }
+
+  /** A rib of root arching overhead: two halves rising from the floor and meeting at the top, lit on the side toward `lit`. */
+  function ribArch(p, cx, hw, base, top, w, v, z, o = {}) {
+    const seed = o.seed || 1;
+    for (const s of [-1, 1]) {
+      // A root, not a moulding: its line wavers and it swells and thins as it climbs.
+      const raw = [[cx + s * hw, base], [cx + s * hw * 1.04, lerp(base, top, 0.3)], [cx + s * hw * 1.0, lerp(base, top, 0.58)], [cx + s * hw * 0.84, top + hw * 0.45], [cx + s * hw * 0.5, top + hw * 0.1], [cx - s * hw * 0.08, top]];
+      const pts = raw.map(([x, y], i) => (i === 0 || i === raw.length - 1 ? [x, y] : [x + (hash(i, s + 2, seed) - 0.5) * w * 0.7, y + (hash(i, s + 5, seed) - 0.5) * w * 0.5]));
+      limb(p, pts, w, w * 0.6, 'bark', v, z, { lit: [-s, 0.6], side: o.side ?? 1.4, rim: o.rim ?? 2, fw: o.fw || 2.6, seed: seed + s, plate: o.plate || 7, edge: 0.7 });
+      // A knuckle where it bends, and rootlets hanging from it.
+      const [kx, ky] = pts[3];
+      p.fill(C.ellipse(kx, ky, w * 0.7, w * 0.55, 12), 'bark', (px, py) => (typeof v === 'function' ? v(px, py) : v) + (py < ky ? 0.8 : -0.6), z);
+      for (let j = 0; j < (o.rootlets ?? 2); j += 1) {
+        const [rx, ry] = pts[1 + j * 2] || pts[1];
+        const len = w * (2 + hash(j, s, seed + 9) * 2);
+        limb(p, [[rx, ry], [rx - s * len * 0.3, ry + len * 0.5], [rx - s * len * 0.2, ry + len]], Math.max(1, w * 0.3), 0.8, 'bark', typeof v === 'function' ? v : v + 0.3, z, { lit: [-s, 0], side: 0.6, texMin: 99, rim: (o.rim ?? 2) * 0.6 });
+      }
+      // Shelf fungus growing on the root, glowing, lighting the root round it.
+      if (o.fungus) {
+        const [fx, fy] = pts[s < 0 ? 2 : 1];
+        const bx = fx - s * w * 0.45; const by = fy + (s < 0 ? 0 : w * 0.8);
+        p.light(bx, by + 1, w * 2.6, 2.6, null, { zMin: z, zMax: z });
+        bracket(p, bx, by, Math.max(1.6, w * 0.42), z);
+      }
+    }
+  }
+
+  /** A knot-hole window: a rough hole in the wood, pale with moonlight, its lip catching it, leaves hanging in. */
+  function knotHole(p, kx, ky, rx, ry, z, u, seed) {
+    p.fill(C.ellipse(kx, ky, rx + 1.6 * u, ry + 1.4 * u, 18), 'bark', (x, y) => (y + 0.5 < ky - ry * 0.3 ? 4 : 2), z);
+    const hole = [C.ellipse(kx, ky, rx, ry, 16)[0].map(([x, y], i) => [x + (hash(i, 2, seed) - 0.5) * 1.4 * u, y + (hash(i, 4, seed) - 0.5) * u])];
+    p.fill(hole, 'night', (x, y) => 10.2 - Math.hypot((x + 0.5 - kx) / rx, (y + 0.5 - ky) / ry) * 1.2, z + 1);
+    p.fill(C.circle(kx + rx * 0.25, ky - ry * 0.1, Math.max(1.2, rx * 0.42), 14), 'night', 14, z + 1);
+    leafCluster(p, kx - rx * 0.7, ky - ry * 0.95, rx * 0.55, ry * 0.4, 'leaf', 1, z + 2, seed, { n: 3, lit: 1.6, dark: 0.6, leaf: 1.3 * u, hang: 1.4 });
+    ivy(p, (t) => [kx + rx * 0.4 + Math.sin(t * 3) * u, ky + ry * 0.6 + t * ry * 3.4], 4, 'leaf', 2.6, z + 2, seed + 1, u, 2);
+  }
+
+  /** Roots woven over and under each other: two families crossing, each round in section and lit along its upper edge, the floor dark between. */
+  function weave(p, shape, o) {
+    const { s, z, seed } = o; const sy = o.sy || 1; const wf = o.w ?? 0.5; const li = p.ri(o.gapRamp || 'litter');
+    p.each(shape, (x, y, i) => {
+      if (z !== undefined && p.z[i] !== z) return;
+      const Y = (y + 0.5) * sy; const X = x + 0.5;
+      const a = (X * 0.75 + Y) / s + Math.sin(Y * 0.045 + X * 0.017 + seed) * 0.45;
+      const b = (X * 0.75 - Y) / s + Math.sin(X * 0.039 - Y * 0.028 + seed * 2) * 0.45;
+      const ia = Math.floor(a); const ib = Math.floor(b); const fa = a - ia - 0.5; const fb = b - ib - 0.5;
+      const thick = o.vary ? 0.55 + 0.9 * vnoise(X / o.vary, Y / o.vary, seed + 9) : 1; // the weave looser here, tighter there
+      const skip = o.skip ?? 0.15;
+      const ha = hash(ia, 0, seed) < skip ? 0 : wf * thick * (0.7 + hash(ia, 1, seed) * 0.6) / 2;
+      const hb = hash(ib, 2, seed) < skip ? 0 : wf * thick * (0.7 + hash(ib, 3, seed) * 0.6) / 2;
+      const inA = Math.abs(fa) < ha; const inB = Math.abs(fb) < hb;
+      const aOver = ((ia + ib) & 1) === 0;
+      if (!inA && !inB) { p.r[i] = li; p.v[i] += o.gap ?? -1; return; }
+      const useA = inA && (!inB || aOver);
+      const q = useA ? fa / ha : fb / hb; const up = useA ? -q : q;
+      let dv = up * 0.8 - q * q * 0.7;
+      if (up > 0.55) dv += o.rim ?? 0.9;
+      const under = useA ? (!inB && Math.abs(fb) < hb + 0.07 && !aOver) : (!inA && Math.abs(fa) < ha + 0.07 && aOver);
+      if (under) dv -= 1;
+      dv += (hash(useA ? ia : ib, Math.floor((useA ? b : a) * 2), seed + 5) - 0.5) * 0.5;
+      p.v[i] += dv;
+    });
+  }
+
+  const Cdesign = {
+    job: 3, setting: 'deep-forest', key: 'C', id: 'deep-forest-c', side: 'inside',
+    name: 'Deep forest', title: 'The heartwood hall',
+    pitch: 'Inside the old wood’s greatest tree: a hall of living grain, roots arching overhead like ribs, a stair of roots going down to the heart, where the mushrooms glow and the moon comes in through a knot-hole.',
+    notes: [
+      ['Light', 'The same teal as the wood outside: mushrooms and shelf fungus glowing in the alcoves and on the heart’s floor, breathing slowly, and one shaft of moonlight from a knot-hole. The heart is brightest; the grain between falls away to black.'],
+      ['Detail', 'Grain running up the curved walls and bending round knots, ribs of root, a stair of roots, shelf fungus, moss, ferns and ivy that came in with the light, leaves hanging in the knot-hole, fireflies drifting inside.'],
+      ['Vista', 'Ribs of root across the board with a glowing alcove between each pair. In the middle, the heart under the knot-hole, two root steps down to it. The card stands in the heart: the antlered thing, the wanderer with the blue lantern, a chest among the mushrooms, roots and thorns grown across, or gold light where the heart opens to the outside.'],
+      ['World', 'The floor under the table is roots woven over and under each other, leaves caught in them. Mushrooms glow in the crooks of the big roots at the edges, and the heart’s light comes down from the top.'],
+    ],
+    palette: ['#04050C', '#0E131F', '#202B37', '#324349', '#1F2C32', '#43917B', '#7FC0AC', '#C8F0E2', '#F2CB8A'],
+
+    back(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['glow'] });
+      const u = H / 134; const cx = W / 2;
+      const hf = 97 * u; // the heart's floor, at the foot of the stair
+      // The curved wall of the hollow, lighter toward the heart.
+      const all = C.rect(0, 0, W, H);
+      p.fill(all, 'grain', (x, y) => 1.1 + 2.2 * Math.max(0, 1 - Math.hypot((x - cx) / (34 * u), (y - hf) / (54 * u))) ** 1.3, 0);
+      grainWall(p, all, { cx, f: 40 * u, sp: 3 * u, z: 0, seed: 6, u, knots: [[14 * u, 62 * u, 4 * u], [82 * u, 46 * u, 3.5 * u], [70 * u, 86 * u, 2.5 * u]] });
+      p.each(all, (x, y, i) => { if (y > 78 * u && fbm(x / (4 * u), y / (6 * u), 9) > 0.57) p.r[i] = p.ri('moss'); });
+      // The heart, down the stair: its far wall glowing up from the mushrooms on its floor.
+      heartRecess(p, cx, 54 * u, 12 * u, hf, 10.5, 1, u);
+      fungi(p, cx - 4 * u, hf - 0.5 * u, 4, u, 'glow', 2, 31, 3.6);
+      fungi(p, cx + 7 * u, hf, 2, u, 'glow', 2, 32, 3);
+      // The stair: its floor, lit near the heart; then roots laid across it, far to near.
+      p.fill(C.poly([[cx - 12 * u, hf], [cx + 12 * u, hf], [cx + 40 * u, H + 1], [cx - 40 * u, H + 1]]), 'litter', (x, y) => 1.3 + 3.4 * Math.max(0, 1 - Math.hypot((x - cx) / (20 * u), (y - hf) / (16 * u))), 1);
+      [[101, 13, 2.2], [107, 17, 2.8], [115, 22, 3.4], [125, 28, 4.2], [137, 35, 5.2]].forEach(([y, hw, th], k) => {
+        const yy = y * u; const near = clamp(1 - (y - 97) / 40, 0, 1);
+        p.shade(C.rect(cx - hw * u, yy, hw * 2 * u, th * u * 0.9), -1.1, 1);
+        limb(p, [[cx - hw * u, yy + 1.2 * u], [cx, yy - 0.6 * u], [cx + hw * u, yy + 1.2 * u]], th * u, th * u * 0.85, 'bark', 1.6 + near * 2.2, 3,
+          { lit: [0, -1], side: 1.3, rim: 1.6 + near * 2.4, fw: 2.4 * u, seed: 50 + k, plate: 6 * u });
+      });
+      p.each(C.rect(0, 98 * u, W, H), (x, y, i) => { if (p.z[i] === 3 && p.v[i] > 2.6 && hash(x >> 1, y, 4) < 0.3) p.r[i] = p.ri('moss'); });
+      // The knot-hole high in the vault, the moon coming down through it into the heart.
+      const kx = cx + 7 * u; const ky = 33 * u;
+      knotHole(p, kx, ky, 5 * u, 4 * u, 2, u, 41);
+      shaft(p, kx - 1 * u, ky + 3 * u, cx - 1 * u, hf, 4 * u, 11 * u, 3, null, { zMax: 3 });
+      // Shelf fungus on the walls between the ribs, glowing, each lighting the grain round it.
+      for (const [x, y, w] of [[18, 70, 3.5], [21, 76, 2.5], [78, 60, 3.5], [75, 66, 2.6], [27, 50, 2.4], [70, 82, 2.4]]) {
+        p.light(x * u, y * u + 2 * u, 15 * u, 3.4, null, { zMax: 1, hard: true });
+        bracket(p, x * u, y * u, w * u, 2);
+      }
+      // Ribs of root arching overhead, the deepest first; their faces catch the heart's light, more the deeper they are.
+      const heartLit = (k) => (x, y) => [3.4, 2.8, 2.2, 1.6][k] + [3.2, 2.2, 1.4, 0.8][k] * Math.max(0, 1 - Math.hypot((x - cx) / (30 * u), (y - hf) / (40 * u)));
+      [[14, 99, 50, 3.4, 4.6], [18.5, 105, 38, 4.6, 3.8], [24, 118, 24, 6.2, 3], [32, 142, 1, 11, 2.2]].forEach(([hw, base, top, w, rim], k) => {
+        ribArch(p, cx, hw * u, base * u, top * u, w * u, heartLit(k), 4 + k, { rim, seed: 60 + k * 3, fw: 2.6 * u, rootlets: k > 1 ? 2 : 1, fungus: k > 0 });
+      });
+      // What came in with the light: ivy on the near rib, ferns at the stair's sides.
+      for (const s of [-1, 1]) {
+        ivy(p, (t) => [cx + s * (32 - 1.5 + Math.sin(t * 9 + s) * 1.5) * u, lerp(132, 60, t) * u], 11, 'leaf', 2.6, 8, 70 + s, u, 2.2);
+        fern(p, cx + s * 30 * u, 128 * u, 9 * u, 'leaf', 2.2, 8, 72 + s, 5);
+        fern(p, cx + s * 17 * u, 104 * u, 5 * u, 'leaf', 3.2, 8, 74 + s, 4);
+      }
+      p.light(cx, hf - 4 * u, 34 * u, 2.2, null, { zMin: 3, zMax: 7 });
+      vignette(p, W, H, 1.8, 0.6);
+      p.rim(0, -1, 0.6, 3);
+      const fl = particles('firefly', 16, [cx - 22 * u, 44 * u, 44 * u, 66 * u], 2.6, 61).filter((q) => q.a > 0.3);
+      return {
+        p,
+        over(img) {
+          driftLeaves(img, 3, [kx - 8 * u, ky + 4 * u, 14 * u, 30 * u], 1.7, 17, '#538672', '#203E36');
+          flies(img, fl, 1);
+        },
+      };
+    },
+
+    vista(W, H, cat) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['glow'] });
+      const u = H / 100; const gx = W / 2;
+      const floor = 84 * u;
+      const ramp = catRamp(cat); const hex = CARD[ramp][3];
+      const warm = cat === 'clear-path';
+      const bright = cat === 'obstacle' ? 0.85 : 1;
+      // The curved wall of the hollow, the grain bending round knots.
+      const wall = C.rect(0, 0, W, floor + 2 * u);
+      p.fill(wall, 'grain', (x, y) => 1.2 + 1.2 * Math.exp(-(((x - gx) / (50 * u)) ** 2)), 0);
+      const knots = [];
+      { const r = rng(5); for (let x = 30 * u + r() * 20 * u; x < W / 2 + 40 * u; x += (34 + r() * 40) * u) for (const s of [-1, 1]) knots.push([gx + s * x, (18 + r() * 44) * u, (2.5 + r() * 2.5) * u]); }
+      grainWall(p, wall, { cx: gx, f: 70 * u, sp: 3.2 * u, z: 0, seed: 3, u, knots });
+      p.each(wall, (x, y, i) => { if (y > 62 * u && fbm(x / (4 * u), y / (6 * u), 11) > 0.57) p.r[i] = p.ri('moss'); });
+      // The heart: a tall recess in the far wall, lit up from its floor.
+      heartRecess(p, gx, 6 * u, 22 * u, floor, (warm ? 11 : 10.5) * bright, 1, u, 'night', warm);
+      // The knot-hole in the heart's vault, and the moon through it.
+      const kx = gx + 6 * u; const ky = 18 * u;
+      knotHole(p, kx, ky, 5 * u, 4 * u, 2, u, 21);
+      // The floor: roots woven over and under, lit around the heart.
+      const ground = C.rect(0, floor, W, H - floor);
+      p.fill(ground, 'bark', (x, y) => 1.5 + 4 * bright * Math.max(0, 1 - Math.hypot((x - gx) / (44 * u), (y - floor) / (10 * u))), 1);
+      weave(p, ground, { s: 9 * u, sy: 2.4, z: 1, seed: 7, w: 0.55, gap: -0.9, rim: 0.9 });
+      // The mushroom bed in the heart.
+      if (!warm) {
+        fungi(p, gx - 13 * u, floor + 0.5 * u, 3, u, 'glow', 3, 33, 3.6);
+        fungi(p, gx + 12 * u, floor + 1 * u, 3, u, 'glow', 3, 34, 3.4);
+      }
+      // The card, in the heart.
+      const sx = gx; const sy = floor;
+      let rise = null;
+      if (cat === 'monster') {
+        const e = stalker(p, sx, sy, 36 * u, ramp, 6);
+        p.backlit(6, 'night', 7.5, 'night', 9);
+        p.tint(e[0], e[1], 5 * u, hex, 0.5, flicker(0.3, 0.3, 1.4));
+      } else if (cat === 'wanderer') {
+        wanderer(p, sx - 3 * u, sy, 28 * u, 6, 'night', 5, ['bark', 'litter'], [1, 1], 22 * u);
+      } else if (cat === 'item') {
+        chest(p, sx, sy - 0.5 * u, 20 * u, ramp, 6);
+        fungi(p, sx + 8 * u, sy + 0.5 * u, 2, u, 'glow', 8, 35, 3);
+        p.light(sx, sy - 2 * u, 18 * u, 2.4, flicker(2, 0.15, 0.7), { zMin: 1, zMax: 1, sy: 0.4 });
+        p.tint(sx, sy - 12 * u, 13 * u, hex, 0.65, flicker(2, 0.15, 0.7));
+        rise = [sx, sy - 12 * u];
+      } else if (cat === 'obstacle') {
+        thornWall(p, sx, sy, 22 * u, 40 * u, ramp, 6, 13, u, 0.15);
+        p.backlit(6, 'night', 5.5, ramp, 3);
+      } else if (warm) {
+        reramp(p, gx, 46 * u, 27 * u, 47 * u, ['night', 'grain'], 'sun', 0.75);
+        reramp(p, gx, floor + 6 * u, 30 * u, 12 * u, ['bark', 'litter', 'moss'], 'sun', 0.6);
+        p.light(gx, floor - 6 * u, 40 * u, 3, flicker(0.2, 0.06, 0.4), { zMax: 4 });
+      }
+      // The moon through the knot-hole and the mushrooms' glow, made after the card so they light round it, not on it.
+      shaft(p, kx - 1 * u, ky + 3 * u, gx - 2 * u, floor + 2 * u, 5 * u, 15 * u, 3 * bright, breath(0.4), { zMax: 5 });
+      if (!warm) p.light(gx, floor - 3 * u, 34 * u, 2.6 * bright, breath(1), { zMax: 4 });
+      // Two root steps down to the heart.
+      for (const [dy, hw, th] of [[6, 26, 3], [13, 40, 4]]) {
+        const yy = floor + dy * u;
+        p.shade(C.rect(gx - hw * u, yy, hw * 2 * u, th * u), -1.1, 1);
+        limb(p, [[gx - hw * u, yy + 1.5 * u], [gx, yy - 0.5 * u], [gx + hw * u, yy + 1.5 * u]], th * u, th * u * 0.85, 'bark', 2.6 + (13 - dy) * 0.15, 7,
+          { lit: [0, -1], side: 1.4, rim: 3.2 * bright, fw: 2.6 * u, seed: dy });
+      }
+      // Ribs of root across the hall, the two by the heart larger; a glowing alcove of shelf fungus between each pair.
+      ribArch(p, gx, 27 * u, floor + 5 * u, -14 * u, 11 * u, 2, 8, { rim: 3.6 * bright, seed: 80, fw: 3 * u });
+      const lights = [];
+      for (let d = 66 * u, k = 0; d < W / 2 + 40 * u; d += (36 + hash(k, 1, 4) * 8) * u, k += 1) {
+        for (const s of [-1, 1]) {
+          const x = gx + s * d;
+          limb(p, [[x, floor + 4 * u], [x - s * 2 * u, 46 * u], [x - s * 10 * u, 12 * u], [x - s * 20 * u, -6 * u]], 10 * u, 5 * u, 'bark', 1.8, 6,
+            { lit: [s, 0.3], side: 1.3, rim: 2.8, fw: 2.8 * u, seed: 90 + k * 2 + s, edge: 0.7 });
+          root(p, [[x - 2 * u, floor + 2 * u], [x - 8 * u, floor + 5 * u], [x - 13 * u, floor + 9 * u]], 4 * u, 1, 1.6, 7, { rim: 1.4, seed: 95 + k * 2 + s });
+          const ax = x - s * 19 * u;
+          fern(p, x - s * 5 * u, floor + 4 * u, 7 * u, 'leaf', 2, 7, 130 + k * 2 + s, 5);
+          if (Math.abs(ax - gx) < 34 * u) continue;
+          // The alcoves glow less the farther they are from the heart, and some along the hall have gone dark.
+          const near = clamp(1 - (Math.abs(ax - gx) - 40 * u) / (150 * u), 0.2, 1);
+          if (k > 0 && hash(k, s + 6, 4) < 0.4) { fungi(p, ax, floor + 1 * u, 1, u, 'glow', 5, 120 + k * 2 + s, 2); continue; }
+          const ay = (44 + hash(k, s + 4, 4) * 12) * u;
+          bracket(p, ax - 2 * u, ay, 5.5 * u, 5); bracket(p, ax + 4 * u, ay + 7 * u, 4.4 * u, 5);
+          if (near > 0.5) bracket(p, ax - 3 * u, ay + 14 * u, 3.4 * u, 5);
+          fungi(p, ax, floor + 1 * u, 2, u, 'glow', 5, 120 + k * 2 + s, 3);
+          reramp(p, ax, ay + 6 * u, 20 * u, 22 * u, ['grain'], 'night', 0.55, [0, 0]);
+          lights.push([ax, ay + 6 * u, k + s, near]);
+        }
+      }
+      lights.forEach(([x, y, ph, near]) => p.light(x, y, 26 * u, 5.5 * near, breath(ph), { zMax: 8, hard: true }));
+      // Roots crossing overhead where the ribs meet.
+      for (const s of [-1, 1]) limb(p, [[gx + s * 4 * u, -2 * u], [gx + s * 40 * u, 4 * u], [gx + s * 90 * u, 1 * u]], 6 * u, 3 * u, 'bark', 1.3, 9, { lit: [0, 1], side: 0.8, rim: 1.2, fw: 2.6 * u, seed: 140 + s });
+      if (warm) reramp(p, gx, 50 * u, 46 * u, 50 * u, ['bark', 'leaf'], 'sun', 0.55);
+      vignette(p, W, H, 1.2, 0.5);
+      p.rim(0, -1, 0.5, 6);
+      const watch = [[gx - 84 * u, 30 * u, 0.1], [gx + 86 * u, 26 * u, 0.55], [gx - 120 * u, 36 * u, 0.8], [gx + 122 * u, 40 * u, 0.3]].map(([x, y, ph]) => [Math.round(x), Math.round(y), ph]);
+      return {
+        p,
+        over(img, t) {
+          flies(img, particles('firefly', Math.round(W / 10), [0, 20 * u, W, 62 * u], t, 71), 1);
+          flies(img, particles('firefly', warm ? 14 : 8, [gx - 26 * u, 30 * u, 52 * u, 50 * u], t, 72), 1);
+          driftLeaves(img, Math.round(W / 50) + 2, [kx - 20 * u, ky, 40 * u, 60 * u], t, 73, warm ? '#8A5E1E' : '#538672', '#203E36');
+          if (cat === 'monster') watchers(img, watch, t, CARD.mons[2]);
+          if (rise) rising(img, rise[0], rise[1], 10 * u, 22 * u, 6, t, 5, CARD.item[3]);
+        },
+      };
+    },
+
+    world(W, H) {
+      const p = new Painter(W, H, RAMPS_C, { emit: ['glow'] });
+      const u = H / 250;
+      const all = C.rect(0, 0, W, H);
+      p.fill(all, 'bark', 1.8, 1);
+      weave(p, all, { s: 15 * u, sy: 1.25, z: 1, seed: 4, w: 0.52, gap: -0.7, rim: 1, vary: 60 * u, skip: 0.24 });
+      p.each(all, (x, y, i) => { if (p.r[i] === p.ri('litter') && vnoise(x / (30 * u), y / (20 * u), 8) > 0.6) p.r[i] = p.ri('moss'); });
+      leaves(p, all, 150, 13, 1, 'litter', 1.4, 2, -0.6);
+      leaves(p, all, 80, 14, 1, 'leaf', 1.3, 1.8, -0.5);
+      // A few great roots lying over the weave, from the heart toward the edges.
+      for (const [x0, x1, y1, w] of [[0.4, 0.1, 150, 18], [0.6, 0.92, 140, 18], [0.47, 0.3, 250, 14], [0.55, 0.74, 260, 14]]) {
+        root(p, wander([W * x0, -6 * u], [lerp(W * x0, W * x1, 0.4), y1 * 0.45 * u], [W * x1, y1 * u], 22, 5 * u, 2.5, x0 * 9), w * u, 2, 2.3, 3, { rim: 1.8, fw: 3.4 * u, seed: Math.round(x0 * 100), taper: 1.8, plate: 11 * u });
+      }
+      // The walls' feet at the edges: big roots flaring onto the floor, mushrooms glowing in their crooks, undergrowth.
+      const glows = [];
+      for (const side of [-1, 1]) {
+        const x = side < 0 ? -2 * u : W + 2 * u;
+        limb(p, [[x, H + 4], [x - side * 3 * u, H * 0.5], [x, -4]], 40 * u, 34 * u, 'grain', 1.8, 5, { lit: [-side, -0.2], side: 1.3, rim: 2.2, fw: 3.4 * u, seed: 90 + side });
+        for (let k = 0; k < 5; k += 1) {
+          const y = (16 + k * 50 + hash(k, side + 3, 3) * 14) * u;
+          root(p, wander([x - side * 12 * u, y], [x - side * 28 * u, y + 8 * u], [x - side * (44 + hash(k, side + 3, 4) * 18) * u, y + (16 + hash(k, side + 3, 5) * 10) * u], 12, 3 * u, 1.5, k),
+            14 * u, 2, 2.2, 5, { rim: 1.8, seed: 100 + k * 2 + side, fw: 3 * u, taper: 2 });
+          const fx = x - side * (19 + hash(k, side + 3, 6) * 5) * u; const fy = y + 12 * u;
+          fungi(p, fx, fy, 3, u * 1.3, 'glow', 6, 200 + k * 2 + side, 3);
+          glows.push([fx, fy - 3 * u, k * 1.7 + side]);
+          if (k % 2) leafCluster(p, x - side * 24 * u, y + 32 * u, 13 * u, 7 * u, 'leaf', 1.6, 6, 210 + k * 2 + side, { n: 6, lit: 2, dark: 1, leaf: 2.2 * u });
+        }
+        fern(p, x - side * 32 * u, 240 * u, 18 * u, 'leaf', 2.4, 6, 120 + side, 6);
+      }
+      glows.forEach(([x, y, ph]) => p.light(x, y, 24 * u, 2.8, breath(ph), { sy: 0.6, zMax: 5 }));
+      // The heart's glow and the moon through the knot-hole, coming down from behind the vista.
+      p.light(W / 2, -24 * u, 170 * u, 2.6, breath(0), { sx: 1.9 });
+      p.shade(null, (x, y) => -2.2 * Math.max(0, y / H - 0.34));
+      p.rim(0, -1, 0.9, 3);
+      const watch = [[12 * u, 132 * u, 0.25], [W - 14 * u, 70 * u, 0.7]].map(([x, y, ph]) => [Math.round(x), Math.round(y), ph]);
+      return {
+        p,
+        over(img, t) {
+          driftLeaves(img, 6, [0, 0, W, H], t, 41, '#325A4E', '#132823');
+          flies(img, particles('firefly', 16, [0, 10 * u, W, H - 20 * u], t, 81), 0.9, false);
+          watchers(img, watch, t, '#A3D8C6');
+        },
+      };
+    },
+  };
+
+  window.DESIGNS = (window.DESIGNS || []).concat([A, B, Cdesign]);
 })();

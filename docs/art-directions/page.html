@@ -73,6 +73,17 @@ header.top .lede { font-size: 19px; }
 .dir-head { display: flex; align-items: baseline; gap: 12px; }
 .letter { font-family: var(--display); font-size: 30px; color: var(--gold); line-height: 1; }
 .pitch { font-size: 17px; }
+.revised { font-size: 15px; color: var(--muted); border-left: 2px solid var(--gold); padding-left: 10px; }
+.revised b { color: var(--gold); font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+.side { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.first { font-size: 15px; color: var(--muted); }
+.first q { color: var(--fg); font-style: italic; }
+.unpicked { border-top: 1px dashed var(--line); padding-top: 14px; }
+.unpicked summary { cursor: pointer; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--muted); }
+.unpicked[open] summary { margin-bottom: 16px; }
+.waiting { display: flex; align-items: center; justify-content: center; min-height: 220px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 15px; padding: 16px; text-align: center; }
+.choose .q { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); width: 100%; }
+.dir[data-picked] .letter::after { content: "Your pick"; font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold); border-radius: 999px; padding: 2px 8px; margin-left: 10px; vertical-align: 6px; }
 
 /* The board: the world full-bleed, the game's furniture over it, drawn in the game's own colours. */
 .board { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 10px; overflow: hidden; background: #0A0F12; container-type: inline-size; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.35); }
@@ -147,9 +158,9 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
 
 <div class="wrap">
   <header class="top">
-    <span class="kicker">Art jobs 1–6 · designs before building</span>
-    <h1>Two ways to draw each setting</h1>
-    <p class="lede">The first dungeon was built and taken back, so nothing is built from here until you have chosen. Each setting has two directions. Each is shown as the board you would play on, the card back, and the vista with every card's subject in it. Pick one, or neither, and say what you like or don't.</p>
+    <span class="kicker">Art jobs 1–6 · round two</span>
+    <h1>Every setting, inside and outside</h1>
+    <p class="lede">You picked a direction for each setting and decided every setting should have an inside and an outside. Each setting now shows the two sides of one place: the one you picked, revised after your notes, and its other side, newly drawn. Approve them or ask for changes, and say which card back the deck keeps. Nothing is built until you approve.</p>
     <p class="small muted">Everything here is drawn on this page, from the briefs and the game's palette. The pictures are the design; the builds will match them, at the game's own sizes.</p>
     <div class="row">
       <button class="btn" id="motion" type="button" aria-pressed="true">Motion on</button>
@@ -287,9 +298,13 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
   function direction(d) {
     const el = document.createElement('article');
     el.className = 'dir';
+    el.dataset.design = d.id;
+    const side = d.side ? `<span class="side">${d.side === 'outside' ? 'Outside' : 'Inside'}</span>` : '';
     el.innerHTML = `
+      ${side}
       <div class="dir-head"><span class="letter">${d.key}</span><h3>${d.title}</h3></div>
       <p class="pitch">${d.pitch}</p>
+      ${d.revised ? `<p class="revised"><b>Revised</b>${d.revised}</p>` : ''}
       <div class="board" role="img" aria-label="${d.name}, ${d.title}: the board with this world, vista and back"></div>
       <div class="pair">
         <figure><div class="card" role="img" aria-label="The card back"></div><figcaption>The back</figcaption></figure>
@@ -319,18 +334,27 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     return el;
   }
 
-  /* ---------- choosing, kept in the page's store ---------- */
+  /* ---------- the review, kept in the page's store ----------
+     First round (collection `choices`): a pick of A, B or neither, and a
+     note. Second round (collection `review`), once a setting has its two
+     sides: approve them or ask for changes, which back the deck keeps, and
+     a note. */
   let db = null;
-  const pickers = {};
-  function chooser(setting, label, dirs) {
+  const reviewers = {};
+  const radios = (name, label, opts) => `<div class="picks" role="radiogroup" aria-label="${label}">${opts.map(([v, t]) =>
+    `<label class="pick"><input type="radio" name="${name}" id="${name}-${v}" value="${v}"><span>${t}</span></label>`).join('')}</div>`;
+
+  function review(setting, label, sided) {
     const el = document.createElement('form');
     el.className = 'choose';
+    const two = sided.length === 2;
     el.innerHTML = `
-      <div class="picks" role="radiogroup" aria-label="Your pick for ${label}">
-        ${dirs.map((d) => `<label class="pick"><input type="radio" name="pick-${setting}" id="pick-${setting}-${d.key}" value="${d.key}"><span>${d.key}: ${d.title}</span></label>`).join('')}
-        <label class="pick"><input type="radio" name="pick-${setting}" id="pick-${setting}-none" value="neither"><span>Neither</span></label>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span class="q">${two ? 'The two sides' : 'This side'}</span>
+        ${radios(`verdict-${setting}`, `Your verdict on ${label}`, [['approve', 'Approve'], ['changes', 'Needs changes']])}
+        ${two ? `<span class="q">The deck's back</span>${radios(`back-${setting}`, `Which back the ${label} deck keeps`, [['outside', 'Outside'], ['inside', 'Inside'], ['both', 'Both, one per side']])}` : ''}
       </div>
-      <textarea id="note-${setting}" placeholder="What you like, what you don't, what to change"></textarea>
+      <textarea id="note2-${setting}" placeholder="What you like, what you don't, what to change"></textarea>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
         <button class="btn" type="submit">Save</button>
         <span class="saved" aria-live="polite"></span>
@@ -339,24 +363,60 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     const btn = el.querySelector('button');
     el.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const pick = el.querySelector('input:checked')?.value || null;
+      const verdict = el.querySelector(`input[name="verdict-${setting}"]:checked`)?.value || null;
+      const back = el.querySelector(`input[name="back-${setting}"]:checked`)?.value || null;
       const note = el.querySelector('textarea').value.trim();
       if (!db) { saved.textContent = 'Not saved: this view has no store. Tell Claude in chat instead.'; return; }
-      if (!pick && !note) { saved.textContent = 'Pick a direction or write a note first.'; return; }
+      if (!verdict && !back && !note) { saved.textContent = 'Choose something or write a note first.'; return; }
       btn.disabled = true; saved.removeAttribute('data-ok'); saved.textContent = 'Saving…';
       try {
-        await db.doc(`choices/${setting}`).set({ pick, note, at: new Date().toISOString() });
+        await db.doc(`review/${setting}`).set({ verdict, back, note, at: new Date().toISOString() });
         saved.textContent = 'Saved'; saved.setAttribute('data-ok', '');
       } catch (err) {
-        saved.textContent = err && err.code === 'invalid_argument' ? 'Only the owner can save choices here.' : 'Could not save. Try again in a moment.';
+        saved.textContent = err && err.code === 'invalid_argument' ? 'Only the owner can save here.' : 'Could not save. Try again in a moment.';
       } finally { btn.disabled = false; }
     });
-    pickers[setting] = (data) => {
-      if (data.pick) { const r = el.querySelector(`input[value="${data.pick}"]`); if (r) r.checked = true; }
+    reviewers[setting] = (data) => {
+      for (const [k, v] of [['verdict', data.verdict], ['back', data.back]]) {
+        if (!v) continue;
+        const r = el.querySelector(`input[name="${k}-${setting}"][value="${v}"]`); if (r) r.checked = true;
+      }
       if (typeof data.note === 'string' && document.activeElement !== el.querySelector('textarea')) el.querySelector('textarea').value = data.note;
       if (data.at) { saved.textContent = `Saved ${new Date(data.at).toLocaleString()}`; saved.setAttribute('data-ok', ''); }
     };
     return el;
+  }
+
+  /* The first round, as it stands: shown under the setting's name. */
+  const rounds = {};
+  function firstPick(setting, data) {
+    rounds[setting] = data;
+    const at = document.querySelector(`#${setting} .first`);
+    if (at) {
+      const d = designs.find((x) => x.setting === setting && x.key === data.pick);
+      const pick = data.pick === 'neither' ? 'neither direction' : d ? `${d.key}, ${d.title}` : 'no pick';
+      const q = document.createElement('q'); q.textContent = data.note || '';
+      at.textContent = `You picked ${pick}${data.note ? ': ' : '.'}`;
+      if (data.note) at.append(q);
+    }
+    status(setting);
+  }
+  function reviewed(setting, data) {
+    if (reviewers[setting]) reviewers[setting](data);
+    rounds[`${setting}:review`] = data;
+    status(setting);
+  }
+  function status(setting) {
+    const s = document.getElementById(`status-${setting}`);
+    if (!s) return;
+    const r = rounds[`${setting}:review`];
+    const f = rounds[setting];
+    if (r && r.verdict) s.textContent = r.verdict === 'approve' ? 'Approved' : 'Changes asked';
+    else if (f) {
+      const sided = designs.filter((x) => x.setting === setting && x.side).length;
+      s.textContent = sided === 2 ? 'Both sides to review' : 'Other side being drawn';
+    } else return;
+    s.setAttribute('data-picked', '');
   }
 
   /* ---------- the page ---------- */
@@ -364,14 +424,35 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
   const index = document.getElementById('index');
   for (const [id, n, label] of SETTINGS) {
     const dirs = designs.filter((d) => d.setting === id);
+    const sided = dirs.filter((d) => d.side).sort((a, b) => (a.side === b.side ? 0 : a.side === 'outside' ? -1 : 1));
+    const rest = dirs.filter((d) => !d.side);
     index.insertAdjacentHTML('beforeend', `<a href="#${id}"><span class="n">Job ${n}</span><span class="t">${label}</span><span class="s" id="status-${id}">${dirs.length ? 'Not chosen yet' : 'Drawing…'}</span></a>`);
     const sec = document.createElement('section');
     sec.className = 'job'; sec.id = id;
-    sec.innerHTML = `<div class="job-head"><span class="kicker">Job ${n}</span><h2>${label}</h2></div>`;
-    if (!dirs.length) { sec.insertAdjacentHTML('beforeend', '<p class="muted">Its two directions are still being drawn.</p>'); jobs.append(sec); continue; }
+    sec.innerHTML = `<div class="job-head"><span class="kicker">Job ${n}</span><h2>${label}</h2><p class="first"></p></div>`;
+    if (!dirs.length) { sec.insertAdjacentHTML('beforeend', '<p class="muted">Its directions are still being drawn.</p>'); jobs.append(sec); continue; }
     const row = document.createElement('div'); row.className = 'dirs';
-    dirs.forEach((d) => row.append(direction(d)));
-    sec.append(row, chooser(id, label, dirs));
+    if (sided.length) {
+      sided.forEach((d) => row.append(direction(d)));
+      if (sided.length === 1) {
+        const other = sided[0].side === 'outside' ? 'inside' : 'outside';
+        row.insertAdjacentHTML('beforeend', `<div class="waiting">Its ${other} is being drawn: the other side of the same place.</div>`);
+      }
+      sec.append(row);
+      if (rest.length) {
+        const det = document.createElement('details'); det.className = 'unpicked';
+        det.innerHTML = '<summary>The direction you didn’t pick</summary>';
+        const r2 = document.createElement('div'); r2.className = 'dirs';
+        det.append(r2);
+        // Drawn only when opened.
+        det.addEventListener('toggle', () => { if (det.open && !r2.childElementCount) rest.forEach((d) => r2.append(direction(d))); });
+        sec.append(det);
+      }
+      sec.append(review(id, label, sided));
+    } else {
+      dirs.forEach((d) => row.append(direction(d)));
+      sec.append(row);
+    }
     jobs.append(sec);
   }
 
@@ -385,18 +466,13 @@ footer.next { display: flex; flex-direction: column; gap: 12px; padding-top: 28p
     db = window.claude && window.claude.use ? await window.claude.use('db') : null;
     if (!db) { note.textContent = 'Choices cannot be saved in this view; tell Claude in chat.'; return; }
     note.textContent = 'Your choices are saved on this page, and Claude reads them.';
+    const fail = () => { note.textContent = 'Choices could not be loaded; tell Claude in chat.'; };
     db.collection('choices').onSnapshot((snap) => {
-      for (const doc of snap.docs) {
-        const data = doc.data() || {};
-        if (pickers[doc.id]) pickers[doc.id](data);
-        const s = document.getElementById(`status-${doc.id}`);
-        if (s) {
-          const d = designs.find((x) => x.setting === doc.id && x.key === data.pick);
-          s.textContent = data.pick === 'neither' ? 'Neither: new directions' : d ? `${d.key}: ${d.title}` : 'Note left';
-          s.setAttribute('data-picked', '');
-        }
-      }
-    }, () => { note.textContent = 'Choices could not be loaded; tell Claude in chat.'; });
+      for (const doc of snap.docs) firstPick(doc.id, doc.data() || {});
+    }, fail);
+    db.collection('review').onSnapshot((snap) => {
+      for (const doc of snap.docs) reviewed(doc.id, doc.data() || {});
+    }, fail);
   })();
 })();
 </script>
