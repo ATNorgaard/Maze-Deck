@@ -160,3 +160,69 @@ phone sees the side; until then it plays the default side.
   atelier typecheck.
 
 **Commit:** `git log --grep set/1`.
+
+### set/2: the vista
+
+**Changed.**
+- **The painter redraws only what its lights touch.** `prepare()` works
+  out once which pixels any light or tint reaches and resolves the rest
+  for good; each frame after copies those and redraws the lit ones.
+  `resolveReference` keeps the old way, for the test.
+  - A vista frame at the board's widest (432 by 72) now costs at most
+    1.0 ms in Node, against up to 2.0 ms working out every pixel.
+  - `node scripts/bench-vista.mjs [width]` measures every side.
+- **The vista is the side's design, on a canvas** (`components/Vista.tsx`).
+  - Each design pixel is a whole number of device pixels, so the dither
+    stays even. The picture is about 72 of its own pixels high, as drawn,
+    and is centred in the box. Its size rounds to 8 by 4, and is
+    re-measured only once a resize settles, so dragging a window does
+    not rebuild it per frame.
+  - Its light moves at 8 frames a second while it is on screen and the
+    page is showing. It holds one frame under reduced motion and when
+    the world is set to *Still* or *Off*.
+  - A new card fades in over the last, as before; a new size alone cuts.
+    Ground gained still steps the picture forward.
+- **A card never waits for its picture.** Building a vista costs 8 to
+  40 ms, so the vista builds the cards not yet turned while the page is
+  idle. Built pictures are kept per size and card
+  (`components/pixel.ts`), about one size's worth.
+- **The route's landmarks and the storyboard's scenes** are stills from
+  the same design: the Clear Path's doorway, cropped, and each scene's
+  card as the vista drew it.
+- **The side reaches every screen:** the board, the phone, the route and
+  the storyboard are given it.
+- `capture-walk.cjs` takes `--side`.
+
+**A change the author should know of.** The old vista drew a different
+picture for every line of narration (seeded by the entry). The approved
+designs draw one composition per card, so every Monster in a side is the
+same picture, and every landmark on the route is the same doorway. Each
+design could take a seed for small variations (where the props stand,
+which way the light falls) if the author wants the variety back.
+
+**Verified.**
+- **The fast redraw gives the same bytes** as working out every pixel,
+  for every side's back, world and three vistas, at two moments each
+  (a new test).
+- **A desert inside walk:** the tomb with its light shafts across the
+  board and the Obstacle in the doorway, crisp; 4 reveals at **0px**; the
+  ending's storyboard draws all three scenes; the route's landmark reads
+  as the lit doorway.
+- **A hosted frozen pass game:** the board and the phone (390 by 844 at
+  2x, 2 CSS pixels to a design pixel) show the same vista, and every
+  check in `capture-phone.cjs` passed.
+- **It moves and holds** in a probe at 1600 by 1000:
+  - with the world on *Auto*, 4 different frames in 4 samples;
+  - under reduced motion, or with the world on *Still* or *Off*, one;
+  - the canvas is 528 by 84, shown at 1584 by 252;
+  - no page errors.
+- **Frame budget**, at 390 by 844, 4x CPU, against set/1 served from a
+  worktree and measured alternately:
+  - at rest, 0.10 to 0.12 s of main thread per 4 s, against 0.08 to 0.09 s;
+  - a turn, 0.80 to 0.99 s, against 0.84 to 1.04 s, so no change;
+  - the worst frame is 100 ms in both.
+- **Build:** each setting is its own chunk, 13 to 22 KB gzipped; the game
+  no longer imports the old scene generator's pictures.
+- **Tests:** art 16, app 41, rules 75; both apps typecheck.
+
+**Commit:** `git log --grep set/2`.

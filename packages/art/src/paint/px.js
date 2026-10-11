@@ -343,7 +343,77 @@ const PX = (() => {
     }
 
     /** The picture at time t, into an ImageData of the painter's size. */
+    /**
+     * Get ready to resolve many frames: the pixels no light or coloured
+     * light reaches are snapped once, and each light keeps the list of
+     * pixels it touches. A frame then copies the still pixels and works
+     * out only the lit ones, in the same order and arithmetic as
+     * resolveReference, so the picture is the same to the byte.
+     */
+    prepare() {
+      const N = this.w * this.h;
+      const lit = new Uint8Array(N);
+      this._fx = this.fields.map((F) => {
+        const idx = [];
+        for (let i = 0; i < N; i += 1) if (F.f[i] !== 0) { idx.push(i); lit[i] = 1; }
+        return Int32Array.from(idx);
+      });
+      for (const T of this.tints) for (let i = 0; i < N; i += 1) if (T.f[i] > 0) lit[i] = 1;
+      const dyn = [];
+      for (let i = 0; i < N; i += 1) if (lit[i]) dyn.push(i);
+      this._dyn = Int32Array.from(dyn);
+      this._acc = new Float64Array(N);
+      this._base = new Uint8ClampedArray(N * 4);
+      for (let i = 0; i < N; i += 1) if (!lit[i]) this._pixel(i, this.v[i], null, this._base);
+      this._prepared = true;
+      return this;
+    }
+
+    /** Forget what prepare() worked out, after changing the picture. */
+    invalidate() { this._prepared = false; return this; }
+
+    /** Snap one pixel at value v (with the coloured lights at strengths tk) into d. */
+    _pixel(i, v, tk, d) {
+      const x = i % this.w; const y = (i - x) / this.w;
+      const D = this.dither;
+      const ramp = this.cols[this.r[i]];
+      const fl = Math.floor(v); const fr = v - fl;
+      const b = BAYER[(y & 3) * 4 + (x & 3)];
+      let q = fr < 0.5 - D / 2 ? fl : fr > 0.5 + D / 2 ? fl + 1 : ((fr - 0.5 + D / 2) / D > b ? fl + 1 : fl);
+      q = q < 0 ? 0 : q >= ramp.length ? ramp.length - 1 : q;
+      let c = ramp[q];
+      if (tk) {
+        for (let j = 0; j < this.tints.length; j += 1) {
+          const a = this.tints[j].f[i] * tk[j];
+          if (a <= 0.02) continue;
+          const step = Math.floor(a * 5 + b) / 5; // in fifths, dithered
+          if (step <= 0) continue;
+          const tc = this.tints[j].c;
+          c = [lerp(c[0], tc[0], step), lerp(c[1], tc[1], step), lerp(c[2], tc[2], step)];
+        }
+      }
+      const o = i * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    }
+
+    /** The picture at time t, into an ImageData of the painter's size. */
     resolve(t, img) {
+      if (!this._prepared) this.prepare();
+      const d = img.data;
+      d.set(this._base);
+      const dyn = this._dyn; const acc = this._acc; const v = this.v;
+      for (let n = 0; n < dyn.length; n += 1) acc[dyn[n]] = v[dyn[n]];
+      for (let j = 0; j < this.fields.length; j += 1) {
+        const k = this.fields[j].k(t); const f = this.fields[j].f; const idx = this._fx[j];
+        for (let n = 0; n < idx.length; n += 1) { const i = idx[n]; acc[i] += k * f[i]; }
+      }
+      const tk = this.tints.map((T) => (T.k ? T.k(t) : 1));
+      for (let n = 0; n < dyn.length; n += 1) this._pixel(dyn[n], acc[dyn[n]], tk, d);
+      return img;
+    }
+
+    /** The picture at time t, every pixel worked out: the reference resolve() is tested against. */
+    resolveReference(t, img) {
       const d = img.data;
       const ks = this.fields.map((F) => F.k(t));
       const tk = this.tints.map((T) => (T.k ? T.k(t) : 1));

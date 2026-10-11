@@ -251,6 +251,7 @@ export function App() {
         <PlayerScreen
           view={view}
           biome={biome}
+          side={side}
           dispatch={dispatch}
           connected={snapshot?.connected ?? false}
           error={snapshot?.error ?? null}
@@ -272,6 +273,7 @@ export function App() {
         <TableScreen
           view={view}
           biome={biome}
+          side={side}
           dispatch={dispatch}
           error={snapshot?.error ?? null}
           runName={campaign.runName}

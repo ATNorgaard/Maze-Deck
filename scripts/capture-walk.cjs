@@ -21,6 +21,7 @@
        --url=http://localhost:5180
        --size=1600x1000      the viewport
        --biome=dungeon       which door to open on the threshold
+       --side=inside         which side of it to play, where it has two
        --frames=2            how many reveals to photograph as frames
        --turns=40            give up after this many steps
        --still               paint the ground still, for comparing
@@ -50,6 +51,7 @@ const out = args.find((a) => !a.startsWith('--')) || path.join(__dirname, '..', 
 const url = flag('url', 'http://localhost:5180');
 const [W, H] = flag('size', '1600x1000').split('x').map(Number);
 const biome = flag('biome', 'dungeon');
+const side = flag('side', '');
 const frameReveals = Number(flag('frames', '2'));
 const maxTurns = Number(flag('turns', '40'));
 const still = args.includes('--still');
@@ -148,6 +150,7 @@ const state = (page) => page.evaluate(() => ({
   await page.waitForTimeout(800);
   await click(page.locator(`.t-door[data-biome="${biome}"]`));
   await page.waitForTimeout(500);
+  if (side) await click(page.getByRole('radio', { name: side === 'inside' ? 'Inside' : 'Outside' }));
   await shot('threshold');
 
   await click(page.getByRole('button', { name: /Start the crossing/ }));

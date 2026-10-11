@@ -22,7 +22,7 @@ import { SlotLayer } from '../components/SlotLayer';
 import { SoundToggle } from '../components/SoundToggle';
 import { Vista } from '../components/Vista';
 import { BIOMES, isBiomeId } from '../biomes';
-import type { Biome, BiomeId } from '../biomes';
+import type { Biome, BiomeId, Side } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import type { SharedScene } from '../transport/types';
 import { useBed } from '../stage/bed';
@@ -48,6 +48,8 @@ interface Props {
   view: GameView;
   /** The setting the run was created in, resolved from the view. */
   biome: Biome;
+  /** The side of it being played (AJ7): the vista, the route and the story are that side's. */
+  side: Side;
   dispatch: (action: GameAction) => void;
   onExit: () => void;
   runName: string;
@@ -139,7 +141,7 @@ function askFor(choice: Choice | null, swapPick: number | null): { title: string
  * centred dialogs; phase 4 brings them onto the table.
  */
 export function TableScreen({
-  view, biome, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
+  view, biome, side, dispatch, onExit, runName, prompt, scenes, asPlayer, onTogglePlayerView,
   hostCode, error, previewBiome = null, onPreviewBiome, opening: openingKey = null, onOpened,
   sharedScene = null, onShare, autoShare = false, onAutoShare,
 }: Props) {
@@ -500,7 +502,7 @@ export function TableScreen({
               the plain readout; the dark round the table is its picture.
               Keyed on the value, as on the old board: a pip filling
               remounts the track and its glow and pop play on mount. */}
-          <Route biome={biome} value={shown.progress} total={shown.rules.escapeTarget} landmarks={landmarks} />
+          <Route biome={biome} side={side} value={shown.progress} total={shown.rules.escapeTarget} landmarks={landmarks} />
           <div className="t-track" key={`t${shown.strikes}`}>
             <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
           </div>
@@ -525,7 +527,7 @@ export function TableScreen({
           vista takes whatever height it leaves — on a big screen a
           landscape, on a small laptop nothing at all. */}
       <div className="t-stage" ref={stageRef}>
-      <Vista biome={biome} prompt={prompt} step={shown.progress} />
+      <Vista biome={biome} side={side} prompt={prompt} step={shown.progress} />
       {opening ? <OpeningTitle biome={biome} runName={runName} /> : null}
       <p className="t-sr" role="status">{opening ? `The crossing begins: ${runName}, in the ${biome.name.toLowerCase()}.` : ''}</p>
 
@@ -851,7 +853,7 @@ export function TableScreen({
       {/* The crossing told back, once feel/8's ending has played (phase 7). */}
       {view.phase === 'over' && endingShown ? (
         <Modal label="The crossing, told back">
-          <Storyboard view={view} biome={biome} runName={runName} scenes={scenes} onExit={onExit} />
+          <Storyboard view={view} biome={biome} side={side} runName={runName} scenes={scenes} onExit={onExit} />
         </Modal>
       ) : null}
 

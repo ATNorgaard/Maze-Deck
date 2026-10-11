@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { FALLBACK_PALETTE, SceneArt, readPalette, vocabOf } from '@maze-deck/art';
-import type { BiomeVocab, Palette } from '@maze-deck/art';
+import type { Design, Side } from '@maze-deck/art';
 import { getCategory } from '@maze-deck/ui';
 import type { Biome } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import { MOTION, reducedMotion } from '../stage/motion';
+import { stillOf, useDesign } from './pixel';
 
 interface Props {
   biome: Biome;
+  /** The side being played: its landmarks are that side's Clear Path. */
+  side: Side;
   /** Clear Paths gained, as presented. */
   value: number;
   /** Clear Paths to the far side. */
@@ -21,27 +23,14 @@ interface Props {
 }
 
 /**
- * A waypoint's landmark: the doorway of the Clear Path the party went
- * through there, with that scene inside it — the card's own arch, drawn
- * by the scene generator from the entry's seed, as the vista was.
+ * A waypoint's landmark: the Clear Path the party went through, the
+ * doorway at the heart of its vista, as small as the design will still
+ * read. Every Clear Path in a setting's side is the same picture, so the
+ * route is a row of the same way, taken again and again.
  */
-const Landmark = React.memo(
-  ({ entry, biome, pal, vocab }: { entry: ChronicleEntry; biome: Biome; pal: Palette; vocab: BiomeVocab }) => {
-    const id = `route${React.useId().replace(/:/g, '')}`;
-    return (
-      <SceneArt
-        id={id}
-        pal={pal}
-        vocab={vocab}
-        p={{
-          category: 'clear-path', frame: 'arch', seed: `${biome.id}:${entry.entryId}`, style: 'flat',
-          px: 2, relief: 1, haze: 0.6, band: true, subject: true, fade: 0,
-        }}
-      />
-    );
-  },
-  (a, b) => a.entry.entryId === b.entry.entryId && a.biome.id === b.biome.id && a.pal === b.pal,
-);
+const Landmark = React.memo(({ design }: { design: Design }) => (
+  <img src={stillOf(design, 64, 40, 'clear-path', 1.3, { x: 19, y: 5, w: 26, h: 30 })} alt="" />
+));
 Landmark.displayName = 'Landmark';
 
 /**
@@ -57,13 +46,9 @@ Landmark.displayName = 'Landmark';
  *
  * A meter to assistive tech, like the pips it replaces.
  */
-export function Route({ biome, value, total, landmarks }: Props) {
+export function Route({ biome, side, value, total, landmarks }: Props) {
   const ref = React.useRef<HTMLDivElement>(null);
-  const [pal, setPal] = React.useState<Palette>(FALLBACK_PALETTE);
-  React.useLayoutEffect(() => {
-    if (ref.current) setPal(readPalette(ref.current));
-  }, [biome.id]);
-  const vocab = vocabOf(biome.id);
+  const design = useDesign(biome.id, side);
 
   // The waypoint just reached, for as long as its arrival plays. Not on
   // the first render: a board opened mid-crossing has nothing arriving.
@@ -101,7 +86,7 @@ export function Route({ biome, value, total, landmarks }: Props) {
         <span className="t-route__lit" />
         {Array.from({ length: steps }, (_, i) => {
           const k = i + 1;
-          const mark = k <= reached ? landmarks[i] ?? null : null;
+          const mark = k <= reached && design ? landmarks[i] ?? null : null;
           return (
             <span
               key={k}
@@ -113,7 +98,7 @@ export function Route({ biome, value, total, landmarks }: Props) {
               style={{ '--x': k / steps } as React.CSSProperties}
               title={mark ? `${name}: ${mark.text}` : undefined}
             >
-              {mark ? <Landmark entry={mark} biome={biome} pal={pal} vocab={vocab} /> : null}
+              {mark && design ? <Landmark design={design} /> : null}
             </span>
           );
         })}

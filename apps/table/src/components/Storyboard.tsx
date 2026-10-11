@@ -1,39 +1,27 @@
 import * as React from 'react';
-import { FALLBACK_PALETTE, SceneArt, readPalette, vocabOf } from '@maze-deck/art';
-import type { BiomeVocab, Palette } from '@maze-deck/art';
+import type { Design, Side } from '@maze-deck/art';
 import type { GameView } from '@maze-deck/rules';
 import { getCategory } from '@maze-deck/ui';
 import type { Biome } from '../biomes';
 import type { ChronicleEntry } from '../campaign';
 import { fightLine, fightsPhrase, recap, tell } from '../story';
+import { stillOf, useDesign } from './pixel';
 
 interface Props {
   view: GameView;
   biome: Biome;
+  /** The side played: its scenes are drawn as that side's vista drew them. */
+  side: Side;
   runName: string;
   /** Every scene drawn this crossing; empty on a player's preview. */
   scenes: ChronicleEntry[];
   onExit: () => void;
 }
 
-/** A scene's picture, as the vista drew it: seeded by the entry, lit by its card. */
-const Thumb = React.memo(
-  ({ entry, biome, pal, vocab }: { entry: ChronicleEntry; biome: Biome; pal: Palette; vocab: BiomeVocab }) => {
-    const id = `story${React.useId().replace(/:/g, '')}`;
-    return (
-      <SceneArt
-        id={id}
-        pal={pal}
-        vocab={vocab}
-        p={{
-          category: entry.category, frame: 'vista', aspect: 1.8, seed: `${biome.id}:${entry.entryId}`,
-          style: 'flat', px: 2, relief: 1, haze: 0.6, band: false, subject: true, fade: 0,
-        }}
-      />
-    );
-  },
-  (a, b) => a.entry.key === b.entry.key && a.biome.id === b.biome.id && a.pal === b.pal,
-);
+/** A scene's picture, as the vista drew it: the side's design with the card in it, held still. */
+const Thumb = React.memo(({ design, entry }: { design: Design; entry: ChronicleEntry }) => (
+  <img src={stillOf(design, 136, 76, entry.category, 1.3)} alt="" />
+));
 Thumb.displayName = 'Thumb';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -48,13 +36,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * it back, copy it as text to keep for next session, or go back to the
  * campaign. A player's preview has no scenes to tell: they are the GM's.
  */
-export function Storyboard({ view, biome, runName, scenes, onExit }: Props) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [pal, setPal] = React.useState<Palette>(FALLBACK_PALETTE);
-  React.useLayoutEffect(() => {
-    if (ref.current) setPal(readPalette(ref.current));
-  }, [biome.id]);
-  const vocab = vocabOf(biome.id);
+export function Storyboard({ view, biome, side, runName, scenes, onExit }: Props) {
+  const design = useDesign(biome.id, side);
 
   const story = React.useMemo(() => tell(scenes, view), [scenes, view]);
   const through = view.outcome === 'through';
@@ -80,7 +63,7 @@ export function Storyboard({ view, biome, runName, scenes, onExit }: Props) {
   };
 
   return (
-    <div className="t-story" ref={ref} data-outcome={view.outcome ?? undefined}>
+    <div className="t-story" data-outcome={view.outcome ?? undefined}>
       <header className="t-story__head">
         <p className="t-kicker">{runName} · {biome.name}</p>
         <h2 className="t-story__title">{title}</h2>
@@ -108,7 +91,7 @@ export function Storyboard({ view, biome, runName, scenes, onExit }: Props) {
                 {r.scenes.map((s) => (
                   <li className="t-story__scene" key={s.entry.key} data-category={s.entry.category} data-fight={s.fight ?? undefined}>
                     <div className="t-story__pic" aria-hidden="true">
-                      <Thumb entry={s.entry} biome={biome} pal={pal} vocab={vocab} />
+                      {design ? <Thumb design={design} entry={s.entry} /> : null}
                     </div>
                     <p className="t-kicker t-story__card">{cardName(s.entry.category)}</p>
                     <p className="t-story__text">{s.entry.text}</p>

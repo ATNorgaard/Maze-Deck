@@ -2,7 +2,7 @@ import { ActionBar, DeckPile, DiscardPile, MazeDeckProvider, PlayerSeat, River, 
 import { activeSeatOf, availableFor, mayAct } from '@maze-deck/rules';
 import type { CardCategory, ChoicePayload, GameAction, GameView } from '@maze-deck/rules';
 import * as React from 'react';
-import type { Biome } from '../biomes';
+import type { Biome, Side } from '../biomes';
 import { ChoicePanel } from '../components/ChoicePanel';
 import { DieRoll } from '../components/DieRoll';
 import { EventLog } from '../components/EventLog';
@@ -30,6 +30,8 @@ interface Props {
   view: GameView;
   /** The setting, as the server told this device. */
   biome: Biome;
+  /** Its side, as the server told this device (the default side before the room carried one). */
+  side: Side;
   dispatch: (action: GameAction) => void;
   connected: boolean;
   error: string | null;
@@ -76,7 +78,7 @@ function HapticsToggle() {
  * What it is allowed to show is decided by the redaction and by what
  * the GM shares; this decides what is worth showing.
  */
-export function PlayerScreen({ view, biome, dispatch, connected, error, scene, onLeave }: Props) {
+export function PlayerScreen({ view, biome, side, dispatch, connected, error, scene, onLeave }: Props) {
   const me = view.viewer.role === 'player' ? view.viewer.seatId : null;
   const a = availableFor(view);
   const active = activeSeatOf(view);
@@ -239,7 +241,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, scene, o
             {error ? <p className="t-phone__error" role="alert">{error}</p> : null}
           </div>
           <div className="t-phone__tracks">
-            <Route biome={biome} value={shown.progress} total={shown.rules.escapeTarget} landmarks={[]} />
+            <Route biome={biome} side={side} value={shown.progress} total={shown.rules.escapeTarget} landmarks={[]} />
             <div className="t-track" key={`t${shown.strikes}`}>
               <ScoreTrack value={shown.strikes} total={shown.rules.encounterAt} variant="threat" />
             </div>
@@ -250,7 +252,7 @@ export function PlayerScreen({ view, biome, dispatch, connected, error, scene, o
             picture once they have shown the table the scene; until then
             the card's, in the setting's light. */}
         <div className="t-phone__vista">
-          <Vista biome={biome} prompt={vistaPrompt} step={shown.progress} />
+          <Vista biome={biome} side={side} prompt={vistaPrompt} step={shown.progress} />
         </div>
 
         <div className="t-phone__scene" data-empty={sceneCategory ? undefined : true} data-category={sceneCategory ?? undefined} aria-live="polite">

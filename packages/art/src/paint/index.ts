@@ -78,6 +78,12 @@ export interface Painter {
   emit: Uint8Array;
   dither: number;
   ri(name: string): number;
+  /**
+   * Sorts out once which pixels any light touches, and works out the
+   * rest for good; every resolve after redraws only the lit ones. The
+   * first resolve does it if nothing has.
+   */
+  prepare(): Painter;
   resolve(t: number, img: ImageLike): ImageLike;
 }
 

@@ -94,6 +94,26 @@ describe('the settings', () => {
     }
   }, 60_000);
 
+  it('redraws only the lit pixels, to the same bytes as working out every one', async () => {
+    type Ref = { resolveReference(t: number, img: ReturnType<typeof imageOf>): unknown };
+    for (const d of await played()) {
+      const pictures: [string, Made, number[]][] = [
+        ['back', d.back(96, 134), [0]],
+        ['world', d.world(320, 200), [0.3, 2.7]],
+        ...(['monster', 'clear-path', null] as const).map((c): [string, Made, number[]] => [`vista ${c}`, vistaOf(d, 192, 72, c), [1.3, 3.1]]),
+      ];
+      for (const [name, made, times] of pictures) {
+        for (const t of times) {
+          const fast = imageOf(made.p.w, made.p.h);
+          const ref = imageOf(made.p.w, made.p.h);
+          made.p.resolve(t, fast);
+          (made.p as unknown as Ref).resolveReference(t, ref);
+          expect(Buffer.from(fast.data).equals(Buffer.from(ref.data)), `${d.id} ${name} at ${t}s`).toBe(true);
+        }
+      }
+    }
+  }, 120_000);
+
   it('draws a Dead End and a Trap in their own colours, not the Obstacle’s teal', async () => {
     const d = await designFor('dungeon', 'inside');
     const teal = [0x43, 0x91, 0x7b];

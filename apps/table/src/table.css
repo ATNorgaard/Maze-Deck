@@ -127,7 +127,8 @@
 }
 
 .t-vista__layer { position: absolute; inset: 0; }
-.t-vista__layer > svg { display: block; width: 100%; height: 100%; }
+/* Each design pixel a whole number of device pixels (Vista's sizeFor). */
+.t-vista__layer > canvas { position: absolute; display: block; image-rendering: pixelated; }
 .t-vista__layer[data-entering] { animation: tFade 900ms ease both; }
 
 /* Narrow, the page scrolls and there is no height left over to give:
@@ -994,7 +995,7 @@
   background: none;
   filter: drop-shadow(0 0 calc(1 * var(--md-u)) var(--md-cat-path-glow));
 }
-.t-route__way[data-mark] > svg { display: block; width: 100%; height: 100%; }
+.t-route__way[data-mark] > img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 
 /* Arriving: the landmark rises out of the line, and a ring of light goes
    out from it. */
@@ -1546,7 +1547,7 @@
   background: var(--md-ink-900);
   box-shadow: 0 0 0 1px var(--md-ink-700);
 }
-.t-story__pic > svg { display: block; width: 100%; height: 100%; }
+.t-story__pic > img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
 .t-story__card { margin: calc(2.5 * var(--md-u)) 0 0; display: block; }
 .t-story__scene[data-category='clear-path'] .t-story__card { color: var(--md-cat-path-300); }
 .t-story__scene[data-category='obstacle'] .t-story__card { color: var(--md-cat-obst-300); }
