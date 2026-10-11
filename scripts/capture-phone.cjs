@@ -3,13 +3,17 @@
    (docs/overhaul.md, phase 8).
 
    Run it against scripts/local-session.mjs --app, which serves the app
-   pointed at a session authority with its table in memory — never the
-   live database:
+   pointed at a session authority with its table in memory, not the live
+   database. Pointed at the live site (--url=https://maze-deck-six.vercel.app)
+   it plays a real room, which writes a row to the shared table: only on
+   the author's word.
 
      node scripts/local-session.mjs --app          (in another terminal)
      node scripts/capture-phone.cjs [outDir] [--manual] [--gpu] [--measure]
 
        --url=http://localhost:5182   the app local-session.mjs serves
+       --side=inside                 which side of the frozen pass the GM
+                                     hosts; the phone must play the same
        --manual                      the table rolls its own dice: the
                                      phone gets a die to throw
        --measure                     the phone's frame budget at 4x CPU, as
@@ -46,6 +50,7 @@ const flag = (name, fallback) => {
 const out = args.find((a) => !a.startsWith('--')) || path.join(__dirname, '..', 'proof', 'phone');
 const url = flag('url', 'http://localhost:5182');
 const manual = args.includes('--manual');
+const side = flag('side', '');
 const gpu = args.includes('--gpu');
 const measuring = args.includes('--measure');
 const CPU = 4;
@@ -109,6 +114,7 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
   }
   await click(gm, gm.locator('.t-door[data-biome="frozen-pass"]'));
   await gm.waitForTimeout(300);
+  if (side) await click(gm, gm.getByRole('radio', { name: side === 'inside' ? 'Inside' : 'Outside' }));
   await click(gm, gm.getByRole('button', { name: 'Host online' }));
   await gm.waitForSelector('.t-table', { timeout: 10000 });
   await gm.waitForTimeout(300);
@@ -126,6 +132,18 @@ const check = (ok, what) => { log(`${ok ? 'ok ' : '!! '} ${what}`); if (!ok) fai
   await phone.waitForTimeout(1500);
   log(`the phone sits as ${seatName}`);
   await shot(phone, 'phone-0-joined');
+  // The side the GM chose reaches the phone with the room (AJ7), and with
+  // it the same place: the phone draws the side's own design.
+  const where = (page) => page.evaluate(() => ({
+    side: document.querySelector('.t-biome')?.getAttribute('data-side') ?? null,
+    vista: document.querySelector('.t-vista')?.dataset.design ?? null,
+    world: document.querySelector('.t-world')?.dataset.design ?? null,
+  }));
+  const [atGm, atPhone] = [await where(gm), await where(phone)];
+  check(atPhone.side === atGm.side && (!side || atGm.side === side),
+    `the phone plays the side the GM chose: ${atPhone.side} (the GM's ${atGm.side})`);
+  check(Boolean(atPhone.vista) && atPhone.vista === atGm.vista,
+    `and draws the same place: the vista ${atPhone.vista}, the world ${atPhone.world ?? 'off'} (the GM's ${atGm.vista})`);
   check(await phone.locator('.t-world, .t-vista').count() > 0, 'the phone has the place behind it: the vista, and the world where the device draws it');
   const tier = await phone.evaluate(() => document.querySelector('.t-world')?.dataset.tier ?? 'none');
   check(tier === 'low' || tier === 'still', `a phone's world starts light: ${tier}`);

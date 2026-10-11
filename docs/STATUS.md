@@ -51,9 +51,7 @@ frame budget is within noise of the overhaul at rest and in a turn.
 
 **The author plays it, live**, at <https://maze-deck-six.vercel.app>: a few
 doors and both sides, a crossing with sound on, and a hosted room with a
-phone or two. The room is the one part not yet exercised live (creating one
-writes a row), so a phone seeing the side the GM chose has been proved only
-against `local-session.mjs`.
+real phone or two.
 
 **The ship was verified on the live site, read-only** (2026-10-11):
 - Vercel reported the deployment of `70cdeae` complete;
@@ -64,7 +62,16 @@ against `local-session.mjs`.
 - single-screen crossings on the GPU in the dungeon, the Ember Hold
   (inside), the Drowned Coast (outside) and the Underdark each drew that
   side's world at *Full* and its vista moving, with no console errors and
-  no failed requests.
+  no failed requests;
+- **a hosted room, live**, at the author's word: `capture-phone.cjs
+  --url=https://maze-deck-six.vercel.app --side=inside --gpu` hosted room
+  `5YA3RR` on the frozen pass's inside and joined it from a headless phone.
+  Every check passed. The phone played the side the GM chose and drew the
+  same design for its vista and world (`frozen-pass-b`), and the same
+  line's picture as the board; scenes shown by hand and automatically
+  reached it; its turn, roll and pick worked. Realtime subscribes on the
+  live site; the phone showed *reconnecting…* in one frame and was back
+  by the next. The room's row is still in the table.
 
 Then say what to change. Work goes on a branch, since a push to `main`
 deploys.
