@@ -6,9 +6,10 @@ Rewritten at the end of every session. Coming in cold: read this, then
 `apps/table`, read the log at the end of [overhaul.md](overhaul.md), and for
 the art, [settings-build.md](settings-build.md).
 
-**Last updated:** 2026-10-12: **the phone is a controller, on the `phone`
-branch** (DECISIONS S14, S15), after the author played the live site with
-real phones. The settings (`set/0`–`set/6`) are live as `70cdeae`.
+**Last updated:** 2026-10-12: **the phone is a controller** (DECISIONS S14,
+S15), after the author played the live site with real phones; merged to
+`main` and pushed at the author's word. The settings (`set/0`–`set/6`)
+shipped the day before.
 
 ## Where we are
 
@@ -20,7 +21,7 @@ deck that it should not know.
 | | What | Where |
 |---|---|---|
 | Live | The settings, `set/0`–`set/6` (`70cdeae`), shipped 2026-10-11, on the overhaul (`world/10`, 2026-10-09) | <https://maze-deck-six.vercel.app>, from `main` |
-| Branch | `phone`: `main` plus the controller phone and the sound levels (S14, S15) | not pushed |
+| Branch | `phone`: merged into `main` (the controller phone and the sound levels, S14, S15) | level with `main` |
 | Database | The live `maze_sessions` table has phase 8's `scene` column (run 2026-10-09). The side rides in the room's state JSON: **no migration** | Supabase, a project shared with other apps |
 
 **What the settings added** ([settings-build.md](settings-build.md) has each
@@ -48,12 +49,12 @@ frame budget is within noise of the overhaul at rest and in a turn.
 
 ## Next single action
 
-**The author tries the controller phone** on the `phone` branch, then says
-whether to ship it: `node scripts/local-session.mjs --app`, host a room at
-<http://localhost:5182>, and join from a phone on the same network (or
-review `proof/ctl-phone/`). A push to `main` deploys it.
+**The author plays the controller phone, live**, at
+<https://maze-deck-six.vercel.app>: a hosted room with real phones, and the
+sound levels on the GM's screen. Then say what to change; work goes on a
+branch, since a push to `main` deploys.
 
-**What the `phone` branch changes** (S14, S15), from the author's notes on
+**What the controller changed** (S14, S15), from the author's notes on
 playing live ("includes a lot of things the mobile user doesn't need"):
 - **The phone shows one thing at a time, the player's own:** waiting (whose
   turn it is, and *You're next* the turn before theirs); the six actions as
@@ -74,7 +75,7 @@ playing live ("includes a lot of things the mobile user doesn't need"):
   back to waiting, the menu and its levels, and no share controls on the
   board.
 
-**Verified on the branch** (against `local-session.mjs`, GPU): every phone
+**Verified before it shipped** (against `local-session.mjs`, GPU): every phone
 check passes, with the table rolling and with the phone throwing; the 52
 sound checks pass; a board walk reveals at 0px; app 45 tests, and both apps
 typecheck. The phone at 4x CPU costs 0.11 s per 4 s at rest and 0.23 s for
